@@ -1,0 +1,32 @@
+{
+  "default": {
+    "tenant_id": "default",
+    "company_name": "LevelAI SaaS",
+    "logo_url": null,
+    "hubspot_token": null,
+    "pipeline": "Default Pipeline",
+    "stage": "New Lead",
+    "primary_color": "#2563eb",
+    "secondary_color": "#64748b"
+  },
+  "company_a": {
+    "tenant_id": "company_a",
+    "company_name": "Company A B.V.",
+    "logo_url": "https://example.com/logo_a.png",
+    "hubspot_token": "pat-company-a-token",
+    "pipeline": "Company A Pipeline",
+    "stage": "New Lead",
+    "primary_color": "#dc2626",
+    "secondary_color": "#991b1b"
+  },
+  "company_b": {
+    "tenant_id": "company_b",
+    "company_name": "Company B Ltd.",
+    "logo_url": "https://example.com/logo_b.png",
+    "hubspot_token": "pat-company-b-token",
+    "pipeline": "Company B Pipeline",
+    "stage": "New Lead",
+    "primary_color": "#059669",
+    "secondary_color": "#047857"
+  }
+}

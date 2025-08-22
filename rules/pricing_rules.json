@@ -1,0 +1,17 @@
+{
+  "base_per_m2": {
+    "gipsplaat": 16.5,
+    "beton": 22.0,
+    "bestaand": 18.0
+  },
+  "surcharge": {
+    "vocht": 0.20,
+    "scheuren": 0.10
+  },
+  "min_total": 250.0,
+  "vat_percent": 21.0
+}
+
+
+
+

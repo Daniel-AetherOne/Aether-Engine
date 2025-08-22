@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: levelai_postgres
+    environment:
+      POSTGRES_DB: levelai_db
+      POSTGRES_USER: levelai_user
+      POSTGRES_PASSWORD: levelai_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    networks:
+      - levelai_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: levelai_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - levelai_network
+    restart: unless-stopped
+
+  # Placeholder for future services
+  # celery:
+  #   image: levelai_celery
+  #   build: .
+  #   command: celery -A app.tasks worker --loglevel=info
+  #   environment:
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - DATABASE_URL=postgresql://levelai_user:levelai_password@postgres:5432/levelai_db
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   networks:
+  #     - levelai_network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  levelai_network:
+    driver: bridge
+
+
+
+
