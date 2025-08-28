@@ -18,10 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 2) Code + gunicorn config
 COPY app/ /app/app
-COPY gunicorn.conf.py /app/gunicorn.conf.py
+COPY gunicorn_conf.py /app/gunicorn_conf.py
 
-# Cloud Run gebruikt $PORT; gunicorn.conf.py bindt daaraan
+# Cloud Run gebruikt $PORT; gunicorn_conf.py bindt daaraan
 EXPOSE 8080
 
 # Start FastAPI via Gunicorn + Uvicorn worker
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-c", "gunicorn.conf.py", "app.main:app"]
+CMD exec gunicorn -k uvicorn.workers.UvicornWorker -c /app/gunicorn_conf.py app.main:app --bind 0.0.0.0:${PORT}
