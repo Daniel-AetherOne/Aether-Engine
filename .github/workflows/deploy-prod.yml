@@ -2,7 +2,7 @@ name: Deploy Prod
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 concurrency:
   group: prod-deploy
@@ -13,7 +13,6 @@ env:
   REGION: ${{ secrets.GCP_REGION }}
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GAR_LOCATION: ${{ secrets.GAR_LOCATION }} # europe-west4
-  REPO_PATH: levelai/api
   IMAGE_SHA_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/levelai/api:${{ github.sha }}
   IMAGE_LATEST_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/levelai/api:latest
   HEALTH_PATH: /health
@@ -42,8 +41,7 @@ jobs:
           export_default_credentials: true
 
       - name: Configure Docker auth for Artifact Registry
-        run: |
-          gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev -q
+        run: gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev -q
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -75,6 +73,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy to Cloud Run (no-traffic, tagged 'canary')
+        shell: bash
         run: |
           gcloud run deploy "$SERVICE" \
             --image "${{ env.IMAGE_SHA_TAG }}" \
@@ -89,10 +88,12 @@ jobs:
             --memory 512Mi \
             --concurrency 80 \
             --set-env-vars APP_ENV=prod,S3_BUCKET_PUBLIC=${{ secrets.S3_BUCKET_PUBLIC }},S3_BUCKET_UPLOADS=${{ secrets.S3_BUCKET_UPLOADS }},AWS_REGION=${{ secrets.AWS_REGION }}
+
           REV=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.latestCreatedRevisionName)')
-          echo "REVISION=$REV" >> $GITHUB_ENV
+          echo "REVISION=$REV" >> "$GITHUB_ENV"
+
           CANARY_URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.trafficStatuses[?tag=canary].url)')
-          echo "CANARY_URL=$CANARY_URL" >> $GITHUB_ENV
+          echo "CANARY_URL=$CANARY_URL" >> "$GITHUB_ENV"
           echo "Canary URL: $CANARY_URL"
 
       - name: Smoke test /health
@@ -109,8 +110,9 @@ jobs:
           done
           echo "Health check failed"; exit 1
 
-      - name: Install test deps
+      - name: Ensure Python + install test deps
         run: |
+          python3 --version || true
           python -m pip install --upgrade pip
           pip install requests
 
@@ -120,6 +122,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+        shell: bash
         run: |
           python - <<'PY'
 import requests, os, uuid
@@ -156,5 +159,4 @@ PY
             --to-revisions "${{ env.REVISION }}=100"
 
       - name: Cleanup note
-        run: |
-          echo "Canary tag blijft beschikbaar voor de volgende release; eerdere revisies behouden voor rollback."
+        run: echo "Canary tag blijft beschikbaar; eerdere revisies blijven beschikbaar voor rollback."
