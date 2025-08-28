@@ -12,7 +12,7 @@ env:
   SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
   REGION: ${{ secrets.GCP_REGION }}
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GAR_LOCATION: ${{ secrets.GAR_LOCATION }} # europe-west4
+  GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
   IMAGE_SHA_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/levelai/api:${{ github.sha }}
   IMAGE_LATEST_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/levelai/api:latest
   HEALTH_PATH: /health
@@ -100,6 +100,7 @@ jobs:
         env:
           CANARY_URL: ${{ env.CANARY_URL }}
           HEALTH_PATH: ${{ env.HEALTH_PATH }}
+        shell: bash
         run: |
           echo "Hitting: ${CANARY_URL}${HEALTH_PATH}"
           for i in {1..10}; do
@@ -110,39 +111,34 @@ jobs:
           done
           echo "Health check failed"; exit 1
 
-      - name: Ensure Python + install test deps
+      - name: Install test deps
         run: |
-          python3 --version || true
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Smoke test offerte-flow (minimal)
-        env:
-          CANARY_URL: ${{ env.CANARY_URL }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+      - name: Write smoke test script to file
         shell: bash
         run: |
-          python - <<'PY'
-import requests, os, uuid
+          cat > smoke.py << 'PY'
+import os, uuid, requests
 from urllib.parse import urljoin
 
 base = os.environ["CANARY_URL"].rstrip("/")
 # 1) presign
 r = requests.post(urljoin(base, "/storage/presign"), json={
-  "tenant":"demo",
-  "filename":f"uploads/demo/{uuid.uuid4()}.txt",
-  "content_type":"text/plain"
+  "tenant": "demo",
+  "filename": f"uploads/demo/{uuid.uuid4()}.txt",
+  "content_type": "text/plain"
 }, timeout=20)
 r.raise_for_status()
 put_url = r.json()["url"]
 
-pr = requests.put(put_url, data=b"hello", headers={"Content-Type":"text/plain"}, timeout=20)
+# upload
+pr = requests.put(put_url, data=b"hello", headers={"Content-Type": "text/plain"}, timeout=20)
 pr.raise_for_status()
 
 # 2) create quote
-r = requests.post(urljoin(base, "/quote/create"), json={"tenant":"demo","job_id":"smoke"}, timeout=30)
+r = requests.post(urljoin(base, "/quote/create"), json={"tenant": "demo", "job_id": "smoke"}, timeout=30)
 r.raise_for_status()
 pub = r.json()["public_url"]
 
@@ -151,6 +147,14 @@ gr = requests.get(pub, timeout=20)
 print("Public URL:", pub, "Status:", gr.status_code)
 assert gr.status_code == 200
 PY
+
+      - name: Run smoke test offerte-flow
+        env:
+          CANARY_URL: ${{ env.CANARY_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: python smoke.py
 
       - name: Shift traffic to new revision (100%)
         run: |
