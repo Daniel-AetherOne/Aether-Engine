@@ -1,0 +1,160 @@
+name: Deploy Prod
+
+on:
+  push:
+    branches: [ "main" ]
+
+concurrency:
+  group: prod-deploy
+  cancel-in-progress: false
+
+env:
+  SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
+  REGION: ${{ secrets.GCP_REGION }}
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: ${{ secrets.GAR_LOCATION }} # europe-west4
+  REPO_PATH: levelai/api
+  IMAGE_SHA_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/levelai/api:${{ github.sha }}
+  IMAGE_LATEST_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/levelai/api:latest
+  HEALTH_PATH: /health
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          export_default_credentials: true
+
+      - name: Configure Docker auth for Artifact Registry
+        run: |
+          gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev -q
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta (labels & tags)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.IMAGE_SHA_TAG }}
+            ${{ env.IMAGE_LATEST_TAG }}
+          tags: |
+            type=raw,value=${{ github.sha }}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=LevelAI
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.repository }}
+            org.opencontainers.image.created=${{ github.run_id }}
+
+      - name: Build & Push image (with cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Cloud Run (no-traffic, tagged 'canary')
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image "${{ env.IMAGE_SHA_TAG }}" \
+            --region "$REGION" \
+            --platform managed \
+            --no-traffic \
+            --tag "canary" \
+            --allow-unauthenticated \
+            --port 8080 \
+            --timeout 300 \
+            --cpu 1 \
+            --memory 512Mi \
+            --concurrency 80 \
+            --set-env-vars APP_ENV=prod,S3_BUCKET_PUBLIC=${{ secrets.S3_BUCKET_PUBLIC }},S3_BUCKET_UPLOADS=${{ secrets.S3_BUCKET_UPLOADS }},AWS_REGION=${{ secrets.AWS_REGION }}
+          REV=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.latestCreatedRevisionName)')
+          echo "REVISION=$REV" >> $GITHUB_ENV
+          CANARY_URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.trafficStatuses[?tag=canary].url)')
+          echo "CANARY_URL=$CANARY_URL" >> $GITHUB_ENV
+          echo "Canary URL: $CANARY_URL"
+
+      - name: Smoke test /health
+        env:
+          CANARY_URL: ${{ env.CANARY_URL }}
+          HEALTH_PATH: ${{ env.HEALTH_PATH }}
+        run: |
+          echo "Hitting: ${CANARY_URL}${HEALTH_PATH}"
+          for i in {1..10}; do
+            if curl -fsSL "${CANARY_URL}${HEALTH_PATH}"; then
+              echo "Health OK"; exit 0
+            fi
+            echo "Retry $i/10..."; sleep 3
+          done
+          echo "Health check failed"; exit 1
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Smoke test offerte-flow (minimal)
+        env:
+          CANARY_URL: ${{ env.CANARY_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          python - <<'PY'
+import requests, os, uuid
+from urllib.parse import urljoin
+
+base = os.environ["CANARY_URL"].rstrip("/")
+# 1) presign
+r = requests.post(urljoin(base, "/storage/presign"), json={
+  "tenant":"demo",
+  "filename":f"uploads/demo/{uuid.uuid4()}.txt",
+  "content_type":"text/plain"
+}, timeout=20)
+r.raise_for_status()
+put_url = r.json()["url"]
+
+pr = requests.put(put_url, data=b"hello", headers={"Content-Type":"text/plain"}, timeout=20)
+pr.raise_for_status()
+
+# 2) create quote
+r = requests.post(urljoin(base, "/quote/create"), json={"tenant":"demo","job_id":"smoke"}, timeout=30)
+r.raise_for_status()
+pub = r.json()["public_url"]
+
+# 3) check public URL
+gr = requests.get(pub, timeout=20)
+print("Public URL:", pub, "Status:", gr.status_code)
+assert gr.status_code == 200
+PY
+
+      - name: Shift traffic to new revision (100%)
+        run: |
+          gcloud run services update-traffic "$SERVICE" \
+            --region "$REGION" \
+            --to-revisions "${{ env.REVISION }}=100"
+
+      - name: Cleanup note
+        run: |
+          echo "Canary tag blijft beschikbaar voor de volgende release; eerdere revisies behouden voor rollback."
