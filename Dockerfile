@@ -24,4 +24,4 @@ COPY gunicorn_conf.py /app/gunicorn_conf.py
 EXPOSE 8080
 
 # Start FastAPI via Gunicorn + Uvicorn worker
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-c", "gunicorn_conf.py", "app.main:app"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-c", "gunicorn.conf.py", "app.main:app"]
