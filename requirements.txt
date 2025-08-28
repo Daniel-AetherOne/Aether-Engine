@@ -1,0 +1,39 @@
+# Core framework
+fastapi
+uvicorn[standard]
+gunicorn
+
+prometheus-client>=0.20.0
+
+# Config en settings
+pydantic-settings
+python-dotenv
+
+# Templates en upload handling
+jinja2
+python-multipart
+requests
+email-validator
+
+# AWS / Cloud
+boto3
+google-cloud-storage
+
+# ML / Data science
+numpy
+pandas
+scikit-learn
+scipy
+
+# Image processing (headless voor Cloud Run!)
+Pillow
+opencv-python-headless
+
+# Security / Auth
+python-jose[cryptography]
+passlib[bcrypt]
+
+# Rate limiting / utils
+slowapi
+redis
+loguru
