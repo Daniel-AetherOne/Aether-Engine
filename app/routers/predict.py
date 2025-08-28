@@ -1,21 +1,24 @@
+# app/routers/predict.py
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from pathlib import Path
 from typing import List, Optional
-import os
-import time
+from datetime import datetime
 
 from app.models.predict import PredictRequest, PredictResponse
 from app.services.predictor import SimplePredictor
-from app.tasks.vision import predict_images, get_vision_predictor
 from app.rate_limiting import prediction_rate_limit, vision_rate_limit
 from app.logging_config import get_logger
 from app.metrics import record_vision_metrics, record_lead_metrics
 from app.dependencies import resolve_tenant
 
-router = APIRouter()
-predictor = SimplePredictor()
+router = APIRouter(prefix="/predict", tags=["predict"])
 logger = get_logger(__name__)
+predictor = SimplePredictor()
 
+
+# -------------------------------------------------------------------------
+# 1) Heuristiek endpoint: gebruikt alleen SimplePredictor
+# -------------------------------------------------------------------------
 @router.post("/", response_model=PredictResponse)
 @prediction_rate_limit()
 async def predict_substrate_and_issues(
@@ -23,121 +26,138 @@ async def predict_substrate_and_issues(
     tenant_id: str = Depends(resolve_tenant)
 ):
     """
-    Predict substrate type and detect issues based on uploaded images
-    
-    This endpoint uses simple heuristics to analyze images and provide predictions
-    without requiring a trained ML model.
+    Heuristiek-voorspelling zonder zware ML libs.
+    Verwacht image_paths (paden op schijf) en m2.
     """
     try:
-        # Validate that images exist
-        valid_image_paths = []
-        for image_path in request.image_paths:
-            if Path(image_path).exists():
-                valid_image_paths.append(image_path)
+        if not request.image_paths:
+            raise HTTPException(status_code=400, detail="image_paths mag niet leeg zijn.")
+
+        valid_paths: List[str] = []
+        for p in request.image_paths:
+            if Path(p).exists():
+                valid_paths.append(p)
             else:
-                print(f"Warning: Image path not found: {image_path}")
-        
-        if not valid_image_paths:
-            raise HTTPException(
-                status_code=400, 
-                detail="No valid image paths provided. Please ensure images exist and are accessible."
-            )
-        
-        # Make prediction using the simple predictor
-        prediction = predictor.predict(
+                logger.warning(f"Image pad niet gevonden: {p}")
+
+        if not valid_paths:
+            raise HTTPException(status_code=400, detail="Geen geldige image_paths gevonden.")
+
+        result = predictor.predict(
             lead_id=request.lead_id,
-            image_paths=valid_image_paths,
-            m2=request.m2
-        )
-        
-        return PredictResponse(**prediction)
-        
-    except Exception as e:
-        print(f"Error in prediction endpoint: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error during prediction: {str(e)}"
+            image_paths=valid_paths,
+            m2=request.m2,
         )
 
+        # Optioneel: metrics
+        try:
+            record_lead_metrics(
+                tenant_id=tenant_id,
+                lead_id=request.lead_id,
+                substrate=result.get("substrate", "unknown"),
+            )
+        except Exception as m:
+            logger.debug(f"Metrics (lead) overslaan: {m}")
+
+        return PredictResponse(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Fout in predict endpoint: {e}")
+        raise HTTPException(status_code=500, detail="Interne serverfout tijdens predict.")
+
+
+# -------------------------------------------------------------------------
+# 2) "Vision" upload endpoint (zonder torch): gebruikt óók SimplePredictor
+#    Slaat uploads op en geeft per afbeelding een heuristiek-voorspelling.
+# -------------------------------------------------------------------------
 @router.post("/vision", response_model=dict)
 @vision_rate_limit()
 async def predict_vision(
     files: List[UploadFile] = File(...),
-    model_path: Optional[str] = None,
-    tenant_id: str = Depends(resolve_tenant)
+    model_path: Optional[str] = None,  # aanwezig voor backward compat; wordt niet gebruikt
+    tenant_id: str = Depends(resolve_tenant),
 ):
     """
-    Vision prediction endpoint voor LevelAI
-    
-    Upload afbeeldingen en krijg substrate en issues voorspellingen.
-    Gebruikt PyTorch model als beschikbaar, anders fallback heuristiek.
+    Vision prediction zonder PyTorch: pure heuristiek.
+    Upload afbeeldingen; we slaan ze tijdelijk op en runnen SimplePredictor per afbeelding.
     """
     try:
-        # Sla geüploade bestanden op
-        uploaded_paths = []
+        if not files:
+            raise HTTPException(status_code=400, detail="Geen bestanden geüpload.")
+
         upload_dir = Path("data/uploads/vision")
         upload_dir.mkdir(parents=True, exist_ok=True)
-        
-        for file in files:
-            if not file.content_type.startswith('image/'):
+
+        saved_paths: List[str] = []
+        for idx, f in enumerate(files):
+            if not f.content_type or not f.content_type.startswith("image/"):
+                logger.warning(f"Bestand overgeslagen (geen image/*): {f.filename}")
                 continue
-                
-            # Genereer unieke bestandsnaam
-            file_extension = Path(file.filename).suffix
-            unique_filename = f"vision_{len(uploaded_paths):04d}{file_extension}"
-            file_path = upload_dir / unique_filename
-            
-            # Sla bestand op
-            with open(file_path, "wb") as buffer:
-                content = await file.read()
-                buffer.write(content)
-            
-            uploaded_paths.append(str(file_path))
-        
-        if not uploaded_paths:
-            raise HTTPException(
-                status_code=400,
-                detail="Geen geldige afbeeldingen geüpload"
+
+            suffix = Path(f.filename or "image").suffix or ".jpg"
+            fname = f"vision_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{idx:03d}{suffix}"
+            dest = upload_dir / fname
+
+            content = await f.read()
+            dest.write_bytes(content)
+            saved_paths.append(str(dest))
+
+        if not saved_paths:
+            raise HTTPException(status_code=400, detail="Geen geldige afbeeldingen geüpload.")
+
+        # Run heuristiek per afbeelding
+        results = []
+        for p in saved_paths:
+            pred = predictor.predict(
+                lead_id=f"vision-{tenant_id}",
+                image_paths=[p],
+                m2=0.0,
             )
-        
-        # Maak voorspellingen
-        predictions = predict_images(uploaded_paths, model_path)
-        
+            results.append({
+                "image_path": p,
+                "prediction": pred,
+                "method": "heuristic"
+            })
+
+        # Optioneel: metrics
+        try:
+            record_vision_metrics(
+                tenant_id=tenant_id,
+                total_images=len(saved_paths),
+                model_used="heuristic"
+            )
+        except Exception as m:
+            logger.debug(f"Metrics (vision) overslaan: {m}")
+
         return {
             "status": "success",
-            "predictions": predictions,
-            "model_used": "pytorch" if any(p.get("method") == "pytorch_model" for p in predictions) else "heuristic",
-            "total_images": len(predictions)
+            "predictions": results,
+            "model_used": "heuristic",
+            "total_images": len(results)
         }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Fout bij vision prediction: {str(e)}"
-        )
 
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Fout bij vision prediction: {e}")
+        raise HTTPException(status_code=500, detail="Interne serverfout tijdens vision prediction.")
+
+
+# -------------------------------------------------------------------------
+# 3) Vision status: altijd fallback/heuristiek beschikbaar
+# -------------------------------------------------------------------------
 @router.get("/vision/status")
 async def vision_status():
-    """Check status van vision model"""
-    try:
-        predictor = get_vision_predictor()
-        status = {
-            "model_loaded": predictor.model is not None,
-            "device": str(predictor.device),
-            "fallback_available": True
+    """
+    Simpele status: geen zwaar model geladen; heuristiek is wel beschikbaar.
+    """
+    return {
+        "model_loaded": False,
+        "device": "cpu",
+        "fallback_available": True,
+        "model_info": {
+            "type": "heuristic_only"
         }
-        
-        if predictor.model:
-            status["model_info"] = {
-                "substrate_classes": predictor.model.substrate_classes,
-                "issue_classes": predictor.model.issue_classes
-            }
-        
-        return status
-        
-    except Exception as e:
-        return {
-            "model_loaded": False,
-            "error": str(e),
-            "fallback_available": True
-        }
+    }

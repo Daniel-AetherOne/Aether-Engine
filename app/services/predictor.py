@@ -1,220 +1,183 @@
+# app/services/predictor.py
 import os
 from pathlib import Path
 from typing import List, Dict, Tuple
 import numpy as np
-from PIL import Image, ImageEnhance, ImageFilter
-import cv2
+from PIL import Image
+
+# cv2 pas importeren wanneer nodig
+def _cv2():
+    import cv2  # headless variant zit in requirements
+    return cv2
+
 
 class SimplePredictor:
     """Simple heuristic-based predictor for substrate and issues without ML"""
-    
+
     def __init__(self):
         self.substrate_types = ["gipsplaat", "beton", "bestaand"]
         self.issue_types = ["scheuren", "vocht"]
-        
+        # hard cap om enorme foto’s te begrenzen (RAM/CPU sparen)
+        self.max_side = int(os.getenv("PREDICT_MAX_SIDE", "1600"))
+
     def predict(self, lead_id: str, image_paths: List[str], m2: float) -> Dict:
-        """
-        Predict substrate type and issues based on image analysis
-        
-        Args:
-            lead_id: Unique identifier for the lead
-            image_paths: List of paths to uploaded images
-            m2: Square meters of the area
-            
-        Returns:
-            Dictionary with predictions and confidences
-        """
         if not image_paths:
             return self._default_prediction()
-        
-        # Analyze first image for substrate and issues
+
         first_image_path = image_paths[0]
-        
         try:
-            # Load and analyze image
-            substrate_pred, substrate_conf = self._analyze_substrate(first_image_path)
-            issues_pred, issues_conf = self._analyze_issues(first_image_path)
-            
+            # Laad 1x, converteer naar RGB en downscale
+            with Image.open(first_image_path) as img_pil:
+                img_pil = img_pil.convert("RGB")
+                img_pil = self._downscale(img_pil, self.max_side)
+                img = np.array(img_pil)
+
+            substrate_pred, substrate_conf = self._analyze_substrate(img)
+            issues_pred, issues_conf = self._analyze_issues(img)
+
             return {
                 "substrate": substrate_pred,
                 "issues": issues_pred,
                 "confidences": {
                     "substrate": substrate_conf,
-                    **issues_conf
-                }
+                    **issues_conf,
+                },
             }
         except Exception as e:
             print(f"Error analyzing image {first_image_path}: {e}")
             return self._default_prediction()
-    
-    def _analyze_substrate(self, image_path: str) -> Tuple[str, float]:
-        """Analyze image to determine substrate type"""
+
+    # ---------- helpers ----------
+
+    def _downscale(self, img_pil: Image.Image, max_side: int) -> Image.Image:
+        w, h = img_pil.size
+        scale = min(1.0, max_side / max(w, h))
+        if scale < 1.0:
+            new_size = (int(w * scale), int(h * scale))
+            img_pil = img_pil.resize(new_size, resample=Image.BILINEAR)
+        return img_pil
+
+    def _to_gray(self, img_rgb: np.ndarray) -> np.ndarray:
+        if img_rgb.ndim == 3:
+            cv2 = _cv2()
+            gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+        else:
+            gray = img_rgb
+        return gray
+
+    # ---------- analyses ----------
+
+    def _analyze_substrate(self, img_rgb: np.ndarray) -> Tuple[str, float]:
         try:
-            # Load image
-            img = Image.open(image_path)
-            img_array = np.array(img)
-            
-            # Convert to grayscale if needed
-            if len(img_array.shape) == 3:
-                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-            else:
-                gray = img_array
-            
-            # Calculate various features
+            cv2 = _cv2()
+            gray = self._to_gray(img_rgb)
+
             contrast = self._calculate_contrast(gray)
-            noise_level = self._calculate_noise(gray)
-            edge_density = self._calculate_edge_density(gray)
-            texture_variance = self._calculate_texture_variance(gray)
-            
-            # Decision logic based on heuristics
+            noise_level = self._calculate_noise(gray, cv2)
+            edge_density = self._calculate_edge_density(gray, cv2)
+            texture_variance = self._calculate_texture_variance(gray, cv2)
+
             if contrast > 0.6 and edge_density > 0.3:
-                # High contrast and edges suggest concrete
                 return "beton", min(0.8, 0.5 + contrast * 0.3)
             elif noise_level > 0.4 and texture_variance > 0.5:
-                # High noise and texture variance suggest existing surface
                 return "bestaand", min(0.75, 0.4 + noise_level * 0.35)
             elif contrast < 0.4 and edge_density < 0.2:
-                # Low contrast and edges suggest drywall
                 return "gipsplaat", min(0.7, 0.5 + (1 - contrast) * 0.2)
             else:
-                # Default to existing surface
                 return "bestaand", 0.65
-                
+
         except Exception as e:
             print(f"Error in substrate analysis: {e}")
             return "bestaand", 0.5
-    
-    def _analyze_issues(self, image_path: str) -> Tuple[List[str], Dict[str, float]]:
-        """Analyze image to detect issues"""
+
+    def _analyze_issues(self, img_rgb: np.ndarray) -> Tuple[List[str], Dict[str, float]]:
         try:
-            # Load image
-            img = Image.open(image_path)
-            img_array = np.array(img)
-            
-            # Convert to grayscale if needed
-            if len(img_array.shape) == 3:
-                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-            else:
-                gray = img_array
-            
-            detected_issues = []
-            issue_confidences = {}
-            
-            # Detect cracks using edge detection
-            crack_confidence = self._detect_cracks(gray)
+            cv2 = _cv2()
+            gray = self._to_gray(img_rgb)
+
+            detected_issues: List[str] = []
+            issue_confidences: Dict[str, float] = {}
+
+            crack_confidence = self._detect_cracks(gray, cv2)
             if crack_confidence > 0.4:
                 detected_issues.append("scheuren")
                 issue_confidences["scheuren"] = crack_confidence
-            
-            # Detect moisture using color analysis
-            moisture_confidence = self._detect_moisture(img_array)
+
+            moisture_confidence = self._detect_moisture(img_rgb, cv2)
             if moisture_confidence > 0.3:
                 detected_issues.append("vocht")
                 issue_confidences["vocht"] = moisture_confidence
-            
-            # Set default confidences for undetected issues
-            if "scheuren" not in issue_confidences:
-                issue_confidences["scheuren"] = 0.2
-            if "vocht" not in issue_confidences:
-                issue_confidences["vocht"] = 0.15
-            
+
+            issue_confidences.setdefault("scheuren", 0.2)
+            issue_confidences.setdefault("vocht", 0.15)
+
             return detected_issues, issue_confidences
-            
+
         except Exception as e:
             print(f"Error in issue analysis: {e}")
             return [], {"scheuren": 0.2, "vocht": 0.15}
-    
-    def _calculate_contrast(self, gray_image: np.ndarray) -> float:
-        """Calculate image contrast"""
+
+    # ---------- metrics ----------
+
+    def _calculate_contrast(self, gray: np.ndarray) -> float:
         try:
-            # Use standard deviation as contrast measure
-            contrast = np.std(gray_image) / 255.0
+            contrast = float(np.std(gray)) / 255.0
             return min(1.0, contrast)
-        except:
+        except Exception:
             return 0.5
-    
-    def _calculate_noise(self, gray_image: np.ndarray) -> float:
-        """Calculate image noise level"""
+
+    def _calculate_noise(self, gray: np.ndarray, cv2) -> float:
         try:
-            # Apply Gaussian blur and compare with original
-            blurred = cv2.GaussianBlur(gray_image, (5, 5), 0)
-            noise = np.mean(np.abs(gray_image.astype(float) - blurred.astype(float))) / 255.0
-            return min(1.0, noise)
-        except:
+            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+            noise = np.mean(np.abs(gray.astype(np.float32) - blurred.astype(np.float32))) / 255.0
+            return min(1.0, float(noise))
+        except Exception:
             return 0.5
-    
-    def _calculate_edge_density(self, gray_image: np.ndarray) -> float:
-        """Calculate edge density using Canny edge detection"""
+
+    def _calculate_edge_density(self, gray: np.ndarray, cv2) -> float:
         try:
-            # Apply Canny edge detection
-            edges = cv2.Canny(gray_image, 50, 150)
-            edge_density = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
-            return min(1.0, edge_density * 10)  # Scale up for better range
-        except:
+            edges = cv2.Canny(gray, 50, 150)
+            edge_density = np.count_nonzero(edges) / (edges.shape[0] * edges.shape[1])
+            return min(1.0, edge_density * 10.0)
+        except Exception:
             return 0.3
-    
-    def _calculate_texture_variance(self, gray_image: np.ndarray) -> float:
-        """Calculate texture variance"""
+
+    def _calculate_texture_variance(self, gray: np.ndarray, cv2) -> float:
         try:
-            # Calculate local variance using a small kernel
-            kernel = np.ones((5, 5)) / 25
-            mean = cv2.filter2D(gray_image.astype(float), -1, kernel)
-            variance = cv2.filter2D((gray_image.astype(float) - mean) ** 2, -1, kernel)
-            texture_var = np.mean(variance) / (255.0 ** 2)
-            return min(1.0, texture_var * 100)  # Scale up for better range
-        except:
+            kernel = np.ones((5, 5), dtype=np.float32) / 25.0
+            mean = cv2.filter2D(gray.astype(np.float32), -1, kernel)
+            variance = cv2.filter2D((gray.astype(np.float32) - mean) ** 2, -1, kernel)
+            texture_var = float(np.mean(variance)) / (255.0 ** 2)
+            return min(1.0, texture_var * 100.0)
+        except Exception:
             return 0.4
-    
-    def _detect_cracks(self, gray_image: np.ndarray) -> float:
-        """Detect cracks using edge analysis"""
+
+    def _detect_cracks(self, gray: np.ndarray, cv2) -> float:
         try:
-            # Apply morphological operations to enhance cracks
             kernel = np.ones((3, 3), np.uint8)
-            edges = cv2.Canny(gray_image, 30, 100)
-            
-            # Dilate edges to connect crack lines
+            edges = cv2.Canny(gray, 30, 100)
             dilated = cv2.dilate(edges, kernel, iterations=1)
-            
-            # Calculate crack-like features
-            crack_score = np.sum(dilated > 0) / (dilated.shape[0] * dilated.shape[1])
-            
-            # Normalize and return confidence
-            confidence = min(1.0, crack_score * 20)  # Scale up for better range
-            return confidence
-        except:
+            crack_score = np.count_nonzero(dilated) / (dilated.shape[0] * dilated.shape[1])
+            return min(1.0, crack_score * 20.0)
+        except Exception:
             return 0.3
-    
-    def _detect_moisture(self, color_image: np.ndarray) -> float:
-        """Detect moisture using color analysis"""
+
+    def _detect_moisture(self, rgb: np.ndarray, cv2) -> float:
         try:
-            if len(color_image.shape) != 3:
+            if rgb.ndim != 3:
                 return 0.2
-            
-            # Convert to HSV for better color analysis
-            hsv = cv2.cvtColor(color_image, cv2.COLOR_RGB2HSV)
-            
-            # Look for dark, saturated areas (potential moisture)
-            # Lower saturation and value thresholds for moisture detection
-            lower_moisture = np.array([0, 0, 0])
-            upper_moisture = np.array([180, 100, 100])
-            
-            moisture_mask = cv2.inRange(hsv, lower_moisture, upper_moisture)
-            moisture_ratio = np.sum(moisture_mask > 0) / (moisture_mask.shape[0] * moisture_mask.shape[1])
-            
-            # Calculate confidence based on moisture ratio
-            confidence = min(1.0, moisture_ratio * 5)  # Scale up for better range
-            return confidence
-        except:
+            hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+            lower = np.array([0, 0, 0], dtype=np.uint8)
+            upper = np.array([180, 100, 100], dtype=np.uint8)
+            mask = cv2.inRange(hsv, lower, upper)
+            ratio = np.count_nonzero(mask) / (mask.shape[0] * mask.shape[1])
+            return min(1.0, ratio * 5.0)
+        except Exception:
             return 0.2
-    
+
     def _default_prediction(self) -> Dict:
-        """Return default prediction when analysis fails"""
         return {
             "substrate": "bestaand",
             "issues": [],
-            "confidences": {
-                "substrate": 0.5,
-                "scheuren": 0.2,
-                "vocht": 0.15
-            }
+            "confidences": {"substrate": 0.5, "scheuren": 0.2, "vocht": 0.15},
         }
