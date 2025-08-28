@@ -62,6 +62,20 @@ jobs:
             --allow-unauthenticated \
             --port 8080
 
+      - name: Echo image + service URL
+        run: |
+          echo "Image tag: ${{ env.IMAGE_SHA_TAG }}"
+          gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url,status.latestCreatedRevisionName,status.conditions)'
+
+      - name: Show recent revision logs (last 80 lines)
+        run: |
+          REV=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.latestCreatedRevisionName)')
+          echo "Latest revision: $REV"
+          gcloud logs read --limit=80 --format='value(textPayload)' \
+            --project='${{ secrets.GCP_PROJECT_ID }}' \
+            "resource.type=cloud_run_revision AND resource.labels.revision_name=$REV"
+
+
       - name: Health check
         run: |
           URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
