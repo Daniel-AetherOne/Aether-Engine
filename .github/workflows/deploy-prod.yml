@@ -70,15 +70,22 @@ jobs:
           gcloud run services describe "$SERVICE" --region "$REGION" \
             --format='value(status.url,status.latestCreatedRevisionName,status.conditions)'
 
-      - name: Show recent revision logs (last 120 lines)
+      - name: Show recent revision logs (last 200 lines)
         if: always()
         run: |
           REV=$(gcloud run services describe "$SERVICE" --region "$REGION" \
             --format='value(status.latestCreatedRevisionName)')
           echo "Latest revision: $REV"
-          gcloud logs read --limit=120 --format='value(textPayload)' \
-            --project='${{ secrets.GCP_PROJECT_ID }}' \
-            "resource.type=cloud_run_revision AND resource.labels.revision_name=$REV"
+          gcloud logging read \
+            'resource.type="cloud_run_revision" AND resource.labels.revision_name="'$REV'"' \
+            --limit=200 --order=desc --format='value(textPayload)'
+
+      - name: Describe latest revision (conditions)
+        if: always()
+        run: |
+          REV=$(gcloud run services describe "$SERVICE" --region "$REGION" \
+            --format='value(status.latestCreatedRevisionName)')
+          gcloud run revisions describe "$REV" --region "$REGION"
 
       - name: Health check
         run: |
