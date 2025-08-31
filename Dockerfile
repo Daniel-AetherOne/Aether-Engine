@@ -25,7 +25,4 @@ EXPOSE 8080
 ENV PORT=8080
 
 # Start FastAPI via Gunicorn + Uvicorn worker
-CMD ["gunicorn",
-     "-k", "uvicorn.workers.UvicornWorker",
-     "-c", "/app/gunicorn.conf.py",
-     "app.main:app"]
+CMD ["gunicorn","-k","uvicorn.workers.UvicornWorker","-c","/app/gunicorn.conf.py","app.main:app"]
