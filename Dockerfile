@@ -22,6 +22,10 @@ COPY gunicorn.conf.py /app/gunicorn.conf.py
 
 # Cloud Run gebruikt $PORT; gunicorn_conf.py bindt daaraan
 EXPOSE 8080
+ENV PORT=8080
 
 # Start FastAPI via Gunicorn + Uvicorn worker
-CMD exec gunicorn -k uvicorn.workers.UvicornWorker -c /app/gunicorn.conf.py app.main:app --bind 0.0.0.0:${PORT}
+CMD ["gunicorn",
+     "-k", "uvicorn.workers.UvicornWorker",
+     "-c", "/app/gunicorn.conf.py",
+     "app.main:app"]
