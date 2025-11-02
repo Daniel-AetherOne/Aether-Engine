@@ -1,0 +1,38 @@
+﻿{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowPutGetHeadWithinUploadsPrefix",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:HeadObject",
+        "s3:GetObjectAttributes"
+      ],
+      "Resource": "arn:aws:s3:::levelai-prod-files/uploads/*"
+    },
+    {
+      "Sid": "AllowListBucketForUploadsPrefix",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket"],
+      "Resource": "arn:aws:s3:::levelai-prod-files",
+      "Condition": { "StringLike": { "s3:prefix": ["uploads/*"] } }
+    },
+    {
+      "Sid": "MultipartOps",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateMultipartUpload",
+        "s3:AbortMultipartUpload",
+        "s3:ListBucketMultipartUploads",
+        "s3:ListMultipartUploadParts",
+        "s3:CompleteMultipartUpload"
+      ],
+      "Resource": [
+        "arn:aws:s3:::levelai-prod-files",
+        "arn:aws:s3:::levelai-prod-files/uploads/*"
+      ]
+    }
+  ]
+}

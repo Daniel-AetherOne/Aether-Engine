@@ -72,3 +72,11 @@ async def get_storage_service():
     This dependency can be used in route handlers to get storage functionality.
     """
     return storage_service
+
+from functools import lru_cache
+from app.services.s3 import S3Service
+
+@lru_cache(maxsize=1)
+def get_s3_service() -> S3Service:
+    """Singleton S3 client for FastAPI DI."""
+    return S3Service()

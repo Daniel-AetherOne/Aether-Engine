@@ -1,0 +1,33 @@
+groups:
+  - name: levelai.rules
+    rules:
+      - alert: LevelAIAppDown
+        expr: up{job="levelai-app"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "LevelAI app is down"
+
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5..",job="levelai-app"}[5m]))
+              / sum(rate(http_requests_total{job="levelai-app"}[5m])) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "5xx error ratio > 5%"
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95,
+               sum by (le) (rate(http_request_duration_seconds_bucket{job="levelai-app"}[5m]))
+             ) > 0.5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "P95 latency > 500ms"
+
+      - alert: IntakeErrorsSpike
+        expr: rate(levelai_intake_error_total[5m]) > 0.2
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Intake errors spike"

@@ -8,6 +8,7 @@ prometheus-client>=0.20.0
 # Config en settings
 pydantic-settings
 python-dotenv
+pip install prometheus-client==0.20.0 prometheus-fastapi-instrumentator==7.0.0
 
 # Templates en upload handling
 jinja2

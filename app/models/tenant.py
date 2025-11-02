@@ -1,27 +1,27 @@
-from pydantic import BaseModel, Field
+# app/models/tenant.py
+from __future__ import annotations
 from typing import Optional
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Integer, Text
+from app.db import Base  # gebruik de Base uit jouw databaseconfig
 
-class TenantSettings(BaseModel):
-    """Tenant configuration settings"""
-    tenant_id: str = Field(..., description="Unique tenant identifier")
-    company_name: str = Field(..., description="Company name for branding")
-    logo_url: Optional[str] = Field(None, description="URL to company logo")
-    hubspot_token: Optional[str] = Field(None, description="HubSpot API token")
-    pipeline: Optional[str] = Field(None, description="HubSpot pipeline name")
-    stage: Optional[str] = Field(None, description="HubSpot stage name")
-    primary_color: Optional[str] = Field("#2563eb", description="Primary brand color")
-    secondary_color: Optional[str] = Field("#64748b", description="Secondary brand color")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "tenant_id": "company_a",
-                "company_name": "Company A B.V.",
-                "logo_url": "https://example.com/logo.png",
-                "hubspot_token": "pat-xxx",
-                "pipeline": "Default Pipeline",
-                "stage": "New Lead",
-                "primary_color": "#2563eb",
-                "secondary_color": "#64748b"
-            }
-        }
+class TenantSettings(Base):
+    __tablename__ = "tenant_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str] = mapped_column(String(100), index=True, unique=True, nullable=False)
+
+    company_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    logo_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # HubSpot integratievelden
+    hubspot_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    pipeline: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    stage: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # Branding
+    primary_color: Mapped[str] = mapped_column(String(20), default="#2563eb")
+    secondary_color: Mapped[str] = mapped_column(String(20), default="#64748b")
+
+    def __repr__(self) -> str:
+        return f"<TenantSettings tenant_id={self.tenant_id!r} company_name={self.company_name!r}>"

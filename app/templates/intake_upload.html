@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project Intake</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; max-width: 720px; margin: 32px auto; }
+    h1 { font-size: 28px; margin-bottom: 16px; }
+    input, textarea, button { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+    textarea { min-height: 80px; }
+    #fileList { list-style: none; padding-left: 0; }
+    #fileList li { margin: 4px 0; }
+    #status { margin-top: 12px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Project Intake</h1>
+
+  <form id="intakeForm">
+    <input id="name" name="name" placeholder="Naam" required />
+    <input id="email" name="email" type="email" placeholder="E-mail" required />
+    <input id="phone" name="phone" placeholder="Telefoon" />
+    <textarea id="project_description" name="project_description" placeholder="Beschrijving"></textarea>
+
+    <input id="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.pdf" />
+    <ul id="fileList"></ul>
+
+    <button type="submit">Verstuur</button>
+  </form>
+
+  <div id="status"></div>
+
+  <script>
+    const tenantId = "default";
+    const fileInput = document.getElementById('fileInput');
+    const fileList  = document.getElementById('fileList');
+    const form      = document.getElementById('intakeForm');
+    const statusBox = document.getElementById('status');
+    const uploadedKeys = new Set();
+
+    async function presign(filename) {
+      const resp = await fetch('/uploads/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, tenant_id: tenantId })
+      });
+      const txt = await resp.text(); // zodat we eventuele fouttekst zien
+      if (!resp.ok) throw new Error(`presign ${resp.status}: ${txt}`);
+      return JSON.parse(txt);
+    }
+
+    async function uploadOne(file) {
+      const { key, post } = await presign(file.name);
+      const fd = new FormData();
+      Object.entries(post.fields).forEach(([k,v]) => fd.append(k, v));
+      fd.append('file', file);
+
+      const res = await fetch(post.url, { method: 'POST', body: fd });
+      const body = await res.text();
+      if (!res.ok) throw new Error(`upload ${res.status}: ${body}`);
+      return key; // tenant-LOZE key voor /intake/lead
+    }
+
+    fileInput.addEventListener('change', async (e) => {
+      fileList.innerHTML = '';
+      uploadedKeys.clear();
+      const files = Array.from(e.target.files || []);
+      for (const f of files) {
+        const li = document.createElement('li');
+        li.textContent = `${f.name} — uploaden...`;
+        fileList.appendChild(li);
+        try {
+          const key = await uploadOne(f);
+          uploadedKeys.add(key);
+          li.textContent = `${f.name} — ✅ klaar`;
+        } catch (err) {
+          console.error(err);
+          li.textContent = `${f.name} — ❌ fout (${err.message})`;
+        }
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (uploadedKeys.size === 0) {
+        statusBox.textContent = 'Upload eerst minstens één bestand.';
+        statusBox.style.color = 'crimson';
+        return;
+      }
+      statusBox.textContent = 'Versturen...';
+      statusBox.style.color = 'inherit';
+
+      const payload = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        project_description: document.getElementById('project_description').value,
+        object_keys: Array.from(uploadedKeys),
+      };
+
+      const resp = await fetch('/intake/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        statusBox.textContent = `Fout: ${JSON.stringify(data.detail ?? data)}`;
+        statusBox.style.color = 'crimson';
+        return;
+      }
+      statusBox.textContent = `✅ Lead aangemaakt (#${data.lead_id}) met ${data.files.length} bestanden.`;
+      form.reset();
+      fileList.innerHTML = '';
+      uploadedKeys.clear();
+    });
+  </script>
+</body>
+</html>

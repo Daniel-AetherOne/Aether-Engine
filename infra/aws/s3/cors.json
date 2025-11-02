@@ -1,0 +1,9 @@
+﻿[
+  {
+    "AllowedOrigins": ["https://app.levelai.example", "http://localhost:5173"],
+    "AllowedMethods": ["PUT", "POST", "GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag","x-amz-version-id"],
+    "MaxAgeSeconds": 3000
+  }
+]

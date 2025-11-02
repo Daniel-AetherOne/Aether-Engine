@@ -1,0 +1,10 @@
+﻿{
+  "Rules": [
+    {
+      "ID": "cleanup-tmp-uploads",
+      "Filter": { "Prefix": "uploads/tmp/" },
+      "Status": "Enabled",
+      "Expiration": { "Days": 30 }
+    }
+  ]
+}

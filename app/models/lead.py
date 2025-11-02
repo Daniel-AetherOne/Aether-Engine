@@ -1,52 +1,74 @@
-from pydantic import BaseModel, EmailStr, Field
+# app/models/lead.py
+from __future__ import annotations
 from typing import List, Optional
 from datetime import datetime
-import uuid
 
-class Lead(BaseModel):
-    """Lead model for tracking customer leads"""
-    lead_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique lead identifier")
-    tenant_id: str = Field(..., description="Tenant identifier")
-    name: str = Field(..., min_length=1, description="Customer name")
-    email: EmailStr = Field(..., description="Customer email address")
-    phone: str = Field(..., min_length=1, description="Customer phone number")
-    address: str = Field(..., min_length=1, description="Customer address")
-    square_meters: float = Field(..., gt=0, description="Square meters")
-    uploaded_files: List[str] = Field(default_factory=list, description="List of uploaded file paths")
-    submission_date: datetime = Field(default_factory=datetime.utcnow, description="Lead submission date")
-    status: str = Field("new", description="Lead status")
-    notes: Optional[str] = Field(None, description="Additional notes")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "tenant_id": "company_a",
-                "name": "John Doe",
-                "email": "john@example.com",
-                "phone": "+31 6 12345678",
-                "address": "Hoofdstraat 123, Amsterdam",
-                "square_meters": 150.5,
-                "status": "new",
-                "notes": "Interested in renovation project"
-            }
-        }
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import (
+    String,
+    Integer,
+    ForeignKey,
+    DateTime,
+    Float,
+    Text,
+    func,
+)
+from app.db import Base  # pas aan als jouw Base elders staat
 
-class LeadCreate(BaseModel):
-    """Model for creating a new lead"""
-    tenant_id: str = Field(..., description="Tenant identifier")
-    name: str = Field(..., min_length=1, description="Customer name")
-    email: EmailStr = Field(..., description="Customer email address")
-    phone: str = Field(..., min_length=1, description="Customer phone number")
-    address: str = Field(..., min_length=1, description="Customer address")
-    square_meters: float = Field(..., gt=0, description="Square meters")
-    notes: Optional[str] = Field(None, description="Additional notes")
 
-class LeadUpdate(BaseModel):
-    """Model for updating a lead"""
-    name: Optional[str] = Field(None, min_length=1, description="Customer name")
-    email: Optional[EmailStr] = Field(None, description="Customer email address")
-    phone: Optional[str] = Field(None, min_length=1, description="Customer phone number")
-    address: Optional[str] = Field(None, min_length=1, description="Customer address")
-    square_meters: Optional[float] = Field(None, gt=0, description="Square meters")
-    status: Optional[str] = Field(None, description="Lead status")
-    notes: Optional[str] = Field(None, description="Additional notes")
+class Lead(Base):
+    __tablename__ = "leads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # multi-tenant
+    tenant_id: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
+
+    # contact
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    email: Mapped[str] = mapped_column(String(320), index=True, nullable=False)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # project
+    address: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    square_meters: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # status/meta
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="new")
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    # files relatie
+    files: Mapped[List["LeadFile"]] = relationship(
+        "LeadFile",
+        back_populates="lead",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    def __repr__(self) -> str:
+        return f"<Lead id={self.id} tenant={self.tenant_id} name={self.name!r}>"
+
+
+class LeadFile(Base):
+    __tablename__ = "lead_files"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    lead_id: Mapped[int] = mapped_column(
+        ForeignKey("leads.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+
+    # canonieke key (na finalize_move), bv. "leads/{lead_id}/file.jpg"
+    s3_key: Mapped[str] = mapped_column(String(1024), index=True, nullable=False)
+
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    lead: Mapped["Lead"] = relationship("Lead", back_populates="files")
+
+    def __repr__(self) -> str:
+        return f"<LeadFile lead_id={self.lead_id} key={self.s3_key!r}>"
