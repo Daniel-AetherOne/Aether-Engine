@@ -3,17 +3,20 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 import uuid
-import datetime as dt
+import datetime as dt  # (nog gebruikt in logs / kan weg als je wilt)
 
 import boto3
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, constr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.services.s3_keys import build_upload_key
+
 print(">> LOADING presigned_upload FROM:", __file__)
 
 # ---------- Settings (LAZY) ----------
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+
 
 class Settings(BaseSettings):
     AWS_REGION: str = "eu-west-1"
@@ -31,7 +34,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+
 _settings_cache: Optional[Settings] = None
+
 
 def get_settings() -> Settings:
     global _settings_cache
@@ -39,7 +44,9 @@ def get_settings() -> Settings:
         _settings_cache = Settings()
     return _settings_cache
 
+
 _s3 = None
+
 
 def get_s3():
     """Alleen aanmaken als we 'm echt nodig hebben."""
@@ -57,27 +64,33 @@ def get_s3():
     )
     return _s3
 
+
 # ---------- Router ----------
 router = APIRouter(prefix="/uploads", tags=["uploads"])
+
 
 @router.get("/ping")
 def ping():
     return {"ok": True}
+
 
 # ---------- Mock-auth dependency ----------
 class User(BaseModel):
     id: str
     tenant_id: Optional[str] = None
 
+
 def get_current_user() -> User:
     # TODO: vervang later door echte auth/JWT
     return User(id="test-user", tenant_id="demo-tenant")
+
 
 # ---------- Body + Response Models ----------
 class PresignRequest(BaseModel):
     filename: constr(min_length=1, max_length=255)
     content_type: constr(min_length=3, max_length=100)
     size_bytes: int = Field(gt=0, lt=1_000_000_000)
+
 
 class PresignResponse(BaseModel):
     method: str = "PUT"
@@ -87,11 +100,17 @@ class PresignResponse(BaseModel):
     expires_in: int
     public_url: str | None = None
 
+
 # ---------- Helper ----------
 def build_object_key(user: User, filename: str) -> str:
-    today = dt.datetime.utcnow()
-    safe_name = filename.replace("/", "_")
-    return f"{user.tenant_id or 'no-tenant'}/{user.id}/{today:%Y/%m/%d}/{uuid.uuid4()}-{safe_name}"
+    """
+    Genereer de object key via de centrale helper:
+    uploads/{tenant_id}/{user_id}/{uuid}_{sanitized_filename}
+    """
+    tenant_id = user.tenant_id or "no-tenant"
+    user_or_lead_id = user.id
+    return build_upload_key(tenant_id, user_or_lead_id, filename)
+
 
 # ---------- Endpoint ----------
 @router.post("/presign", response_model=PresignResponse)
@@ -109,10 +128,16 @@ def create_presigned_put(
         "text/plain",
     }
     if body.content_type not in allowed_mimes:
-        raise HTTPException(status_code=400, detail=f"content_type not allowed: {body.content_type}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"content_type not allowed: {body.content_type}",
+        )
 
     if body.size_bytes > settings.MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=400, detail=f"file too large; max={settings.MAX_UPLOAD_BYTES} bytes")
+        raise HTTPException(
+            status_code=400,
+            detail=f"file too large; max={settings.MAX_UPLOAD_BYTES} bytes",
+        )
 
     object_key = build_object_key(current_user, body.filename)
     s3 = get_s3()

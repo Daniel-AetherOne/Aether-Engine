@@ -1,7 +1,21 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 from datetime import datetime
+from sqlalchemy import Column, Integer, String, DateTime
 import uuid
+
+from app.db.session import Base
+
+class QuoteORM(Base):
+    __tablename__ = "quotes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    s3_key = Column(String, nullable=True)
+    published_at = Column(DateTime, nullable=True)
+
+    # 👇 Nieuwe kolom voor Stap 6.4
+    public_url = Column(String, nullable=True)
+
 
 class QuoteItem(BaseModel):
     """Individual item in a quote"""

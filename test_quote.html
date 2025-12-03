@@ -1,0 +1,333 @@
+
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offerte - Test Klant - LevelAI Demo</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .company-logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+
+        .company-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .quote-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .customer-info, .quote-info {
+            flex: 1;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2563eb;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+        }
+
+        .work-description {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #2563eb;
+        }
+
+        .pricing-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .pricing-table th,
+        .pricing-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .pricing-table th {
+            background: #f1f5f9;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .total-row {
+            font-weight: bold;
+            background: #f8fafc;
+            border-top: 2px solid #2563eb;
+        }
+
+        .assumptions {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .assumptions ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .validity {
+            background: #dcfce7;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #16a34a;
+            margin-top: 20px;
+        }
+
+        .tenant-branding {
+            color: #2563eb;
+        }
+
+        .tenant-secondary {
+            color: #64748b;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+
+            .header {
+                border-bottom-color: #000;
+            }
+
+            .section-title {
+                color: #000;
+                border-bottom-color: #000;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+
+
+        <div class="company-logo tenant-branding">
+            Floora AI Demo
+        </div>
+        <div class="company-info">
+            <div>Professionele vloerrenovatie & onderhoud</div>
+            <div>Tel: +31 (0)6 12345678 | Email: info@levelaidemo.nl</div>
+            <div>KVK: 12345678 | BTW: NL123456789B01</div>
+        </div>
+    </div>
+
+    <div class="quote-details">
+        <div class="customer-info">
+            <div class="section-title">Klantgegevens</div>
+            <div class="info-item">
+                <div class="info-label">Naam:</div>
+                <div class="info-value">Test Klant</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Email:</div>
+                <div class="info-value">test@example.com</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Telefoon:</div>
+                <div class="info-value">0612345678</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Adres:</div>
+                <div class="info-value">Teststraat 1, 1234 AB Stad</div>
+            </div>
+        </div>
+
+        <div class="quote-info">
+            <div class="section-title">Offerte Details</div>
+            <div class="info-item">
+                <div class="info-label">Offertenummer:</div>
+                <div class="info-value">Q-TEST-001</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Datum:</div>
+                <div class="info-value">21-11-2025</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Geldig tot:</div>
+                <div class="info-value">21-12-2025</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Werkomschrijving</div>
+        <div class="work-description">
+            <div class="info-item">
+                <div class="info-label">Substraat:</div>
+                <div class="info-value">betonvloer</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Gedetecteerde problemen:</div>
+                <div class="info-value">
+
+
+                            • Haarscheuren<br>
+
+                            • Lichte oneffenheden<br>
+
+
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Oppervlakte:</div>
+                <div class="info-value">80 m²</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Prijsopbouw</div>
+        <table class="pricing-table">
+            <thead>
+                <tr>
+                    <th>Omschrijving</th>
+                    <th>Hoeveelheid</th>
+                    <th>Prijs per m²</th>
+                    <th>Subtotaal</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Basis behandeling betonvloer</td>
+                    <td>80 m²</td>
+                    <td>€25.00</td>
+                    <td>€2000.00</td>
+                </tr>
+
+
+                    <tr>
+                        <td>Meerwerk trap</td>
+                        <td>80 m²</td>
+                        <td>€10.00</td>
+                        <td>€800.00</td>
+                    </tr>
+
+
+                <tr class="total-row">
+                    <td colspan="3">Subtotaal (excl. BTW)</td>
+                    <td>€2000.00</td>
+                </tr>
+                <tr>
+                    <td colspan="3">BTW (21%)</td>
+                    <td>€588.00</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="3"><strong>Totaal (incl. BTW)</strong></td>
+                    <td><strong>€2588.00</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Doorlooptijd</div>
+        <div class="info-item">
+            <div class="info-value">Uitvoering binnen 2 weken na akkoord</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Aannames</div>
+        <div class="assumptions">
+            <ul>
+
+                    <li>Ruimte is leeg en goed bereikbaar</li>
+
+                    <li>Stroom en water zijn aanwezig</li>
+
+            </ul>
+        </div>
+    </div>
+
+    <div class="validity">
+        <strong>Geldigheid:</strong> Deze offerte is geldig tot 21-12-2025.
+        Na deze datum kunnen prijzen wijzigen.
+    </div>
+
+    <div class="footer">
+        <p>Voor vragen over deze offerte kunt u contact opnemen via:</p>
+        <p><strong>Email:</strong> info@levelaidemo.nl | <strong>Telefoon:</strong> +31 (0)6 12345678</p>
+        <p>Wij kijken ernaar uit om samen te werken!</p>
+
+
+        <p class="tenant-secondary" style="margin-top: 20px; font-size: 12px;">
+            Offerte gegenereerd door Floora AI Demo
+        </p>
+
+    </div>
+</body>
+</html>
+
+
+

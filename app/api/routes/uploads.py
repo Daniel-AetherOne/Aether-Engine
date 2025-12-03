@@ -8,12 +8,53 @@ from app.db.session import get_db
 from app.schemas.uploads import VerifyUploadIn, UploadRecordOut
 from app.services.upload_verification import verify_and_persist
 from app.models.upload_record import UploadRecord
+from app.services.s3_storage import create_presigned_post_for_image_upload
+
 
 from time import perf_counter
 from app.core.logging_config import logger
 from app.observability.metrics import verify_counter, latency_hist
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
+
+@router.post("/presign")
+def presign_image_upload(request: Request) -> dict:
+    """
+    Geef een presigned POST terug voor een image-upload (met type/size restricties).
+    """
+    trace_id = getattr(request.state, "trace_id", None)
+
+    try:
+        presigned = create_presigned_post_for_image_upload()
+
+        logger.info(
+            "presign_ok",
+            extra={
+                "extra": {
+                    "event": "presign",
+                    "result": "success",
+                    "trace_id": trace_id,
+                    "bucket": "levelai-prod-files",
+                    "prefix": "uploads/",
+                }
+            },
+        )
+
+        return presigned
+
+    except Exception as e:
+        logger.info(
+            "presign_error",
+            extra={
+                "extra": {
+                    "event": "presign",
+                    "result": "error",
+                    "trace_id": trace_id,
+                    "error": str(e),
+                }
+            },
+        )
+        raise HTTPException(status_code=500, detail="Could not create presigned upload URL")
 
 
 def _start_processing_background(upload_id: int) -> None:

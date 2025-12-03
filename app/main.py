@@ -3,6 +3,9 @@ import asyncio
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers import quotes_publish
+from app.routers import files
+from app.routers import quotes
 
 # Routers (alleen de nieuwe)
 from app.routers import uploads, intake
@@ -26,6 +29,7 @@ from app.core.rate_limit import limiter
 # ----------------------------------------------------
 app = FastAPI(title="LevelAI", version="0.1.0")
 
+app.include_router(quotes_publish.router)
 
 # ----------------------------------------------------
 # Middleware
@@ -55,7 +59,8 @@ app.add_middleware(
 app.include_router(uploads.router)        # /uploads/presign, /uploads/local, /uploads/verify (indien aanwezig)
 app.include_router(metrics_router)        # /metrics
 app.include_router(intake.router)         # /intake/upload, /intake/lead
-
+app.include_router(files.router)
+app.include_router(quotes.router)
 
 # ----------------------------------------------------
 # Health

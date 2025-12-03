@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Floora AI – Offerte dashboard</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 24px;
+            background: #f9fafb;
+        }
+        h1 {
+            margin-bottom: 16px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        th, td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+        th {
+            background: #f3f4f6;
+            text-align: left;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .btn {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #2563eb;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .btn:hover {
+            background: #eff6ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Floora AI – Offertes</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Lead ID</th>
+                <th>Naam</th>
+                <th>Email</th>
+                <th>Project</th>
+                <th>Offerte</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for lead in leads %}
+            <tr>
+                <td>{{ lead.id }}</td>
+                <td>{{ lead.name or "-" }}</td>
+                <td>{{ lead.email or "-" }}</td>
+                <td>
+                    {% if lead.notes %}
+                        {{ lead.notes[:60] }}{% if lead.notes|length > 60 %}...{% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <a
+                        href="{{ cloudfront_base }}/quotes/{{ lead.id }}/index.html"
+                        target="_blank"
+                        class="btn"
+                    >
+                        Bekijk offerte
+                    </a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

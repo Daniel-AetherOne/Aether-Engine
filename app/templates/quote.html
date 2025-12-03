@@ -2,335 +2,210 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
+    <title>Offerte #{{ lead.id }} - {{ lead.name }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offerte - {{ lead.name }} - {{ tenant.company_name if tenant else 'LevelAI' }}</title>
     <style>
-        @page {
-            size: A4;
-            margin: 2cm;
-        }
-        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 20px;
+        }
+        .wrap {
+            max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
-            background: white;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+            overflow: hidden;
         }
-        
         .header {
-            text-align: center;
-            border-bottom: 3px solid {{ tenant.primary_color if tenant else '#2563eb' }};
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding: 24px 32px;
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: #fff;
         }
-        
-        .company-logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: {{ tenant.primary_color if tenant else '#2563eb' }};
-            margin-bottom: 10px;
+        .header h1 {
+            margin: 0 0 6px 0;
+            font-size: 24px;
+            font-weight: 600;
         }
-        
-        .company-info {
+        .header p {
+            margin: 0;
+            opacity: 0.9;
             font-size: 14px;
-            color: #666;
         }
-        
-        .quote-details {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-        }
-        
-        .customer-info, .quote-info {
-            flex: 1;
-        }
-        
         .section {
-            margin-bottom: 25px;
-        }
-        
-        .section-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: {{ tenant.primary_color if tenant else '#2563eb' }};
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        
-        .info-item {
-            margin-bottom: 10px;
-        }
-        
-        .info-label {
-            font-weight: bold;
-            color: #555;
-            margin-bottom: 5px;
-        }
-        
-        .info-value {
-            color: #333;
-        }
-        
-        .work-description {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid {{ tenant.primary_color if tenant else '#2563eb' }};
-        }
-        
-        .pricing-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        
-        .pricing-table th,
-        .pricing-table td {
-            padding: 12px;
-            text-align: left;
+            padding: 24px 32px;
             border-bottom: 1px solid #e5e7eb;
         }
-        
-        .pricing-table th {
-            background: #f1f5f9;
-            font-weight: bold;
-            color: #374151;
+        .section:last-child {
+            border-bottom: none;
         }
-        
-        .total-row {
-            font-weight: bold;
-            background: #f8fafc;
-            border-top: 2px solid {{ tenant.primary_color if tenant else '#2563eb' }};
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #111827;
         }
-        
-        .assumptions {
-            background: #fef3c7;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #f59e0b;
-        }
-        
-        .assumptions ul {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            text-align: center;
+        .two-col {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
             font-size: 14px;
-            color: #666;
         }
-        
-        .validity {
-            background: #dcfce7;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #16a34a;
-            margin-top: 20px;
+        .two-col div {
+            flex: 1;
+            min-width: 200px;
         }
-        
-        .tenant-branding {
-            color: {{ tenant.primary_color if tenant else '#2563eb' }};
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
         }
-        
-        .tenant-secondary {
-            color: {{ tenant.secondary_color if tenant else '#64748b' }};
+        th, td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
         }
-        
-        @media print {
-            body {
-                padding: 0;
-                margin: 0;
-            }
-            
-            .header {
-                border-bottom-color: #000;
-            }
-            
-            .section-title {
-                color: #000;
-                border-bottom-color: #000;
-            }
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+        .right {
+            text-align: right;
+        }
+        .totals {
+            margin-top: 10px;
+            max-width: 300px;
+            margin-left: auto;
+            font-size: 14px;
+        }
+        .totals div {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+        .totals div.total {
+            font-weight: 700;
+            font-size: 16px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 6px;
+            padding-top: 8px;
+        }
+        .notes {
+            white-space: pre-line;
+            font-size: 13px;
+            color: #4b5563;
+        }
+        .photos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .photos img {
+            max-width: 180px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            object-fit: cover;
+        }
+        .footer {
+            padding: 16px 32px 24px;
+            font-size: 12px;
+            color: #6b7280;
+            background: #f9fafb;
         }
     </style>
 </head>
 <body>
+<div class="wrap">
     <div class="header">
-        {% if tenant and tenant.logo_url %}
-        <div class="company-logo">
-            <img src="{{ tenant.logo_url }}" alt="{{ tenant.company_name }} Logo" style="max-height: 60px; max-width: 200px;">
-        </div>
-        {% endif %}
-        
-        <div class="company-logo tenant-branding">
-            {{ tenant.company_name if tenant else 'LevelAI' }}
-        </div>
-        <div class="company-info">
-            <div>Professionele vloerrenovatie & onderhoud</div>
-            <div>Tel: +31 (0)6 12345678 | Email: info@{{ tenant.company_name.lower().replace(' ', '').replace('.', '').replace('bv', '').replace('ltd', '') if tenant else 'levelai' }}.nl</div>
-            <div>KVK: 12345678 | BTW: NL123456789B01</div>
-        </div>
+        <h1>Offerte voor {{ lead.name }}</h1>
+        <p>Lead #{{ lead.id }}{% if tenant_id %} · Tenant: {{ tenant_id }}{% endif %}</p>
     </div>
 
-    <div class="quote-details">
-        <div class="customer-info">
-            <div class="section-title">Klantgegevens</div>
-            <div class="info-item">
-                <div class="info-label">Naam:</div>
-                <div class="info-value">{{ lead.name }}</div>
+    <div class="section">
+        <div class="section-title">Klantgegevens</div>
+        <div class="two-col">
+            <div>
+                <strong>Naam</strong><br>
+                {{ lead.name }}<br><br>
+                <strong>E-mail</strong><br>
+                {{ lead.email }}<br><br>
+                <strong>Telefoon</strong><br>
+                {{ lead.phone }}
             </div>
-            <div class="info-item">
-                <div class="info-label">Email:</div>
-                <div class="info-value">{{ lead.email }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Telefoon:</div>
-                <div class="info-value">{{ lead.phone }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Adres:</div>
-                <div class="info-value">{{ lead.address }}</div>
-            </div>
-        </div>
-        
-        <div class="quote-info">
-            <div class="section-title">Offerte Details</div>
-            <div class="info-item">
-                <div class="info-label">Offertenummer:</div>
-                <div class="info-value">{{ quote_id }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Datum:</div>
-                <div class="info-value">{{ current_date }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Geldig tot:</div>
-                <div class="info-value">{{ validity_date }}</div>
+            <div>
+                {% if quote.items and quote.items[0].quantity_m2 %}
+                    <strong>Oppervlakte</strong><br>
+                    {{ quote.items[0].quantity_m2 }} m²<br><br>
+                {% endif %}
+                <strong>Offertedatum</strong><br>
+                {{ (quote.created_at if quote.created_at is defined else "") }}
             </div>
         </div>
     </div>
 
     <div class="section">
-        <div class="section-title">Werkomschrijving</div>
-        <div class="work-description">
-            <div class="info-item">
-                <div class="info-label">Substraat:</div>
-                <div class="info-value">{{ prediction.substrate }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Gedetecteerde problemen:</div>
-                <div class="info-value">
-                    {% if prediction.issues %}
-                        {% for issue in prediction.issues %}
-                            • {{ issue }}<br>
-                        {% endfor %}
-                    {% else %}
-                        Geen problemen gedetecteerd
-                    {% endif %}
-                </div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Oppervlakte:</div>
-                <div class="info-value">{{ lead.square_meters }} m²</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="section-title">Prijsopbouw</div>
-        <table class="pricing-table">
+        <div class="section-title">Samenvatting werkzaamheden</div>
+        <table>
             <thead>
-                <tr>
-                    <th>Omschrijving</th>
-                    <th>Hoeveelheid</th>
-                    <th>Prijs per m²</th>
-                    <th>Subtotaal</th>
-                </tr>
+            <tr>
+                <th>Omschrijving</th>
+                <th class="right">m²</th>
+                <th class="right">Prijs/m²</th>
+                <th class="right">Totaal</th>
+            </tr>
             </thead>
             <tbody>
+            {% for item in quote.items %}
                 <tr>
-                    <td>Basis behandeling {{ prediction.substrate }}</td>
-                    <td>{{ lead.square_meters }} m²</td>
-                    <td>€{{ "%.2f"|format(pricing.base_per_m2) }}</td>
-                    <td>€{{ "%.2f"|format(pricing.subtotal) }}</td>
+                    <td>{{ item.description }}</td>
+                    <td class="right">{{ "%.2f"|format(item.quantity_m2) }}</td>
+                    <td class="right">€ {{ "%.2f"|format(item.unit_price) }}</td>
+                    <td class="right">€ {{ "%.2f"|format(item.total_price) }}</td>
                 </tr>
-                {% if pricing.surcharges %}
-                    {% for surcharge in pricing.surcharges %}
-                    <tr>
-                        <td>{{ surcharge.description }}</td>
-                        <td>{{ lead.square_meters }} m²</td>
-                        <td>€{{ "%.2f"|format(surcharge.amount) }}</td>
-                        <td>€{{ "%.2f"|format(surcharge.total) }}</td>
-                    </tr>
-                    {% endfor %}
-                {% endif %}
-                <tr class="total-row">
-                    <td colspan="3">Subtotaal (excl. BTW)</td>
-                    <td>€{{ "%.2f"|format(pricing.subtotal) }}</td>
-                </tr>
-                <tr>
-                    <td colspan="3">BTW (21%)</td>
-                    <td>€{{ "%.2f"|format(pricing.vat_amount) }}</td>
-                </tr>
-                <tr class="total-row">
-                    <td colspan="3"><strong>Totaal (incl. BTW)</strong></td>
-                    <td><strong>€{{ "%.2f"|format(pricing.total) }}</strong></td>
-                </tr>
+            {% endfor %}
             </tbody>
         </table>
-    </div>
 
-    <div class="section">
-        <div class="section-title">Doorlooptijd</div>
-        <div class="info-item">
-            <div class="info-value">{{ pricing.doorlooptijd }}</div>
+        <div class="totals">
+            <div>
+                <span>Subtotaal</span>
+                <span>€ {{ "%.2f"|format(quote.subtotal) }}</span>
+            </div>
+            <div>
+                <span>BTW</span>
+                <span>€ {{ "%.2f"|format(quote.vat) }}</span>
+            </div>
+            <div class="total">
+                <span>Totaal (incl. BTW)</span>
+                <span>€ {{ "%.2f"|format(quote.total) }}</span>
+            </div>
         </div>
     </div>
 
+    {% if files %}
     <div class="section">
-        <div class="section-title">Aannames</div>
-        <div class="assumptions">
-            <ul>
-                {% for assumption in pricing.aannames %}
-                    <li>{{ assumption }}</li>
-                {% endfor %}
-            </ul>
+        <div class="section-title">Bijgevoegde foto&apos;s</div>
+        <div class="photos">
+            {% for f in files %}
+                <img src="{{ file_base_url }}{{ f.s3_key }}" alt="Foto lead {{ lead.id }}">
+            {% endfor %}
         </div>
     </div>
+    {% endif %}
 
-    <div class="validity">
-        <strong>Geldigheid:</strong> Deze offerte is geldig tot {{ validity_date }}. 
-        Na deze datum kunnen prijzen wijzigen.
+    <div class="section">
+        <div class="section-title">Toelichting & aannames</div>
+        <div class="notes">
+            {{ quote.notes }}
+        </div>
     </div>
 
     <div class="footer">
-        <p>Voor vragen over deze offerte kunt u contact opnemen via:</p>
-        <p><strong>Email:</strong> info@{{ tenant.company_name.lower().replace(' ', '').replace('.', '').replace('bv', '').replace('ltd', '') if tenant else 'levelai' }}.nl | <strong>Telefoon:</strong> +31 (0)6 12345678</p>
-        <p>Wij kijken ernaar uit om samen te werken!</p>
-        
-        {% if tenant %}
-        <p class="tenant-secondary" style="margin-top: 20px; font-size: 12px;">
-            Offerte gegenereerd door {{ tenant.company_name }}
-        </p>
-        {% endif %}
+        Deze offerte is gebaseerd op de door u aangeleverde informatie en foto&apos;s.
+        Eventuele grote afwijkingen op locatie kunnen invloed hebben op de uiteindelijke prijs.
     </div>
+</div>
 </body>
 </html>
-
-
-
-

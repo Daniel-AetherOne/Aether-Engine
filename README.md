@@ -53,5 +53,3 @@ source venv/bin/activate  # macOS/Linux
 pip install -e ".[dev]"
 copy env.example .env  # Voeg eigen variabelen toe
 docker-compose up -d postgres redis
-
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

@@ -3,6 +3,8 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
+from app.core.settings import settings
+
 DATABASE_URL = "sqlite:///./levelai.db"  # of jouw URL
 
 engine = create_engine(

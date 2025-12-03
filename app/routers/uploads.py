@@ -18,6 +18,9 @@ from app.services.storage import (
     ALLOWED_CONTENT_TYPES,
 )
 
+# ✅ gebruik dezelfde filename-sanitizer als de S3 key helpers
+from app.services.s3_keys import _safe_filename
+
 # -----------------------------------------------------------------------------
 # Router + globale storage instance
 # -----------------------------------------------------------------------------
@@ -40,12 +43,6 @@ S3_BUCKET = os.getenv("S3_BUCKET")
 S3_REGION = os.getenv("S3_REGION", "eu-west-1")
 
 
-def _safe_filename(name: str) -> str:
-    """Maak bestandsnaam URL/FS-safe."""
-    name = PurePath(name).name  # strip pad
-    return "".join(ch if ch.isalnum() or ch in (".", "-", "_") else "_" for ch in name)
-
-
 def _guess_content_type(filename: str) -> str:
     ctype, _ = mimetypes.guess_type(filename)
     return ctype or "application/octet-stream"
@@ -53,11 +50,13 @@ def _guess_content_type(filename: str) -> str:
 
 def _make_temp_key(filename: str) -> str:
     """
-    Genereer een tenant-LOZE tijdelijke key onder TEMP_PREFIX.
+    Genereer een tijdelijke key onder TEMP_PREFIX (zonder tenant).
     Voorbeeld: 'uploads/2025-11-01/550e8400.../TEST.jpg'
+    Let op: de tenant-prefix wordt ERVOOR geplakt bij presign.
     """
     today = datetime.utcnow().date().isoformat()
-    return f"{TEMP_PREFIX}{today}/{uuid4().hex}/{_safe_filename(filename)}"
+    safe_name = _safe_filename(PurePath(filename).name)
+    return f"{TEMP_PREFIX}{today}/{uuid4().hex}/{safe_name}"
 
 
 def _validate_content_type(ctype: str) -> None:
