@@ -1,27 +1,20 @@
 # app/main.py
-import asyncio
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import quotes_publish
-from app.routers import files
-from app.routers import quotes
 
-# Routers (alleen de nieuwe)
-from app.routers import uploads, intake
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
-# DB & modellen
 from app.db import Base, engine
 from app import models  # zorgt dat SQLAlchemy modellen geregistreerd zijn
 
-# Observability / metrics
-from app.observability.metrics import router as metrics_router
-
-# Middleware (request-id + rate limit)
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 from app.middleware.request_id import RequestIdMiddleware
 from app.core.rate_limit import limiter
+
+# Routers
+from app.routers import uploads, intake, quotes, files
+from app.observability.metrics import router as metrics_router
 
 
 # ----------------------------------------------------
@@ -29,18 +22,19 @@ from app.core.rate_limit import limiter
 # ----------------------------------------------------
 app = FastAPI(title="LevelAI", version="0.1.0")
 
-app.include_router(quotes_publish.router)
 
 # ----------------------------------------------------
 # Middleware
 # ----------------------------------------------------
-app.add_middleware(RequestIdMiddleware)   # unieke request-id header + context
-app.state.limiter = limiter               # deel dezelfde limiter- instantie
-app.add_middleware(SlowAPIMiddleware)     # rate-limiting
+app.add_middleware(RequestIdMiddleware)  # unieke request-id header + context
+app.state.limiter = limiter  # deel dezelfde limiter-instantie
+app.add_middleware(SlowAPIMiddleware)  # rate-limiting
+
 
 @app.exception_handler(RateLimitExceeded)
 def ratelimit_handler(request: Request, exc: RateLimitExceeded):
     return PlainTextResponse(str(exc), status_code=429)
+
 
 # CORS (lokaal relaxed; in productie strakker maken)
 app.add_middleware(
@@ -56,11 +50,12 @@ app.add_middleware(
 # Routers
 # ----------------------------------------------------
 # ⚠️ GEEN imports/routers uit app.api.routes.* meer
-app.include_router(uploads.router)        # /uploads/presign, /uploads/local, /uploads/verify (indien aanwezig)
-app.include_router(metrics_router)        # /metrics
-app.include_router(intake.router)         # /intake/upload, /intake/lead
-app.include_router(files.router)
-app.include_router(quotes.router)
+app.include_router(uploads.router)  # /uploads/presign, /uploads/local, ...
+app.include_router(quotes.router)  # /quotes/publish, /quotes/dashboard
+app.include_router(files.router)  # /files/...
+app.include_router(intake.router)  # /intake/upload, /intake/lead
+app.include_router(metrics_router)  # /metrics
+
 
 # ----------------------------------------------------
 # Health
