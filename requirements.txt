@@ -3,12 +3,13 @@ fastapi
 uvicorn[standard]
 gunicorn
 
-prometheus-client>=0.20.0
+# Metrics / Prometheus
+prometheus-client==0.20.0
+prometheus-fastapi-instrumentator==7.0.0
 
 # Config en settings
 pydantic-settings
 python-dotenv
-pip install prometheus-client==0.20.0 prometheus-fastapi-instrumentator==7.0.0
 
 # Templates en upload handling
 jinja2
@@ -38,3 +39,6 @@ passlib[bcrypt]
 slowapi
 redis
 loguru
+
+# Logging (NIEUW)
+structlog
