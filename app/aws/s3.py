@@ -1,6 +1,6 @@
 # s3.py (vervang je ENV/client blok + update helpers)
 
-import os
+from app.core.settings import settings
 import mimetypes
 import uuid
 from typing import Dict, Optional
@@ -21,12 +21,10 @@ CLOUDFRONT_DOMAIN = (settings.CLOUDFRONT_DOMAIN or "").rstrip("/")
 USE_LOCAL_STORAGE = settings.USE_LOCAL_STORAGE
 LOCAL_STORAGE_ROOT = settings.LOCAL_STORAGE_ROOT
 
-S3_UPLOAD_MAX_MB = int(os.getenv("S3_UPLOAD_MAX_MB", "25"))
-S3_UPLOAD_ALLOWED = set(
-    t.strip()
-    for t in os.getenv("S3_UPLOAD_ALLOWED_TYPES", "").split(",")
-    if t.strip()
-)
+S3_UPLOAD_MAX_MB = settings.S3_UPLOAD_MAX_MB
+ALLOWED_TYPES = [
+    t.strip() for t in settings.S3_UPLOAD_ALLOWED_TYPES.split(",") if t.strip()
+]
 
 # Alleen eisen dat S3 vars bestaan als we NIET in lokale modus zitten
 if not USE_LOCAL_STORAGE and not S3_BUCKET:
@@ -41,14 +39,19 @@ if not USE_LOCAL_STORAGE:
         config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}),
     )
 
+
 # --- helpers ---
 def s3_key_join(*parts: str) -> str:
     """Combineer pathdelen veilig tot een S3 key."""
     return "/".join(p.strip("/").replace("..", "") for p in parts if p)
 
-def guess_content_type(filename: str, fallback: str = "application/octet-stream") -> str:
+
+def guess_content_type(
+    filename: str, fallback: str = "application/octet-stream"
+) -> str:
     ctype, _ = mimetypes.guess_type(filename)
     return ctype or fallback
+
 
 def random_name(prefix: str = "", ext: Optional[str] = None) -> str:
     rid = uuid.uuid4().hex
@@ -56,11 +59,13 @@ def random_name(prefix: str = "", ext: Optional[str] = None) -> str:
         ext = f".{ext}"
     return f"{prefix}{rid}{ext or ''}"
 
+
 # --- presigned POST (upload vanaf browser) (ongewijzigd bij jou) ---
 # create_presigned_post(...)
 
 # --- presigned GET (tijdelijke download link) (ongewijzigd bij jou) ---
 # create_presigned_get(...)
+
 
 # --- directe upload vanuit server ---
 def put_bytes(
@@ -95,6 +100,7 @@ def put_bytes(
 
     return public_http_url(key)
 
+
 def object_exists(key: str) -> bool:
     if USE_LOCAL_STORAGE:
         return (Path(LOCAL_STORAGE_ROOT) / key).exists()
@@ -107,6 +113,7 @@ def object_exists(key: str) -> bool:
         if code in ("404", "NotFound"):
             return False
         raise
+
 
 def delete_object(key: str):
     if USE_LOCAL_STORAGE:
@@ -124,6 +131,7 @@ def delete_object(key: str):
     except (BotoCoreError, ClientError) as e:
         raise RuntimeError(f"Verwijderen uit S3 mislukt: {e}")
 
+
 def public_http_url(key: str) -> str:
     """
     Geef een nette publieke URL.
@@ -131,7 +139,9 @@ def public_http_url(key: str) -> str:
     - Anders: directe S3-URL
     """
     if CLOUDFRONT_DOMAIN:
-        if CLOUDFRONT_DOMAIN.startswith("http://") or CLOUDFRONT_DOMAIN.startswith("https://"):
+        if CLOUDFRONT_DOMAIN.startswith("http://") or CLOUDFRONT_DOMAIN.startswith(
+            "https://"
+        ):
             return f"{CLOUDFRONT_DOMAIN}/{key}"
         return f"https://{CLOUDFRONT_DOMAIN}/{key}"
     return f"https://{S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{key}"

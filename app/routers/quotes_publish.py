@@ -19,6 +19,18 @@ from app.services.s3_storage import (
     create_presigned_get,
 )
 
+
+put_bytes(
+    key, data, content_type="text/html; charset=utf-8", cache=cache_control, public=True
+)
+put_bytes(
+    version_key,
+    data,
+    content_type="text/html; charset=utf-8",
+    cache=cache_control,
+    public=True,
+)
+
 # Logger voor quotes
 logger = logging.getLogger("levelai.quotes")
 

@@ -12,9 +12,11 @@ env:
   SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
   REGION: ${{ secrets.GCP_REGION }}
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GAR_LOCATION: ${{ secrets.GAR_LOCATION }}
-  IMAGE_SHA_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/levelai/api:${{ github.sha }}
-  IMAGE_LATEST_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/levelai/api:latest
+  GAR_LOCATION: ${{ secrets.GAR_LOCATION }} # moet bv europe-west4 zijn
+  GAR_REPO: ${{ secrets.GAR_REPO }}         # bv levelai
+  IMAGE_NAME: api                           # image naam binnen repo (mag je aanpassen)
+  IMAGE_SHA_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GAR_REPO }}/api:${{ github.sha }}
+  IMAGE_LATEST_TAG: ${{ secrets.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GAR_REPO }}/api:latest
 
 jobs:
   deploy:
@@ -24,6 +26,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ---------- Python tests ----------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Unit tests
+        run: |
+          pytest -q
+
+      # ---------- Auth / gcloud ----------
       - name: Auth to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -37,11 +55,12 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Configure Docker auth for Artifact Registry
-        run: gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev -q
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # ---------- Build & Push ----------
       - name: Build & Push image
         uses: docker/build-push-action@v6
         with:
@@ -52,11 +71,13 @@ jobs:
             ${{ env.IMAGE_SHA_TAG }}
             ${{ env.IMAGE_LATEST_TAG }}
 
+      # ---------- Deploy (no traffic) ----------
       - name: Deploy to Cloud Run (no-traffic)
         run: |
           gcloud run deploy "$SERVICE" \
             --image "${{ env.IMAGE_SHA_TAG }}" \
             --region "$REGION" \
+            --project "$PROJECT_ID" \
             --platform managed \
             --no-traffic \
             --allow-unauthenticated \
@@ -67,37 +88,55 @@ jobs:
         if: always()
         run: |
           echo "Image tag: ${{ env.IMAGE_SHA_TAG }}"
-          gcloud run services describe "$SERVICE" --region "$REGION" \
+          gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" \
             --format='value(status.url,status.latestCreatedRevisionName,status.conditions)'
 
       - name: Show recent revision logs (last 200 lines)
         if: always()
         run: |
-          REV=$(gcloud run services describe "$SERVICE" --region "$REGION" \
+          REV=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" \
             --format='value(status.latestCreatedRevisionName)')
           echo "Latest revision: $REV"
           gcloud logging read \
             'resource.type="cloud_run_revision" AND resource.labels.revision_name="'$REV'"' \
+            --project "$PROJECT_ID" \
             --limit=200 --order=desc --format='value(textPayload)'
 
       - name: Describe latest revision (conditions)
         if: always()
         run: |
-          REV=$(gcloud run services describe "$SERVICE" --region "$REGION" \
+          REV=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" \
             --format='value(status.latestCreatedRevisionName)')
-          gcloud run revisions describe "$REV" --region "$REGION"
+          gcloud run revisions describe "$REV" --region "$REGION" --project "$PROJECT_ID"
 
-      - name: Health check
+      # ---------- Smoke tests ----------
+      - name: Smoke test /health and /metrics (retry)
         run: |
-          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --format='value(status.url)')
           echo "Service URL: $URL"
-          for i in {1..10}; do
-            if curl -fsSL "${URL}/health"; then exit 0; fi
-            echo "Retry $i/10..."; sleep 3
-          done
-          echo "Health failed"; exit 1
 
+          echo "Checking /health ..."
+          for i in {1..10}; do
+            if curl -fsSL "${URL}/health" | grep -Eo '"status"\s*:\s*"ok"' >/dev/null; then
+              echo "/health OK"; break
+            fi
+            echo "Retry /health $i/10..."; sleep 3
+            if [ "$i" -eq 10 ]; then echo "/health failed"; exit 1; fi
+          done
+
+          echo "Checking /metrics ..."
+          for i in {1..10}; do
+            if curl -fsSL "${URL}/metrics" >/dev/null; then
+              echo "/metrics OK"; break
+            fi
+            echo "Retry /metrics $i/10..."; sleep 3
+            if [ "$i" -eq 10 ]; then echo "/metrics failed"; exit 1; fi
+          done
+
+      # ---------- Shift traffic only if smoke passed ----------
       - name: Shift all traffic to latest revision
         run: |
-          REV=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.latestCreatedRevisionName)')
-          gcloud run services update-traffic "$SERVICE" --region "$REGION" --to-revisions "$REV=100"
+          REV=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" \
+            --format='value(status.latestCreatedRevisionName)')
+          gcloud run services update-traffic "$SERVICE" --region "$REGION" --project "$PROJECT_ID" \
+            --to-revisions "$REV=100"

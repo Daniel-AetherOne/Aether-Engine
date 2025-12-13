@@ -1,77 +1,18 @@
 # app/routers/presigned_upload.py
 from __future__ import annotations
-from pathlib import Path
-from typing import Optional
-import uuid
-import datetime as dt  # (nog gebruikt in logs / kan weg als je wilt)
 
-import boto3
+from typing import Optional, Dict
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, constr
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.services.s3_keys import build_upload_key
+from app.core.settings import settings
+from app.services.s3 import (
+    _get_s3_client,
+    generate_intake_upload_key,
+)
 
-print(">> LOADING presigned_upload FROM:", __file__)
-
-# ---------- Settings (LAZY) ----------
-ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
-
-
-class Settings(BaseSettings):
-    AWS_REGION: str = "eu-west-1"
-    AWS_ACCESS_KEY_ID: Optional[str] = None
-    AWS_SECRET_ACCESS_KEY: Optional[str] = None
-    S3_BUCKET: Optional[str] = None
-    S3_PUBLIC_BASE_URL: Optional[str] = None
-    ENV: str = "prod"
-    PRESIGN_EXPIRES_SECONDS: int = 600
-    MAX_UPLOAD_BYTES: int = 25 * 1024 * 1024
-
-    model_config = SettingsConfigDict(
-        env_file=str(ENV_PATH),
-        env_ignore_empty=True,
-        extra="ignore",
-    )
-
-
-_settings_cache: Optional[Settings] = None
-
-
-def get_settings() -> Settings:
-    global _settings_cache
-    if _settings_cache is None:
-        _settings_cache = Settings()
-    return _settings_cache
-
-
-_s3 = None
-
-
-def get_s3():
-    """Alleen aanmaken als we 'm echt nodig hebben."""
-    global _s3
-    if _s3 is not None:
-        return _s3
-    s = get_settings()
-    if not (s.AWS_ACCESS_KEY_ID and s.AWS_SECRET_ACCESS_KEY and s.S3_BUCKET):
-        raise HTTPException(status_code=500, detail="S3 is niet geconfigureerd")
-    _s3 = boto3.client(
-        "s3",
-        region_name=s.AWS_REGION,
-        aws_access_key_id=s.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=s.AWS_SECRET_ACCESS_KEY,
-    )
-    return _s3
-
-
-# ---------- Router ----------
 router = APIRouter(prefix="/uploads", tags=["uploads"])
-
-
-@router.get("/ping")
-def ping():
-    return {"ok": True}
 
 
 # ---------- Mock-auth dependency ----------
@@ -82,7 +23,7 @@ class User(BaseModel):
 
 def get_current_user() -> User:
     # TODO: vervang later door echte auth/JWT
-    return User(id="test-user", tenant_id="demo-tenant")
+    return User(id="test-user", tenant_id="default")
 
 
 # ---------- Body + Response Models ----------
@@ -95,37 +36,29 @@ class PresignRequest(BaseModel):
 class PresignResponse(BaseModel):
     method: str = "PUT"
     upload_url: str
-    headers: dict
+    headers: Dict[str, str]
     key: str
     expires_in: int
-    public_url: str | None = None
+    public_url: Optional[str] = None
 
 
-# ---------- Helper ----------
-def build_object_key(user: User, filename: str) -> str:
-    """
-    Genereer de object key via de centrale helper:
-    uploads/{tenant_id}/{user_id}/{uuid}_{sanitized_filename}
-    """
-    tenant_id = user.tenant_id or "no-tenant"
-    user_or_lead_id = user.id
-    return build_upload_key(tenant_id, user_or_lead_id, filename)
+# ---------- Endpoints ----------
+@router.get("/ping")
+def ping():
+    return {"ok": True}
 
 
-# ---------- Endpoint ----------
 @router.post("/presign", response_model=PresignResponse)
 def create_presigned_put(
     body: PresignRequest,
     current_user: User = Depends(get_current_user),
 ):
-    settings = get_settings()
-
+    # 1) Validaties
     allowed_mimes = {
         "image/jpeg",
         "image/png",
         "image/webp",
         "application/pdf",
-        "text/plain",
     }
     if body.content_type not in allowed_mimes:
         raise HTTPException(
@@ -133,26 +66,49 @@ def create_presigned_put(
             detail=f"content_type not allowed: {body.content_type}",
         )
 
-    if body.size_bytes > settings.MAX_UPLOAD_BYTES:
+    max_bytes = settings.MAX_UPLOAD_MB * 1024 * 1024
+    if body.size_bytes > max_bytes:
         raise HTTPException(
             status_code=400,
-            detail=f"file too large; max={settings.MAX_UPLOAD_BYTES} bytes",
+            detail=f"file too large; max={max_bytes} bytes",
         )
 
-    object_key = build_object_key(current_user, body.filename)
-    s3 = get_s3()
-    expires = settings.PRESIGN_EXPIRES_SECONDS
-
-    url = s3.generate_presigned_url(
-        ClientMethod="put_object",
-        Params={
-            "Bucket": settings.S3_BUCKET,
-            "Key": object_key,
-            "ContentType": body.content_type,
-        },
-        ExpiresIn=expires,
-        HttpMethod="PUT",
+    bucket = (
+        getattr(settings, "s3_bucket", None)
+        or getattr(settings, "AWS_S3_BUCKET_NAME", None)
+        or getattr(settings, "S3_BUCKET", None)
     )
+    if not bucket:
+        raise HTTPException(status_code=500, detail="S3 bucket ontbreekt in settings")
+
+    # 2) Key bouwen
+    object_key = generate_intake_upload_key(
+        current_user.tenant_id or "default", body.filename
+    )
+
+    # 3) S3 client + presigned URL (via _get_s3_client uit s3.py)
+    try:
+        s3 = _get_s3_client()
+    except RuntimeError as e:
+        # Dit komt rechtstreeks uit s3.py als credentials/bucket ontbreken
+        raise HTTPException(status_code=500, detail=str(e))
+
+    expires = 600  # seconden
+
+    try:
+        url = s3.generate_presigned_url(
+            ClientMethod="put_object",
+            Params={
+                "Bucket": bucket,
+                "Key": object_key,
+                "ContentType": body.content_type,
+            },
+            ExpiresIn=expires,
+            HttpMethod="PUT",
+        )
+    except Exception as e:
+        # Hier zie je nu de rauwe boto3 error terug
+        raise HTTPException(status_code=500, detail=f"presign_failed: {e}")
 
     required_headers = {
         "Content-Type": body.content_type,
@@ -160,7 +116,7 @@ def create_presigned_put(
 
     public_url = (
         f"{settings.S3_PUBLIC_BASE_URL.rstrip('/')}/{object_key}"
-        if settings.S3_PUBLIC_BASE_URL and object_key
+        if getattr(settings, "S3_PUBLIC_BASE_URL", None)
         else None
     )
 

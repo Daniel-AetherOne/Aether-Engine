@@ -18,13 +18,9 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 def get_s3_client():
-    """
-    S3 client die regio uit settings gebruikt.
-    Credentials haalt boto3 uit ~/.aws/credentials.
-    """
     return boto3.client(
         "s3",
-        region_name=settings.S3_REGION,
+        region_name=settings.AWS_REGION,
     )
 
 
@@ -36,18 +32,33 @@ def _get_cloudfront_base_url() -> str:
     - CLOUDFRONT_DOMAIN="d1bjdnx9r99951.cloudfront.net"
     - of CLOUDFRONT_DOMAIN="https://d1bjdnx9r99951.cloudfront.net"
     """
-    raw = (settings.CLOUDFRONT_DOMAIN or "").strip()
+    raw = (getattr(settings, "CLOUDFRONT_DOMAIN", None) or "").strip()
     if not raw:
         raise HTTPException(
             status_code=500, detail="CLOUDFRONT_DOMAIN is niet ingesteld"
         )
 
     if raw.startswith("http://") or raw.startswith("https://"):
-        base = raw.rstrip("/")
-    else:
-        base = "https://" + raw.rstrip("/")
+        return raw.rstrip("/")
+    return "https://" + raw.rstrip("/")
 
-    return base  # bv. "https://d1bjdnx9r99951.cloudfront.net"
+
+def _s3_base_url() -> str:
+    """
+    Virtual-hosted style S3 URL.
+    """
+    return f"https://{settings.S3_BUCKET}.s3.{settings.S3_REGION}.amazonaws.com"
+
+
+def _public_base_url() -> str:
+    """
+    Kies base URL voor publieke assets:
+    - CloudFront als aanwezig
+    - anders directe S3 base URL
+    """
+    if getattr(settings, "CLOUDFRONT_DOMAIN", None):
+        return _get_cloudfront_base_url()
+    return _s3_base_url()
 
 
 @router.post("/publish/{lead_id}")
@@ -57,8 +68,8 @@ def publish_quote(
     db: Session = Depends(get_db),
 ):
     """
-    Publiceer een offerte als HTML op S3 + CloudFront
-    én stuur automatisch een e-mail naar de klant.
+    Publiceer een offerte als HTML op S3 (+ evt CloudFront)
+    en stuur optioneel een e-mail naar de klant.
     """
     # 1) Lead ophalen
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
@@ -93,8 +104,9 @@ def publish_quote(
     # 4) HTML renderen via Jinja template
     template = templates.get_template("quote.html")
 
-    cloudfront_base = _get_cloudfront_base_url()
-    file_base_url = cloudfront_base + "/"  # voor foto's
+    # Base URL voor images/assets in de offerte
+    public_base = _public_base_url()
+    file_base_url = public_base + "/"  # voor foto's, bv. {base}/uploads/...
 
     html = template.render(
         lead=lead,
@@ -104,9 +116,11 @@ def publish_quote(
         tenant_id=getattr(lead, "tenant_id", None),
     )
 
-    # 5) Uploaden naar S3
+    # 5) Uploaden naar S3 (publiek voor stap 8.2)
     s3 = get_s3_client()
-    key = f"quotes/{lead_id}/index.html"
+
+    # Checklist-friendly key:
+    key = f"quotes/{lead_id}/quote.html"
 
     try:
         s3.put_object(
@@ -121,21 +135,25 @@ def publish_quote(
             detail=f"Upload naar S3 mislukt: {e}",
         )
 
-    # 6) Public URL bouwen
-    public_url = f"{cloudfront_base}/{key}"
+    # 6) Public URL bouwen (CloudFront als aanwezig, anders S3)
+    public_url = f"{public_base}/{key}"
 
-    # 7) E-mail versturen als background task
-    background_tasks.add_task(
-        send_quote_email,
-        to_email=lead.email,
-        to_name=lead.name,
-        public_url=public_url,
-        lead_id=lead.id,
-    )
+    # 7) E-mail versturen als background task (kan falen zonder de response te breken)
+    # Als je dit tijdelijk wil uitzetten: comment deze block.
+    if getattr(lead, "email", None):
+        background_tasks.add_task(
+            send_quote_email,
+            to_email=lead.email,
+            to_name=getattr(lead, "name", "") or "",
+            public_url=public_url,
+            lead_id=lead.id,
+        )
 
     return {
         "lead_id": lead_id,
+        "key": key,
         "public_url": public_url,
+        "via": "cloudfront" if getattr(settings, "CLOUDFRONT_DOMAIN", None) else "s3",
     }
 
 
@@ -143,16 +161,17 @@ def publish_quote(
 def quotes_dashboard(request: Request, db: Session = Depends(get_db)):
     """
     Simpel intern dashboard met leads + link naar offerte (public_url).
+    Werkt ook zonder CloudFront.
     """
     leads = db.query(Lead).order_by(Lead.id.desc()).limit(50).all()
 
-    cloudfront_base = _get_cloudfront_base_url()
+    public_base = _public_base_url()
 
     return templates.TemplateResponse(
         "quotes_dashboard.html",
         {
             "request": request,
             "leads": leads,
-            "cloudfront_base": cloudfront_base,
+            "public_base": public_base,
         },
     )

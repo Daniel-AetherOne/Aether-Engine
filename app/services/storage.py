@@ -1,5 +1,5 @@
 # app/services/storage.py
-import os
+from app.core.settings import settings
 import boto3
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -15,13 +15,15 @@ logger = logging.getLogger(__name__)
 # =========================
 # Config / Policies
 # =========================
-TEMP_PREFIX = os.getenv("S3_TEMP_PREFIX", "uploads/")   # tijdelijke uploads (presigned)
-FINAL_PREFIX = os.getenv("S3_FINAL_PREFIX", "leads/")   # definitieve opslag per lead
-MAX_BYTES = int(os.getenv("UPLOAD_MAX_BYTES", str(25 * 1024 * 1024)))  # 25MB default
+TEMP_PREFIX = settings.S3_TEMP_PREFIX
+FINAL_PREFIX = settings.S3_FINAL_PREFIX
+MAX_BYTES = settings.UPLOAD_MAX_BYTES
 
 # Content-typen whitelist (kan via env uitgebreid worden, CSV)
 _default_types = {"image/jpeg", "image/png", "application/pdf"}
-_env_types = {t.strip() for t in os.getenv("UPLOAD_ALLOWED_CONTENT_TYPES", "").split(",") if t.strip()}
+_env_types = {
+    t.strip() for t in settings.UPLOAD_ALLOWED_CONTENT_TYPES.split(",") if t.strip()
+}
 ALLOWED_CONTENT_TYPES = _default_types.union(_env_types)
 
 
@@ -68,7 +70,7 @@ class LocalStorage(Storage):
     def save_bytes(self, tenant_id: str, key: str, data: bytes) -> str:
         file_path = self._full_path(tenant_id, key)
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             f.write(data)
         logger.info(f"Bestand opgeslagen: {file_path}")
         return key
@@ -101,7 +103,10 @@ class LocalStorage(Storage):
             st = p.stat()
             size = st[stat.ST_SIZE]
             ctype, _ = mimetypes.guess_type(str(p))
-            return {"ContentLength": size, "ContentType": ctype or "application/octet-stream"}
+            return {
+                "ContentLength": size,
+                "ContentType": ctype or "application/octet-stream",
+            }
         except Exception as e:
             logger.error(f"Local head error voor {p}: {e}")
             return None
@@ -123,20 +128,26 @@ class LocalStorage(Storage):
 class S3Storage(Storage):
     """Amazon S3 bestandsopslag implementatie."""
 
-    def __init__(self, bucket: str, region: str = "eu-west-1",
-                 aws_access_key_id: Optional[str] = None,
-                 aws_secret_access_key: Optional[str] = None):
+    def __init__(
+        self,
+        bucket: str,
+        region: str = "eu-west-1",
+        aws_access_key_id: Optional[str] = None,
+        aws_secret_access_key: Optional[str] = None,
+    ):
         self.bucket = bucket
         self.region = region
 
         session_kwargs = {}
         if aws_access_key_id and aws_secret_access_key:
-            session_kwargs.update({
-                'aws_access_key_id': aws_access_key_id,
-                'aws_secret_access_key': aws_secret_access_key
-            })
+            session_kwargs.update(
+                {
+                    "aws_access_key_id": aws_access_key_id,
+                    "aws_secret_access_key": aws_secret_access_key,
+                }
+            )
 
-        self.s3_client = boto3.client('s3', region_name=region, **session_kwargs)
+        self.s3_client = boto3.client("s3", region_name=region, **session_kwargs)
 
         try:
             self.s3_client.head_bucket(Bucket=bucket)
@@ -155,7 +166,7 @@ class S3Storage(Storage):
                 Bucket=self.bucket,
                 Key=s3_key,
                 Body=data,
-                ContentType=self._get_content_type(key)
+                ContentType=self._get_content_type(key),
             )
             logger.info(f"Bestand geüpload naar S3: {s3_key}")
             return key
@@ -173,7 +184,7 @@ class S3Storage(Storage):
             self.s3_client.head_object(Bucket=self.bucket, Key=s3_key)
             return True
         except ClientError as e:
-            if e.response.get('Error', {}).get('Code') == '404':
+            if e.response.get("Error", {}).get("Code") == "404":
                 return False
             logger.error(f"Fout bij controleren van S3 object: {e}")
             return False
@@ -194,23 +205,28 @@ class S3Storage(Storage):
     def _get_content_type(self, key: str) -> str:
         ext = Path(key).suffix.lower()
         content_types = {
-            '.html': 'text/html',
-            '.pdf': 'application/pdf',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.txt': 'text/plain',
-            '.json': 'application/json'
+            ".html": "text/html",
+            ".pdf": "application/pdf",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".txt": "text/plain",
+            ".json": "application/json",
         }
-        return content_types.get(ext, 'application/octet-stream')
+        return content_types.get(ext, "application/octet-stream")
 
     # ====== Extra helpers voor verify/move (S3) ======
     def head_object(self, tenant_id: str, key: str) -> Optional[Dict]:
         """Thin wrapper rond S3 HeadObject; retourneert metadata of None."""
         try:
-            r = self.s3_client.head_object(Bucket=self.bucket, Key=self._tenant_key(tenant_id, key))
-            return {"ContentLength": r.get("ContentLength", 0), "ContentType": r.get("ContentType", "")}
+            r = self.s3_client.head_object(
+                Bucket=self.bucket, Key=self._tenant_key(tenant_id, key)
+            )
+            return {
+                "ContentLength": r.get("ContentLength", 0),
+                "ContentType": r.get("ContentType", ""),
+            }
         except ClientError as e:
             code = e.response.get("Error", {}).get("Code")
             if code == "404" or code == "NotFound":
@@ -238,26 +254,28 @@ def get_storage() -> Storage:
     """
     Factory functie om de juiste storage backend te retourneren.
     """
-    storage_backend = os.getenv("STORAGE_BACKEND", "local").lower()
+    storage_backend = settings.STORAGE_BACKEND.lower()
 
     if storage_backend == "s3":
-        bucket = os.getenv("S3_BUCKET")
-        region = os.getenv("S3_REGION", "eu-west-1")
-        aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        bucket = settings.S3_BUCKET
+        region = settings.AWS_REGION
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
 
         if not bucket:
-            raise ValueError("S3_BUCKET environment variable is vereist voor S3 storage")
+            raise ValueError(
+                "S3_BUCKET environment variable is vereist voor S3 storage"
+            )
 
         return S3Storage(
             bucket=bucket,
             region=region,
             aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key
+            aws_secret_access_key=aws_secret_access_key,
         )
 
     elif storage_backend == "local":
-        base_path = os.getenv("LOCAL_STORAGE_PATH", "data")
+        base_path = settings.LOCAL_STORAGE_PATH
         return LocalStorage(base_path=base_path)
 
     else:
@@ -280,7 +298,9 @@ def _basic_key_checks(key: str) -> Optional[str]:
     return None
 
 
-def head_ok(storage: Storage, tenant_id: str, key: str) -> Tuple[bool, Optional[Dict], Optional[str]]:
+def head_ok(
+    storage: Storage, tenant_id: str, key: str
+) -> Tuple[bool, Optional[Dict], Optional[str]]:
     """
     Verifieer of een geüploade tijdelijk key in orde is:
     - correcte prefix (TEMP_PREFIX)

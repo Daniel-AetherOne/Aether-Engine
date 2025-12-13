@@ -1,7 +1,9 @@
-import os
+from app.core.settings import settings
 from typing import Optional
 import uuid
 import boto3
+from app.core.settings import settings
+
 
 # ----------------------------------------------------
 # Config
@@ -9,22 +11,19 @@ import boto3
 
 # Bucketnaam: accepteer zowel AWS_S3_BUCKET_NAME als AWS_S3_BUCKET, met fallback
 AWS_S3_BUCKET_NAME = (
-    os.getenv("AWS_S3_BUCKET_NAME")
-    or os.getenv("AWS_S3_BUCKET")
-    or "levelai-prod-files"
-)
-AWS_REGION = os.getenv("AWS_REGION", "eu-west-1")
+    settings.AWS_S3_BUCKET_NAME
+)  # valt al terug op S3_BUCKET in settings
+AWS_REGION = settings.AWS_REGION
+_RAW_CF1 = settings.AWS_CLOUDFRONT_BASE_URL
+_RAW_CF2 = settings.CLOUDFRONT_DOMAIN
 
-# CloudFront: support zowel oude als nieuwe naam
-_RAW_CF1 = os.getenv("AWS_CLOUDFRONT_BASE_URL")  # nieuw uit roadmap
-_RAW_CF2 = os.getenv("CLOUDFRONT_DOMAIN")        # oudere naam
 CLOUDFRONT_BASE_URL: Optional[str] = (
     (_RAW_CF1 or _RAW_CF2).rstrip("/") if (_RAW_CF1 or _RAW_CF2) else None
 )
 
 # Upload-limieten
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
-PRESIGNED_EXPIRES_IN = 3600          # 1 uur
+PRESIGNED_EXPIRES_IN = 3600  # 1 uur
 
 # Boto3 client (maakt gebruik van IAM role / env credentials)
 _s3_client = boto3.client("s3")
@@ -33,6 +32,7 @@ _s3_client = boto3.client("s3")
 # ----------------------------------------------------
 # Upload helpers
 # ----------------------------------------------------
+
 
 def create_presigned_post_for_image_upload(prefix: str = "uploads/") -> dict:
     """
@@ -68,16 +68,18 @@ def put_bytes(
     data: bytes,
     content_type: str = "application/octet-stream",
     cache: Optional[str] = None,
+    public: bool = False,
 ) -> None:
-    """
-    Schrijf bytes naar S3 met optionele Cache-Control.
-    """
     extra_args = {
         "ContentType": content_type,
         "ServerSideEncryption": "AES256",
     }
+
     if cache:
         extra_args["CacheControl"] = cache
+
+    if public:
+        extra_args["ACL"] = "public-read"
 
     _s3_client.put_object(
         Bucket=AWS_S3_BUCKET_NAME,
@@ -90,6 +92,7 @@ def put_bytes(
 # ----------------------------------------------------
 # Public URL helpers
 # ----------------------------------------------------
+
 
 def public_http_url(key: str) -> Optional[str]:
     """

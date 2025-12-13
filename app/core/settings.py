@@ -1,26 +1,70 @@
 # app/core/settings.py
+from typing import Optional, List
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import AnyHttpUrl
-from typing import Optional
 
 
 class Settings(BaseSettings):
-    PUBLIC_BASE_URL: AnyHttpUrl = "http://localhost:8000"
+    # --- Core app ---
+    ENV: str = "development"
+    APP_ENV: str = "development"
+    APP_NAME: str = "LevelAI SaaS"
+    APP_VERSION: str = "0.1.0"
+    DEBUG: bool = True
+    SECRET_KEY: str = "change-me"
 
-    # --- Storage ---
+    # --- Database & Redis ---
+    DATABASE_URL: str = "postgresql://username:password@localhost:5432/levelai_db"
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # --- Storage / S3 ---
+    AWS_REGION: str = "eu-west-1"
     S3_BUCKET: str = "levelai-prod-files"
-    S3_REGION: str = "eu-west-1"
-    CLOUDFRONT_DOMAIN: Optional[str] = None
+    AWS_S3_BUCKET_NAME: Optional[str] = None
+
     USE_LOCAL_STORAGE: bool = False
     LOCAL_STORAGE_ROOT: str = "./.local_storage"
 
-    allowed_mimes: list[str] = ["image/jpeg", "image/png", "application/pdf"]
-    max_upload_mb: int = 50
-    presign_expiry_sec: int = 600
-    allowed_metadata_keys: list[str] = ["trace_id"]
-    mpu_part_size_mb: int = 8
+    S3_BASE_URL: Optional[str] = None
 
-    # --- E-mail (nieuw) ---
+    # Raw AWS creds (optioneel, vooral voor lokale/debug)
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+
+    # --- CloudFront ---
+    CLOUDFRONT_DOMAIN: Optional[str] = None
+    AWS_CLOUDFRONT_BASE_URL: Optional[str] = None
+
+    # --- Upload / presign settings ---
+    MAX_UPLOAD_MB: int = 25
+    S3_UPLOAD_MAX_MB: int = 25
+    S3_UPLOAD_ALLOWED_TYPES: str = "image/jpeg,image/png,application/pdf"
+    UPLOAD_DIR: str = "data/uploads"
+    OFFERS_DIR: str = "data/offers"
+
+    S3_TEMP_PREFIX: str = "uploads/"
+    S3_FINAL_PREFIX: str = "leads/"
+    UPLOAD_MAX_BYTES: int = 25 * 1024 * 1024
+    UPLOAD_ALLOWED_CONTENT_TYPES: str = ""
+
+    STORAGE_BACKEND: str = "local"
+    LOCAL_STORAGE_PATH: str = "data"
+
+    # --- CORS (als string in .env, we splitten zelf) ---
+    # Voorbeeld .env:
+    # ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
+
+    # --- HubSpot ---
+    HUBSPOT_ENABLED: bool = False
+    HUBSPOT_TOKEN: Optional[str] = None
+    PIPELINE: str = "default"
+    STAGE: str = "appointmentscheduled"
+
+    # --- Predictor ---
+    PREDICT_MAX_SIDE: int = 1600
+
+    # --- E-mail ---
     SMTP_HOST: Optional[str] = None
     SMTP_PORT: int = 587
     SMTP_USER: Optional[str] = None
@@ -28,11 +72,35 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: Optional[str] = None
     SMTP_FROM_NAME: str = "LevelAI"
 
+    # --- External services ---
+    WHATSAPP_API_KEY: Optional[str] = None
+    CRM_API_URL: Optional[str] = None
+    CRM_API_KEY: Optional[str] = None
+
+    # --- AI / ML services ---
+    OPENAI_API_KEY: Optional[str] = None
+    VISION_API_URL: Optional[str] = None
+    VISION_API_KEY: Optional[str] = None
+    PRICING_MODEL_URL: Optional[str] = None
+
+    # --- Frontend ---
+    VITE_API_URL: Optional[str] = None
+
+    # Pydantic settings-config
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    # Helpers
+    @property
+    def allowed_origins_list(self) -> List[str]:
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def s3_upload_allowed_types_list(self) -> List[str]:
+        return [t.strip() for t in self.S3_UPLOAD_ALLOWED_TYPES.split(",") if t.strip()]
 
 
 settings = Settings()  # leest .env

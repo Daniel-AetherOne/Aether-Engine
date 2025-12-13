@@ -1,13 +1,15 @@
 # app/services/predictor.py
-import os
+from app.core.settings import settings
 from pathlib import Path
 from typing import List, Dict, Tuple
 import numpy as np
 from PIL import Image
 
+
 # cv2 pas importeren wanneer nodig
 def _cv2():
     import cv2  # headless variant zit in requirements
+
     return cv2
 
 
@@ -18,7 +20,7 @@ class SimplePredictor:
         self.substrate_types = ["gipsplaat", "beton", "bestaand"]
         self.issue_types = ["scheuren", "vocht"]
         # hard cap om enorme foto’s te begrenzen (RAM/CPU sparen)
-        self.max_side = int(os.getenv("PREDICT_MAX_SIDE", "1600"))
+        self.max_side = settings.PREDICT_MAX_SIDE
 
     def predict(self, lead_id: str, image_paths: List[str], m2: float) -> Dict:
         if not image_paths:
@@ -90,7 +92,9 @@ class SimplePredictor:
             print(f"Error in substrate analysis: {e}")
             return "bestaand", 0.5
 
-    def _analyze_issues(self, img_rgb: np.ndarray) -> Tuple[List[str], Dict[str, float]]:
+    def _analyze_issues(
+        self, img_rgb: np.ndarray
+    ) -> Tuple[List[str], Dict[str, float]]:
         try:
             cv2 = _cv2()
             gray = self._to_gray(img_rgb)
@@ -129,7 +133,10 @@ class SimplePredictor:
     def _calculate_noise(self, gray: np.ndarray, cv2) -> float:
         try:
             blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-            noise = np.mean(np.abs(gray.astype(np.float32) - blurred.astype(np.float32))) / 255.0
+            noise = (
+                np.mean(np.abs(gray.astype(np.float32) - blurred.astype(np.float32)))
+                / 255.0
+            )
             return min(1.0, float(noise))
         except Exception:
             return 0.5
@@ -147,7 +154,7 @@ class SimplePredictor:
             kernel = np.ones((5, 5), dtype=np.float32) / 25.0
             mean = cv2.filter2D(gray.astype(np.float32), -1, kernel)
             variance = cv2.filter2D((gray.astype(np.float32) - mean) ** 2, -1, kernel)
-            texture_var = float(np.mean(variance)) / (255.0 ** 2)
+            texture_var = float(np.mean(variance)) / (255.0**2)
             return min(1.0, texture_var * 100.0)
         except Exception:
             return 0.4
@@ -157,7 +164,9 @@ class SimplePredictor:
             kernel = np.ones((3, 3), np.uint8)
             edges = cv2.Canny(gray, 30, 100)
             dilated = cv2.dilate(edges, kernel, iterations=1)
-            crack_score = np.count_nonzero(dilated) / (dilated.shape[0] * dilated.shape[1])
+            crack_score = np.count_nonzero(dilated) / (
+                dilated.shape[0] * dilated.shape[1]
+            )
             return min(1.0, crack_score * 20.0)
         except Exception:
             return 0.3

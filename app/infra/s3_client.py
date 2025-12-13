@@ -1,14 +1,13 @@
 # app/infra/s3_client.py
-
-import os
+from app.core.settings import settings
 import logging
 import boto3
 from botocore.config import Config
 
 logger = logging.getLogger(__name__)
 
-AWS_REGION = os.getenv("AWS_REGION", "eu-west-1")
-S3_BUCKET  = os.getenv("S3_BUCKET", "levelai-prod-files")
+AWS_REGION = settings.AWS_REGION
+S3_BUCKET = settings.S3_BUCKET
 
 _BOTO_CFG = Config(
     region_name=AWS_REGION,
@@ -19,6 +18,7 @@ _BOTO_CFG = Config(
 
 _s3_client = None
 
+
 def get_s3():
     """Lazy singleton S3 client met standaardconfig."""
     global _s3_client
@@ -27,8 +27,10 @@ def get_s3():
         logger.info("S3 client initialized region=%s bucket=%s", AWS_REGION, S3_BUCKET)
     return _s3_client
 
+
 def get_bucket() -> str:
     return S3_BUCKET
+
 
 def get_region() -> str:
     return AWS_REGION

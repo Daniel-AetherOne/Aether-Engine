@@ -1,30 +1,42 @@
 # app/config.py
-import os
 from functools import lru_cache
 from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# <-- centrale settings vanuit .env
+from app.core.settings import settings as env_settings
+
 
 class Settings(BaseSettings):
+    """
+    Secondary settings layer used by older LevelAI modules.
+    Reads .env via env_settings (the new core settings class).
+    """
+
     # === Algemene app settings ===
-    app_env: str = "local"  # local | development | production
+    app_env: str = env_settings.APP_ENV  # local | development | production
 
     # === AWS & S3 ===
-    AWS_REGION: str = Field("eu-west-1", description="AWS region for S3")
-    S3_BUCKET: Optional[str] = Field(None, description="Primary S3 bucket name for LevelAI files")
+    AWS_REGION: str = env_settings.AWS_REGION
+    S3_BUCKET: Optional[str] = env_settings.S3_BUCKET
     S3_ENDPOINT_URL: Optional[str] = None
     S3_USE_ACCELERATE: bool = False
-    AWS_ACCESS_KEY_ID: Optional[str] = None
-    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+
+    AWS_ACCESS_KEY_ID: Optional[str] = env_settings.AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: Optional[str] = env_settings.AWS_SECRET_ACCESS_KEY
     AWS_SESSION_TOKEN: Optional[str] = None
+
     PRESIGN_EXPIRES_SECONDS: int = 900  # 15 min
-    # Fallback base URL voor sandbox/tests (kan via .env worden overschreven)
-    S3_BASE_URL: str = os.getenv("S3_BASE_URL", "https://example-bucket.s3.amazonaws.com")
+
+    # Fallback voor sandbox/tests
+    S3_BASE_URL: str = (
+        env_settings.S3_BASE_URL or "https://example-bucket.s3.amazonaws.com"
+    )
 
     # === Database ===
-    database_url: str = "sqlite:///./levelai.db"
+    database_url: str = env_settings.DATABASE_URL
 
     # === Redis ===
     redis_host: str = "localhost"
@@ -49,8 +61,8 @@ class Settings(BaseSettings):
     metrics_port: int = 9090
 
     # === Celery / Background ===
-    celery_broker_url: str = "redis://localhost:6379/0"
-    celery_result_backend: str = "redis://localhost:6379/0"
+    celery_broker_url: str = env_settings.REDIS_URL
+    celery_result_backend: str = env_settings.REDIS_URL
 
     # === Vision ===
     vision_model_path: Optional[str] = None
@@ -70,15 +82,19 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Singleton Settings instance met simpele env-overrides."""
+    """
+    Singleton wrapper around Settings + environment-based overrides.
+    """
     s = Settings()
 
-    env = os.getenv("ENVIRONMENT", s.app_env).lower()
+    env = env_settings.APP_ENV.lower()
+
     if env == "production":
         s.log_level = "WARNING"
         s.rate_limit_quote_create = 30
         s.rate_limit_vision_processing = 15
         s.rate_limit_prediction = 50
+
     elif env == "development":
         s.log_level = "DEBUG"
         s.rate_limit_quote_create = 120
@@ -88,6 +104,5 @@ def get_settings() -> Settings:
     return s
 
 
-# Module-level export zodat bestaande imports blijven werken:
-# from app.config import settings
+# Backwards compatibility: old code imports "settings"
 settings = get_settings()

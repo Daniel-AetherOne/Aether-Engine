@@ -1,27 +1,31 @@
 # app/core/logging_config.py
-import logging, sys, json, uuid
-from typing import Any, Dict
+import logging
+import sys
+import structlog
 
-class JsonFormatter(logging.Formatter):
-    def format(self, record: logging.LogRecord) -> str:
-        base: Dict[str, Any] = {
-            "level": record.levelname,
-            "msg": record.getMessage(),
-            "logger": record.name,
-            "time": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
-        }
-        if hasattr(record, "extra") and isinstance(record.extra, dict):
-            base.update(record.extra)
-        return json.dumps(base, ensure_ascii=False)
 
-def setup_logging() -> logging.Logger:
-    logger = logging.getLogger("levelai")
-    logger.setLevel(logging.INFO)
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(JsonFormatter())
-    if not logger.handlers:
-        logger.addHandler(handler)
-    logger.propagate = False
-    return logger
+def setup_logging() -> None:
+    """
+    Configure structlog + standaard logging.
+    Logs gaan als JSON naar stdout (Cloud Run pakt dit automatisch op).
+    """
+    logging.basicConfig(
+        format="%(message)s",
+        stream=sys.stdout,
+        level=logging.INFO,
+    )
 
-logger = setup_logging()
+    structlog.configure(
+        processors=[
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.JSONRenderer(),
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+
+
+# Globale logger die je overal kunt importeren
+logger = structlog.get_logger("levelai")

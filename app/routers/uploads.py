@@ -1,7 +1,7 @@
 # app/routers/uploads.py
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from typing import Optional, Dict
-import os
+from app.core.settings import settings
 import mimetypes
 from datetime import datetime
 from pathlib import PurePath
@@ -27,6 +27,7 @@ from app.services.s3_keys import _safe_filename
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 storage: Storage = get_storage()
 
+
 # -----------------------------------------------------------------------------
 # Pydantic requestmodel voor presign (frontend stuurt JSON)
 # -----------------------------------------------------------------------------
@@ -39,8 +40,9 @@ class PresignRequest(BaseModel):
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
-S3_BUCKET = os.getenv("S3_BUCKET")
-S3_REGION = os.getenv("S3_REGION", "eu-west-1")
+
+S3_BUCKET = settings.S3_BUCKET
+S3_REGION = settings.AWS_REGION
 
 
 def _guess_content_type(filename: str) -> str:
@@ -98,6 +100,7 @@ async def presign_upload(req: PresignRequest) -> Dict:
 
         try:
             import boto3  # lazy import
+
             s3 = boto3.client("s3", region_name=S3_REGION)
 
             fields = {
@@ -129,10 +132,10 @@ async def presign_upload(req: PresignRequest) -> Dict:
         post = {
             "url": "/uploads/local",
             "fields": {
-                "key": key_with_tenant,        # mét tenant-prefix
+                "key": key_with_tenant,  # mét tenant-prefix
                 "Content-Type": ctype,
                 "tenant_id": req.tenant_id,
-            }
+            },
         }
         return {"key": key_without_tenant, "post": post}
 
@@ -145,7 +148,7 @@ async def presign_upload(req: PresignRequest) -> Dict:
 # -----------------------------------------------------------------------------
 @router.post("/local")
 async def local_upload(
-    key: str = Form(...),                 # VOLLEDIGE key met tenant, bv. "acme/uploads/..."
+    key: str = Form(...),  # VOLLEDIGE key met tenant, bv. "acme/uploads/..."
     tenant_id: str = Form(...),
     content_type: Optional[str] = Form(None),
     file: UploadFile = File(...),
@@ -173,7 +176,7 @@ async def local_upload(
 
     # strip tenant-prefix voor storage API
     tenant_prefix = f"{tenant_id}/"
-    key_without_tenant = key[len(tenant_prefix):]
+    key_without_tenant = key[len(tenant_prefix) :]
 
     try:
         assert isinstance(storage, LocalStorage), "local endpoint requires LocalStorage"
