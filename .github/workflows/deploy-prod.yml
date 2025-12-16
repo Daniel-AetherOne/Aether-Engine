@@ -54,6 +54,12 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
+      - name: Activate service account
+        run: |
+              gcloud auth list
+              gcloud config set account ${{ secrets.GCP_SA_EMAIL }}
+              gcloud config set project "${{ env.PROJECT_ID }}"
+
       - name: Configure Docker auth for Artifact Registry
         run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev -q
 
