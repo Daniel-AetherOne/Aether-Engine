@@ -2,32 +2,34 @@
 fastapi
 uvicorn[standard]
 gunicorn
+SQLAlchemy>=2.0
+sentry-sdk
 
 # Metrics / Prometheus
 prometheus-client==0.20.0
 prometheus-fastapi-instrumentator==7.0.0
 
-# Config en settings
+# Config / settings
 pydantic-settings
 python-dotenv
 
-# Templates en upload handling
+# Templates / uploads
 jinja2
 python-multipart
 requests
 email-validator
 
-# AWS / Cloud
+# Cloud
 boto3
 google-cloud-storage
 
-# ML / Data science
+# ML / Data science (alleen laten staan als je het echt nodig hebt)
 numpy
 pandas
 scikit-learn
 scipy
 
-# Image processing (headless voor Cloud Run!)
+# Image processing
 Pillow
 opencv-python-headless
 
@@ -40,5 +42,5 @@ slowapi
 redis
 loguru
 
-# Logging (NIEUW)
+# Logging
 structlog
