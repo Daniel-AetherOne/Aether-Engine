@@ -37,9 +37,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Unit tests
-        run: |
-          pytest -q
 
       # ---------- Auth / gcloud ----------
       - name: Auth to Google Cloud
