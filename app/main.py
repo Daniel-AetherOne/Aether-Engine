@@ -3,45 +3,42 @@ import time
 import sentry_sdk
 
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from sentry_sdk.integrations.fastapi import FastApiIntegration
-
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.settings import settings
+from app.core.logging_config import setup_logging, logger
+from app.core.rate_limit import limiter
 from app.db import Base, engine
 from app import models  # noqa: F401  (registreert SQLAlchemy modellen)
-
 from app.middleware.request_id import RequestIdMiddleware
-from app.core.rate_limit import limiter
 
-from app.core.logging_config import setup_logging, logger
-
-# Routers
 from app.routers import uploads, intake, quotes, files
 from app.observability.metrics import router as metrics_router
 
 
 # ----------------------------------------------------
-# Sentry
+# Sentry (optioneel: alleen als DSN bestaat)
 # ----------------------------------------------------
-sentry_sdk.init(
-    dsn="https://cb47c0b6218cd9c276f3710842c418f8@o4510512134481280.ingest.de.sentry.io/4510512136800256",
-    integrations=[FastApiIntegration()],
-    traces_sample_rate=1.0,
-    send_default_pii=True,
-)
+if getattr(settings, "SENTRY_DSN", None):
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        integrations=[FastApiIntegration()],
+        traces_sample_rate=1.0,
+        send_default_pii=True,
+    )
+
 
 # ----------------------------------------------------
-# App init (LET OP: eerst app maken)
+# App init
 # ----------------------------------------------------
 app = FastAPI(title="LevelAI", version="0.1.0")
 
-# Logging
 setup_logging()
-logger.info("startup_test_log", foo="bar")
+logger.info("startup", service="levelai-api")
 
 
 # ----------------------------------------------------
@@ -72,16 +69,14 @@ async def logging_middleware(request: Request, call_next):
         endpoint=str(request.url.path),
         method=request.method,
     )
+
     bound_logger.info("request_started")
-
     response = await call_next(request)
-
     latency_ms = round((time.time() - start) * 1000, 2)
-    bound_logger.bind(
-        status_code=response.status_code,
-        latency_ms=latency_ms,
-    ).info("request_finished")
 
+    bound_logger.bind(status_code=response.status_code, latency_ms=latency_ms).info(
+        "request_finished"
+    )
     return response
 
 
@@ -113,7 +108,7 @@ app.include_router(uploads.router)
 app.include_router(quotes.router)
 app.include_router(files.router)
 app.include_router(intake.router)
-app.include_router(metrics_router)  # <-- dit is /metrics
+app.include_router(metrics_router)  # /metrics
 
 
 # ----------------------------------------------------
