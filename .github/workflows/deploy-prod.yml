@@ -104,20 +104,24 @@ jobs:
             --format="yaml(status.url,status.traffic)"
 
       # ---------------- Smoke tests ----------------
-      - name: Smoke test /health and /metrics
+      - name: Smoke test /health and /metrics (candidate)
         run: |
-          URL=$(gcloud run services describe "$SERVICE" \
+          BASE_URL=$(gcloud run services describe "$SERVICE" \
             --region "$REGION" \
             --project "$PROJECT_ID" \
-            --format="value(status.traffic[?tag='candidate'].url)")
+            --format="value(status.url)")
 
-          echo "Candidate URL: $URL"
+          echo "Service URL: $BASE_URL"
+
+          # Wacht heel even tot revision/tag gerouteerd is
+          sleep 5
 
           echo "Checking /health..."
-          curl -fsSL "$URL/health"
+          curl -fsSL "$BASE_URL/health"
 
           echo "Checking /metrics..."
-          curl -fsSL "$URL/metrics"
+          curl -fsSL "$BASE_URL/metrics"
+
 
       # ---------------- Promote ----------------
       - name: Shift traffic to latest revision
