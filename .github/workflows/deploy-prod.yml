@@ -106,21 +106,37 @@ jobs:
       # ---------------- Smoke tests ----------------
       - name: Smoke test /health and /metrics (candidate)
         run: |
-          BASE_URL=$(gcloud run services describe "$SERVICE" \
-            --region "$REGION" \
-            --project "$PROJECT_ID" \
+          BASE_URL=$(gcloud run services describe "${{ env.SERVICE }}" \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}" \
             --format="value(status.url)")
 
-          echo "Service URL: $BASE_URL"
+          CAND_URL="${BASE_URL/https:\/\//https:\/\/candidate---}"
 
-          # Wacht heel even tot revision/tag gerouteerd is
+          echo "Service URL:   $BASE_URL"
+          echo "Candidate URL: $CAND_URL"
+
+          # Kleine wacht (routing/tag kan even duren)
           sleep 5
 
-          echo "Checking /health..."
-          curl -fsSL "$BASE_URL/health"
+          echo "Checking /health on candidate..."
+          for i in {1..10}; do
+            if curl -fsSL "${CAND_URL}/health" >/dev/null; then
+              echo "/health OK"; break
+            fi
+            echo "Retry /health $i/10..."; sleep 3
+            if [ "$i" -eq 10 ]; then echo "/health failed"; exit 1; fi
+          done
 
-          echo "Checking /metrics..."
-          curl -fsSL "$BASE_URL/metrics"
+          echo "Checking /metrics on candidate..."
+          for i in {1..10}; do
+            if curl -fsSL "${CAND_URL}/metrics" >/dev/null; then
+              echo "/metrics OK"; break
+            fi
+            echo "Retry /metrics $i/10..."; sleep 3
+            if [ "$i" -eq 10 ]; then echo "/metrics failed"; exit 1; fi
+          done
+
 
 
       # ---------------- Promote ----------------
