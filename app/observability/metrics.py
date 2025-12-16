@@ -1,8 +1,10 @@
 # app/observability/metrics.py
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-from fastapi import APIRouter, Response
+from fastapi import APIRouter
+from starlette.responses import Response
 
-router = APIRouter()
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+
+router = APIRouter(tags=["observability"])
 
 presign_counter = Counter(
     "levelai_presign_total",
@@ -28,6 +30,8 @@ latency_hist = Histogram(
     ["route"],  # e.g. /uploads/presign, /uploads/verify
 )
 
-@router.get("/metrics")
+
+@router.get("/metrics", include_in_schema=True)
 def metrics() -> Response:
-    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    # Prometheus expects text/plain; version=0.0.4
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

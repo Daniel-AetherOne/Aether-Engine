@@ -12,7 +12,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.settings import settings
 from app.db import Base, engine
-from app import models  # registreert SQLAlchemy modellen
+from app import models  # noqa: F401  (registreert SQLAlchemy modellen)
 
 from app.middleware.request_id import RequestIdMiddleware
 from app.core.rate_limit import limiter
@@ -34,16 +34,13 @@ sentry_sdk.init(
     send_default_pii=True,
 )
 
-
 # ----------------------------------------------------
-# App init
+# App init (LET OP: eerst app maken)
 # ----------------------------------------------------
 app = FastAPI(title="LevelAI", version="0.1.0")
 
-# Configure logging (structlog -> JSON naar stdout / Cloud Run)
+# Logging
 setup_logging()
-
-# (optioneel) testlog voor Cloud Run
 logger.info("startup_test_log", foo="bar")
 
 
@@ -75,13 +72,11 @@ async def logging_middleware(request: Request, call_next):
         endpoint=str(request.url.path),
         method=request.method,
     )
-
     bound_logger.info("request_started")
 
     response = await call_next(request)
 
     latency_ms = round((time.time() - start) * 1000, 2)
-
     bound_logger.bind(
         status_code=response.status_code,
         latency_ms=latency_ms,
@@ -93,9 +88,9 @@ async def logging_middleware(request: Request, call_next):
 # ----------------------------------------------------
 # Middleware
 # ----------------------------------------------------
-app.add_middleware(RequestIdMiddleware)  # unieke request-id header + context
+app.add_middleware(RequestIdMiddleware)
 app.state.limiter = limiter
-app.add_middleware(SlowAPIMiddleware)  # rate-limiting
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -114,11 +109,11 @@ def ratelimit_handler(request: Request, exc: RateLimitExceeded):
 # ----------------------------------------------------
 # Routers
 # ----------------------------------------------------
-app.include_router(uploads.router)  # /uploads/presign, /uploads/local, ...
-app.include_router(quotes.router)  # /quotes/publish/{lead_id}, /quotes/dashboard, ...
-app.include_router(files.router)  # /files/...
-app.include_router(intake.router)  # /intake/...
-app.include_router(metrics_router)  # /metrics
+app.include_router(uploads.router)
+app.include_router(quotes.router)
+app.include_router(files.router)
+app.include_router(intake.router)
+app.include_router(metrics_router)  # <-- dit is /metrics
 
 
 # ----------------------------------------------------
@@ -126,5 +121,4 @@ app.include_router(metrics_router)  # /metrics
 # ----------------------------------------------------
 @app.on_event("startup")
 def on_startup():
-    # Dev/SQLite convenience; in productie liefst via migrations
     Base.metadata.create_all(bind=engine)
