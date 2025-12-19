@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Painting Estimate Request — {{ tenant_id or "painters_us" }}</title>
+
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#5b6474;
+      --line:#e7e9f1;
+
+      --brand:#2563eb;      /* blue */
+      --brand2:#16a34a;     /* green */
+      --danger:#dc2626;
+
+      --shadow:0 18px 45px rgba(15,23,42,.10);
+      --radius:18px;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      background:
+        radial-gradient(900px 520px at 18% 0%, rgba(37,99,235,.10), transparent 60%),
+        radial-gradient(900px 520px at 86% 12%, rgba(22,163,74,.08), transparent 60%),
+        linear-gradient(180deg, #fbfcff, var(--bg));
+      min-height:100vh;
+      padding:28px 16px;
+    }
+
+    .topbar{
+      max-width:1100px;
+      margin:0 auto 14px auto;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:12px;
+    }
+    .brandBlock{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .brandTitle{
+      font-size:18px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .brandSub{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    .badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.65);
+      border-radius:999px;
+      font-size:12px;
+      color:var(--muted);
+      box-shadow: 0 8px 22px rgba(15,23,42,.04);
+      backdrop-filter: blur(8px);
+    }
+    .badge strong{color:var(--text);font-weight:800}
+
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 1.35fr .65fr;
+      gap:16px;
+    }
+    @media (max-width: 980px){
+      .topbar{align-items:flex-start;flex-direction:column}
+      .badges{justify-content:flex-start}
+      .wrap{grid-template-columns:1fr}
+    }
+
+    .card{
+      background: var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .header{
+      padding:20px 22px 16px 22px;
+      border-bottom:1px solid var(--line);
+      background:
+        radial-gradient(900px 240px at 0% 0%, rgba(37,99,235,.08), transparent 60%),
+        radial-gradient(900px 240px at 100% 0%, rgba(22,163,74,.06), transparent 60%);
+    }
+    .title{
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing:.2px;
+      margin-bottom:6px;
+    }
+    .subtitle{
+      color:var(--muted);
+      line-height:1.5;
+      font-size:14px;
+      max-width: 70ch;
+    }
+
+    .content{padding:18px 22px 22px 22px}
+
+    .stepRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+    .step{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .dot{
+      width:10px;height:10px;border-radius:999px;
+      background: rgba(37,99,235,.25);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.08);
+    }
+    .step strong{color:var(--text);font-weight:900}
+
+    .grid{display:grid;gap:14px}
+    .grid.two{grid-template-columns:1fr 1fr}
+    .grid.three{grid-template-columns:1fr 1fr 1fr}
+    @media (max-width: 740px){
+      .grid.two, .grid.three{grid-template-columns:1fr}
+    }
+
+    label{
+      display:block;
+      font-size:12px;
+      letter-spacing:.35px;
+      color:var(--muted);
+      margin:0 0 8px 2px;
+      text-transform:uppercase;
+      font-weight:800;
+    }
+
+    input, textarea, select{
+      width:100%;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid #d9dce8;
+      background:#fff;
+      color:var(--text);
+      outline:none;
+      transition: border .15s ease, box-shadow .15s ease, transform .05s ease;
+    }
+    input:focus, textarea:focus, select:focus{
+      border-color: rgba(37,99,235,.55);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+    textarea{min-height:110px;resize:vertical}
+
+    .hint{
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.5;
+      margin-top:10px;
+    }
+
+    .section{
+      margin-top:16px;
+      padding-top:16px;
+      border-top:1px dashed var(--line);
+    }
+    .sectionTitle{
+      font-weight:900;
+      font-size:14px;
+      margin-bottom:10px;
+      letter-spacing:.2px;
+    }
+
+    .uploadBox{
+      border:2px dashed rgba(37,99,235,.35);
+      border-radius:16px;
+      padding:16px;
+      background: linear-gradient(180deg, rgba(37,99,235,.04), rgba(22,163,74,.03));
+      cursor:pointer;
+      transition: border .15s ease, transform .05s ease, background .15s ease;
+    }
+    .uploadBox:hover{
+      border-color: rgba(22,163,74,.45);
+      background: linear-gradient(180deg, rgba(37,99,235,.06), rgba(22,163,74,.05));
+    }
+    .uploadTop{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      margin-bottom:10px;
+    }
+    .uploadTitle{font-weight:900;font-size:14px}
+    .uploadMeta{color:var(--muted);font-size:12px}
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
+      font-size:12px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.75);
+      color:var(--muted);
+      font-weight:800;
+    }
+
+    .files{
+      margin-top:10px;
+      display:grid;
+      gap:8px;
+    }
+    .fileRow{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 10px;
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:14px;
+      font-size:13px;
+      color:var(--text);
+    }
+    .fileRow small{color:var(--muted)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+
+    .actions{
+      margin-top:16px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .btn{
+      appearance:none;
+      border:none;
+      border-radius:14px;
+      padding:12px 14px;
+      font-weight:900;
+      cursor:pointer;
+      transition: transform .05s ease, opacity .15s ease, box-shadow .15s ease;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+    }
+    .btn:active{transform: translateY(1px)}
+    .btnPrimary{
+      background: linear-gradient(135deg, rgba(37,99,235,.98), rgba(22,163,74,.92));
+      color:#ffffff;
+      box-shadow: 0 14px 30px rgba(37,99,235,.18);
+    }
+    .btnGhost{
+      background:#fff;
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+    .btn[disabled]{opacity:.55;cursor:not-allowed}
+
+    .msg{
+      display:none;
+      margin-bottom:12px;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-size:13px;
+      line-height:1.5;
+    }
+    .msg.ok{border-color: rgba(22,163,74,.35)}
+    .msg.err{border-color: rgba(220,38,38,.35)}
+    .msg strong{font-weight:900}
+    .linkish{
+      color:var(--brand);
+      text-decoration:none;
+      font-weight:900;
+    }
+
+    .tiny{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:10px;
+      line-height:1.4;
+    }
+
+    /* Sidebar */
+    .sideCard .content{padding:16px}
+    .sideTitle{
+      font-weight:900;
+      font-size:14px;
+      margin-bottom:10px;
+      letter-spacing:.2px;
+    }
+    .sideList{display:grid;gap:10px}
+    .sideItem{
+      padding:12px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:#fff;
+    }
+    .sideItem b{display:block;margin-bottom:4px;font-weight:900}
+    .sideItem span{color:var(--muted);font-size:13px;line-height:1.45}
+
+    .summary{
+      margin-top:12px;
+      border-top:1px dashed var(--line);
+      padding-top:12px;
+      display:grid;
+      gap:8px;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .kv{display:flex;justify-content:space-between;gap:10px}
+    .kv strong{color:var(--text);font-weight:900}
+
+  </style>
+</head>
+
+<body>
+
+  <div class="topbar">
+    <div class="brandBlock">
+      <div class="brandTitle">Painting Estimate Request</div>
+      <div class="brandSub">Fast, itemized estimate based on area + photos. Typical turnaround: minutes.</div>
+    </div>
+
+    <div class="badges">
+      <div class="badge">Tenant: <strong>{{ tenant_id or "painters_us" }}</strong></div>
+      <div class="badge">Units: <strong>Square Feet</strong></div>
+      <div class="badge">Photos: <strong>1–5</strong></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- Main -->
+    <div class="card">
+      <div class="header">
+        <div class="title">Tell us about the project</div>
+        <div class="subtitle">
+          Fill in your contact details, approximate paintable area, and upload a few photos.
+          We’ll generate a clean estimate for labor & materials.
+        </div>
+
+        <div class="stepRow">
+          <div class="step"><span class="dot"></span> <span><strong>1</strong> Contact</span></div>
+          <div class="step"><span class="dot"></span> <span><strong>2</strong> Area & scope</span></div>
+          <div class="step"><span class="dot"></span> <span><strong>3</strong> Photos</span></div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div id="msgOk" class="msg ok"></div>
+        <div id="msgErr" class="msg err"></div>
+
+        <form id="intakeForm" enctype="multipart/form-data">
+          <!-- hidden routing -->
+          <input type="hidden" name="tenant_id" value="{{ tenant_id or 'painters_us' }}" />
+          <input type="hidden" name="vertical" value="{{ vertical or 'painters_us' }}" />
+          <input type="hidden" name="area_unit" value="sqft" />
+
+          <div class="section" style="margin-top:0;padding-top:0;border-top:none;">
+            <div class="sectionTitle">Contact</div>
+
+            <div class="grid two">
+              <div>
+                <label for="name">Full Name *</label>
+                <input id="name" name="name" type="text" autocomplete="name" required />
+              </div>
+              <div>
+                <label for="email">Email *</label>
+                <input id="email" name="email" type="email" autocomplete="email" required />
+              </div>
+            </div>
+
+            <div class="grid two" style="margin-top:14px;">
+              <div>
+                <label for="phone">Phone *</label>
+                <input id="phone" name="phone" type="tel" autocomplete="tel" required />
+              </div>
+              <div>
+                <label for="square_meters">Approx. Paintable Area (sq ft) *</label>
+                <!-- backend reads square_meters; we convert via area_unit=sqft -->
+                <input id="square_meters" name="square_meters" type="number" min="10" step="1" required />
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="sectionTitle">Location</div>
+
+            <div class="grid three">
+              <div>
+                <label for="street">Street Address *</label>
+                <input id="street" name="street" type="text" autocomplete="street-address" required />
+              </div>
+              <div>
+                <label for="city">City *</label>
+                <input id="city" name="city" type="text" autocomplete="address-level2" required />
+              </div>
+              <div>
+                <label for="state">State *</label>
+                <input id="state" name="state" type="text" maxlength="2" placeholder="CA" autocomplete="address-level1" required />
+              </div>
+            </div>
+
+            <div class="grid two" style="margin-top:14px;">
+              <div>
+                <label for="zip">ZIP Code *</label>
+                <input id="zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" required />
+              </div>
+              <div>
+                <label for="job_type">Job Type</label>
+                <select id="job_type" name="job_type">
+                  <option value="interior">Interior</option>
+                  <option value="exterior">Exterior</option>
+                  <option value="both">Both</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="sectionTitle">Scope details</div>
+
+            <div>
+              <label for="address">Project Notes / Location Details *</label>
+              <!-- backend uses "address" as project_description -->
+              <textarea id="address" name="address" required
+                placeholder="Example: Living room + hallway. Walls only. Existing paint in good condition. Please include minor patching."></textarea>
+              <div class="hint">
+                Helpful: # rooms, ceiling height, trim/doors, prep & repairs, access notes.
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="sectionTitle">Photos</div>
+
+            <div>
+              <label>Upload Photos (1–5 images) *</label>
+              <div class="uploadBox" id="uploadBox">
+                <div class="uploadTop">
+                  <div>
+                    <div class="uploadTitle">Click to select photos</div>
+                    <div class="uploadMeta">JPG/PNG/WebP • Up to 5 files</div>
+                  </div>
+                  <div class="pill">S3 presigned</div>
+                </div>
+
+                <input type="file" id="files" multiple accept="image/*" style="display:none" required />
+                <div class="files" id="fileList"></div>
+                <div class="status" id="uploadStatus">No files selected yet.</div>
+                <div id="photoKeysContainer"></div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" class="btn btnPrimary" id="submitBtn">
+                Submit Request
+              </button>
+              <button type="button" class="btn btnGhost" id="resetBtn">
+                Reset
+              </button>
+            </div>
+
+            <div class="tiny">
+              By submitting, you agree we may use your photos to generate an automated estimate.
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Side -->
+    <div class="card sideCard">
+      <div class="header">
+        <div class="title" style="font-size:18px;">Estimate summary</div>
+        <div class="subtitle">We’ll price labor + materials and generate a shareable estimate link.</div>
+      </div>
+      <div class="content">
+        <div class="sideTitle">What we need</div>
+        <div class="sideList">
+          <div class="sideItem">
+            <b>Clear photos</b>
+            <span>Wide shots + close-ups of repairs or damage.</span>
+          </div>
+          <div class="sideItem">
+            <b>Approx. area (sq ft)</b>
+            <span>Estimate is fine — we refine from vision output.</span>
+          </div>
+          <div class="sideItem">
+            <b>Notes</b>
+            <span>Trim/doors? Ceilings? Prep level? Access issues?</span>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="kv"><span>Tenant</span><strong>{{ tenant_id or "painters_us" }}</strong></div>
+          <div class="kv"><span>Units</span><strong>Square feet</strong></div>
+          <div class="kv"><span>Photos</span><strong>1–5</strong></div>
+        </div>
+
+        <div class="sideTitle" style="margin-top:14px;">Example scope</div>
+        <div class="sideItem">
+          <span>
+            “Interior walls only, 2 bedrooms + hallway, standard prep,
+            include minor patching, 8 ft ceilings.”
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const form = document.getElementById('intakeForm');
+  const uploadBox = document.getElementById('uploadBox');
+  const fileInput = document.getElementById('files');
+  const fileList = document.getElementById('fileList');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const photoKeysContainer = document.getElementById('photoKeysContainer');
+  const submitBtn = document.getElementById('submitBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const msgOk = document.getElementById('msgOk');
+  const msgErr = document.getElementById('msgErr');
+
+  let uploadInProgress = false;
+
+  function showOk(html){
+    msgErr.style.display = 'none';
+    msgOk.innerHTML = html;
+    msgOk.style.display = 'block';
+  }
+  function showErr(text){
+    msgOk.style.display = 'none';
+    msgErr.textContent = text;
+    msgErr.style.display = 'block';
+  }
+  function clearMsgs(){
+    msgOk.style.display = 'none';
+    msgErr.style.display = 'none';
+  }
+
+  function createHiddenPhotoKey(key){
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'photo_keys';
+    input.value = key;
+    photoKeysContainer.appendChild(input);
+  }
+
+  async function uploadFileToS3(file){
+    const params = new URLSearchParams({
+      filename: file.name,
+      content_type: file.type || 'image/jpeg',
+    });
+
+    const res = await fetch(`/files/presign-upload?${params.toString()}`);
+    if(!res.ok) throw new Error('Could not get presigned upload');
+
+    const data = await res.json();
+
+    const formData = new FormData();
+    Object.entries(data.fields).forEach(([k,v]) => formData.append(k, v));
+    formData.append('file', file);
+
+    const s3Res = await fetch(data.url, { method:'POST', body: formData });
+    if(!s3Res.ok) throw new Error('S3 upload failed');
+
+    return data.key;
+  }
+
+  uploadBox.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async function(){
+    clearMsgs();
+    const files = Array.from(this.files || []);
+    fileList.innerHTML = '';
+    photoKeysContainer.innerHTML = '';
+
+    if(files.length === 0){
+      uploadStatus.textContent = 'No files selected yet.';
+      return;
+    }
+    if(files.length > 5){
+      showErr('Maximum 5 files allowed.');
+      this.value = '';
+      uploadStatus.textContent = 'Upload cancelled.';
+      return;
+    }
+    for(const f of files){
+      if(!f.type.startsWith('image/')){
+        showErr('Only image files are allowed.');
+        this.value = '';
+        uploadStatus.textContent = 'Upload cancelled.';
+        return;
+      }
+    }
+
+    uploadInProgress = true;
+    submitBtn.disabled = true;
+    uploadStatus.textContent = 'Uploading photos...';
+
+    try{
+      const keys = [];
+
+      for(const f of files){
+        const row = document.createElement('div');
+        row.className = 'fileRow';
+        row.innerHTML = `<span>${f.name}</span><small>${(f.size/1024/1024).toFixed(2)} MB</small>`;
+        fileList.appendChild(row);
+
+        const key = await uploadFileToS3(f);
+        keys.push(key);
+        createHiddenPhotoKey(key);
+      }
+
+      uploadStatus.textContent = `✅ Uploaded ${keys.length} photo(s)`;
+    }catch(err){
+      console.error(err);
+      showErr('Photo upload failed. Please try again.');
+      this.value = '';
+      fileList.innerHTML = '';
+      photoKeysContainer.innerHTML = '';
+      uploadStatus.textContent = '❌ Upload failed';
+    }finally{
+      uploadInProgress = false;
+      submitBtn.disabled = false;
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    form.reset();
+    fileInput.value = '';
+    fileList.innerHTML = '';
+    photoKeysContainer.innerHTML = '';
+    uploadStatus.textContent = 'No files selected yet.';
+    clearMsgs();
+  });
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    clearMsgs();
+
+    if(uploadInProgress){
+      showErr('Please wait until photo uploads finish.');
+      return;
+    }
+
+    const photoKeyInputs = document.querySelectorAll('input[name="photo_keys"]');
+    if(photoKeyInputs.length === 0){
+      showErr('Please upload at least one photo.');
+      return;
+    }
+
+    const area = parseFloat(form.querySelector('#square_meters').value);
+    if(!area || area <= 0){
+      showErr('Please enter an area greater than 0.');
+      return;
+    }
+
+    try{
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      const street = (form.querySelector('#street')?.value || '').trim();
+      const city = (form.querySelector('#city')?.value || '').trim();
+      const state = (form.querySelector('#state')?.value || '').trim();
+      const zip = (form.querySelector('#zip')?.value || '').trim();
+
+      const notes = form.querySelector('#address');
+      const oneLine = [street, city, state, zip].filter(Boolean).join(', ');
+      if(oneLine && notes && !notes.value.includes(oneLine)){
+        notes.value = `Address: ${oneLine}\n\n${notes.value || ''}`.trim();
+      }
+
+      const formData = new FormData(form);
+
+      const res = await fetch('/intake/lead', { method:'POST', body: formData });
+      const data = await res.json();
+
+      if(!res.ok){
+        showErr(data.detail ? JSON.stringify(data.detail) : 'Submission failed.');
+        return;
+      }
+
+      const leadId = data.lead_id;
+      const visionUrl = data.next?.vision ? data.next.vision : '';
+      const publishUrl = data.next?.publish_estimate ? data.next.publish_estimate : '';
+
+      showOk(`
+        <strong>Submitted successfully.</strong><br/>
+        Lead ID: <strong>${leadId}</strong><br/>
+        Vertical: <strong>${data.vertical || ''}</strong><br/><br/>
+        Next:
+        ${visionUrl ? `<a class="linkish" href="${visionUrl}" target="_blank">Run Vision</a>` : '' }
+        ${publishUrl ? ` • <a class="linkish" href="${publishUrl}" target="_blank">Publish Estimate</a>` : '' }
+        <div class="hint" style="margin-top:8px;">
+          Tip: You can also run these from Swagger: <code>/docs</code>
+        </div>
+      `);
+
+    }catch(err){
+      console.error(err);
+      showErr('Unexpected error submitting request.');
+    }finally{
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Request';
+    }
+  });
+</script>
+</body>
+</html>

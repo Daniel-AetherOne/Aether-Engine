@@ -1,0 +1,140 @@
+{
+    "vertical_id": "painters_us",
+    "version": "0.1",
+    "locale": "en-US",
+    "currency": "USD",
+    "units": "imperial",
+    "fields": [
+        {
+            "key": "customer_name",
+            "type": "string",
+            "required": true
+        },
+        {
+            "key": "phone",
+            "type": "string",
+            "required": true
+        },
+        {
+            "key": "email",
+            "type": "string",
+            "required": false
+        },
+        {
+            "key": "address",
+            "type": "string",
+            "required": true
+        },
+        {
+            "key": "zip_code",
+            "type": "string",
+            "required": true
+        },
+        {
+            "key": "project_type",
+            "type": "enum",
+            "required": true,
+            "enum": [
+                "interior",
+                "exterior",
+                "both"
+            ]
+        },
+        {
+            "key": "interior_rooms",
+            "type": "number",
+            "required": false,
+            "min": 0
+        },
+        {
+            "key": "ceilings_included",
+            "type": "boolean",
+            "required": false,
+            "default": false
+        },
+        {
+            "key": "trim_included",
+            "type": "boolean",
+            "required": false,
+            "default": false
+        },
+        {
+            "key": "doors_count",
+            "type": "number",
+            "required": false,
+            "min": 0
+        },
+        {
+            "key": "exterior_surface",
+            "type": "enum",
+            "required": false,
+            "enum": [
+                "siding",
+                "stucco",
+                "brick",
+                "wood",
+                "other"
+            ]
+        },
+        {
+            "key": "stories",
+            "type": "enum",
+            "required": false,
+            "enum": [
+                "1",
+                "2",
+                "3+"
+            ]
+        },
+        {
+            "key": "surface_area_sqft",
+            "type": "number",
+            "required": false,
+            "min": 0
+        },
+        {
+            "key": "prep_level",
+            "type": "enum",
+            "required": true,
+            "enum": [
+                "light",
+                "medium",
+                "heavy"
+            ]
+        },
+        {
+            "key": "paint_quality",
+            "type": "enum",
+            "required": true,
+            "enum": [
+                "contractor_grade",
+                "mid",
+                "premium"
+            ]
+        },
+        {
+            "key": "color_changes",
+            "type": "enum",
+            "required": false,
+            "enum": [
+                "none",
+                "some",
+                "many"
+            ],
+            "default": "some"
+        },
+        {
+            "key": "notes",
+            "type": "string",
+            "required": false
+        },
+        {
+            "key": "images",
+            "type": "array",
+            "required": false,
+            "items": {
+                "type": "file"
+            }
+        }
+    ]
+}

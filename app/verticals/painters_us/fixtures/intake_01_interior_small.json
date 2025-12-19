@@ -1,0 +1,22 @@
+{
+    "customer_name": "John Smith",
+    "phone": "+1 206-555-0142",
+    "email": "john.smith@example.com",
+    "address": "123 Maple St, Seattle, WA",
+    "zip_code": "98109",
+    "project_type": "interior",
+    "measurement_method": "rooms",
+    "interior_rooms": 3,
+    "ceilings_included": false,
+    "trim_included": true,
+    "doors_count": 5,
+    "surface_area_sqft": 0,
+    "prep_level": "light",
+    "reported_condition": "good",
+    "paint_quality": "mid",
+    "color_changes": "some",
+    "home_occupied": true,
+    "desired_start_timeline": "1-2_weeks",
+    "notes": "Repaint living room, hallway, and one bedroom. Same color family, minor scuffs only.",
+    "images": []
+}

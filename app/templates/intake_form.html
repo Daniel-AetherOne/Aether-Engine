@@ -246,6 +246,8 @@
             <div class="success-message" id="successMessage"></div>
 
             <form id="intakeForm" enctype="multipart/form-data">
+				<input type="hidden" name="vertical" value="painters_us" />
+				<input type="hidden" name="tenant_id" value="{{ tenant_id or 'default' }}" />
                 <div class="form-row">
                     <div class="form-group">
                         <label for="name">Naam *</label>

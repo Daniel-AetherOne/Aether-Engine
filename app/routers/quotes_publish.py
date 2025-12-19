@@ -4,37 +4,16 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from app.config.cache_config import CACHE_OFFERTES
-from app.utils.cache_control import cache_control
-
-from app.templates import render_template
 from app.domain.quotes import get_quote_for_publish, mark_quote_published
-from app.services.s3_keys import (
-    build_quote_key,
-    build_quote_version_key,
-)
-from app.services.s3_storage import (
-    put_bytes,
-    public_http_url,
-    create_presigned_get,
-)
+from app.services.s3_keys import build_quote_key, build_quote_version_key
+from app.services.s3_storage import put_bytes, public_http_url, create_presigned_get
 
+from app.verticals.registry import get as get_vertical
 
-put_bytes(
-    key, data, content_type="text/html; charset=utf-8", cache=cache_control, public=True
-)
-put_bytes(
-    version_key,
-    data,
-    content_type="text/html; charset=utf-8",
-    cache=cache_control,
-    public=True,
-)
+# Logger (brand later volledig, maar dit is alvast netjes)
+logger = logging.getLogger("aether_engine.quotes")
 
-# Logger voor quotes
-logger = logging.getLogger("levelai.quotes")
-
-# Metrics (optioneel, als prometheus_client beschikbaar is)
+# Metrics (optioneel)
 try:
     from prometheus_client import Counter
 
@@ -47,12 +26,12 @@ try:
         "quotes_publish_error_total",
         "Total number of quote publish errors",
     )
-except Exception:  # ImportError of iets anders
+except Exception:
     quotes_published_total = None
     quotes_publish_error_total = None
 
 
-# Tijdelijke dummy user voor stap 4.x – later vervangen door echte auth
+# Dummy auth
 class CurrentUser(BaseModel):
     id: str
     is_admin: bool = True
@@ -63,17 +42,11 @@ def get_current_user() -> CurrentUser:
 
 
 def _get_tenant_id_from_quote(quote) -> str:
-    """
-    Haalt op een defensieve manier een tenant-achtige ID uit de quote.
-    Valt terug op 'debug-tenant' als niets gevonden wordt.
-    """
-    # 1) Directe attributen op de quote zelf
     for attr in ("tenant_id", "tenantId", "owner_id", "ownerId"):
         val = getattr(quote, attr, None)
         if val:
             return str(val)
 
-    # 2) Nested tenant object of dict
     tenant_obj = getattr(quote, "tenant", None)
     if isinstance(tenant_obj, dict):
         for key in ("id", "tenant_id", "tenantId"):
@@ -86,21 +59,34 @@ def _get_tenant_id_from_quote(quote) -> str:
             if v:
                 return str(v)
 
-    # 3) Hele veilige fallback
     return "debug-tenant"
+
+
+def _resolve_vertical_id_from_quote(quote) -> str:
+    # Single-vertical for now, maar wél future-proof:
+    lead = getattr(quote, "lead", None)
+    if lead is not None:
+        v = getattr(lead, "vertical", None)
+        if v:
+            return str(v)
+
+    v = getattr(quote, "vertical", None)
+    if v:
+        return str(v)
+
+    # fallback (jij draait nu alleen painters_us)
+    return "painters_us"
 
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 
 
-# 4.6 – URL ophalen
 @router.get("/{quote_id}/url")
 def get_quote_url(
     quote_id: str,
     days: int = 7,
     current_user: CurrentUser = Depends(get_current_user),
 ):
-    # 1. Quote ophalen + autorisatie
     quote = get_quote_for_publish(quote_id)
     if not quote:
         raise HTTPException(status_code=404, detail="Quote not found")
@@ -108,13 +94,11 @@ def get_quote_url(
     if quote.owner_id != current_user.id and not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Not allowed")
 
-    # 2. S3 key bepalen
     key = getattr(quote, "s3_key", None)
     if not key:
         tenant_id = _get_tenant_id_from_quote(quote)
         key = build_quote_key(tenant_id, quote.id)
 
-    # 3. CloudFront of presigned GET
     url = public_http_url(key)
     via = "cloudfront"
 
@@ -124,21 +108,11 @@ def get_quote_url(
         via = "presigned"
 
     if not url:
-        raise HTTPException(
-            status_code=500,
-            detail="Could not generate URL",
-        )
+        raise HTTPException(status_code=500, detail="Could not generate URL")
 
-    return {
-        "status": "ok",
-        "quote_id": quote_id,
-        "key": key,
-        "url": url,
-        "via": via,
-    }
+    return {"status": "ok", "quote_id": quote_id, "key": key, "url": url, "via": via}
 
 
-# 4.5 – Publiceren
 class PublishQuoteRequest(BaseModel):
     quote_id: str
     cache_seconds: int | None = 300
@@ -149,6 +123,7 @@ class PublishQuoteResponse(BaseModel):
     key: str
     public_url: str
     via: str
+    vertical: str
 
 
 @router.post("/publish", response_model=PublishQuoteResponse)
@@ -156,42 +131,28 @@ def publish_quote(
     payload: PublishQuoteRequest,
     current_user: CurrentUser = Depends(get_current_user),
 ) -> PublishQuoteResponse:
-    # cache_seconds alvast bepalen (ook handig voor logging)
     cache_seconds = payload.cache_seconds or 300
 
     try:
-        # 1. Quote ophalen & autorisatie check
         quote = get_quote_for_publish(payload.quote_id)
         if not quote:
             if quotes_publish_error_total:
                 quotes_publish_error_total.inc()
-            logger.warning(
-                "Publish failed: quote not found",
-                extra={"quote_id": payload.quote_id},
-            )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Quote not found",
-            )
+            raise HTTPException(status_code=404, detail="Quote not found")
 
         if quote.owner_id != current_user.id and not getattr(
             current_user, "is_admin", False
         ):
             if quotes_publish_error_total:
                 quotes_publish_error_total.inc()
-            logger.warning(
-                "Publish forbidden: not owner or admin",
-                extra={
-                    "quote_id": quote.id,
-                    "user_id": current_user.id,
-                },
-            )
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not allowed to publish this quote",
+                status_code=403, detail="Not allowed to publish this quote"
             )
 
-        # 2. HTML renderen
+        # ✅ Vertical-first: adapter bepaalt template/render gedrag
+        vertical_id = _resolve_vertical_id_from_quote(quote)
+        v = get_vertical(vertical_id)
+
         context = {
             "lead": quote.lead,
             "tenant": quote.tenant,
@@ -202,28 +163,20 @@ def publish_quote(
             "validity_date": quote.validity_date_str,
         }
 
-        html = render_template("quote.html", context)
+        html = v.render_quote_html(context)
 
-        # 3. S3 keys bepalen (tenant + quote)
         tenant_id = _get_tenant_id_from_quote(quote)
         ts = datetime.utcnow()
 
         key = build_quote_key(tenant_id, quote.id)
         version_key = build_quote_version_key(tenant_id, quote.id, ts)
 
-        # 4. Uploaden naar S3
         cache_control = f"public, max-age={cache_seconds}"
         data = html.encode("utf-8")
 
-        # Latest (index.html)
         put_bytes(
-            key,
-            data,
-            content_type="text/html; charset=utf-8",
-            cache=cache_control,
+            key, data, content_type="text/html; charset=utf-8", cache=cache_control
         )
-
-        # Versie-archief
         put_bytes(
             version_key,
             data,
@@ -231,70 +184,59 @@ def publish_quote(
             cache=cache_control,
         )
 
-        # 5. Quote markeren als gepubliceerd
         mark_quote_published(quote.id, s3_key=key, version_key=version_key)
 
-        # 6. URL kiezen: CloudFront public URL of presigned
         public_url = public_http_url(key)
         via = "cloudfront"
-
         if not public_url:
-            expires_in = 7 * 24 * 3600  # 7 dagen
-            public_url = create_presigned_get(key, expires_in=expires_in)
+            public_url = create_presigned_get(key, expires_in=7 * 24 * 3600)
             via = "presigned"
 
         if not public_url:
             if quotes_publish_error_total:
                 quotes_publish_error_total.inc()
-            logger.error(
-                "Publish failed: could not create public URL",
-                extra={
-                    "quote_id": quote.id,
-                    "key": key,
-                    "cache_seconds": cache_seconds,
-                },
-            )
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Could not create public URL for quote",
+                status_code=500, detail="Could not create public URL for quote"
             )
 
-        # 7. Success logging + metric
         logger.info(
             "Quote published",
             extra={
                 "quote_id": quote.id,
                 "key": key,
                 "via": via,
-                "cache_seconds": cache_seconds,
+                "vertical": vertical_id,
             },
         )
         if quotes_published_total:
             quotes_published_total.labels(via=via).inc()
 
         return PublishQuoteResponse(
-            status="ok",
-            key=key,
-            public_url=public_url,
-            via=via,
+            status="ok", key=key, public_url=public_url, via=via, vertical=vertical_id
         )
 
     except HTTPException:
-        # HTTPExceptions zijn al voorzien van correcte statuscode;
-        # errors zijn hierboven al meegeteld.
         raise
     except Exception as exc:
-        # Onverwachte fout
         if quotes_publish_error_total:
             quotes_publish_error_total.inc()
         logger.exception(
             "Unexpected error while publishing quote",
-            extra={
-                "quote_id": payload.quote_id,
-                "cache_seconds": cache_seconds,
-            },
+            extra={"quote_id": payload.quote_id},
         )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal error while publishing quote",
+            status_code=500, detail="Internal error while publishing quote"
         ) from exc
+
+
+# ✅ Plak compat route HIER, NA publish_quote(), helemaal links (top-level)
+@router.post("/publish/{quote_id}", response_model=PublishQuoteResponse)
+def publish_quote_compat(
+    quote_id: str,
+    cache_seconds: int | None = 300,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> PublishQuoteResponse:
+    return publish_quote(
+        PublishQuoteRequest(quote_id=quote_id, cache_seconds=cache_seconds),
+        current_user=current_user,
+    )

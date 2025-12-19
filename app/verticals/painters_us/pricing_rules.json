@@ -1,0 +1,80 @@
+{
+    "vertical_id": "painters_us",
+    "version": "0.1",
+    "currency": "USD",
+    "units": {
+        "area": "sqft",
+        "discrete": "per_item"
+    },
+    "surface_types": [
+        "walls",
+        "ceilings",
+        "trim",
+        "doors",
+        "exterior_siding"
+    ],
+    "assumptions": {
+        "includes_paint": false,
+        "includes_prep": false,
+        "includes_cleanup": false,
+        "includes_repairs": false,
+        "includes_materials": false,
+        "includes_labor": false
+    },
+    "gates": {
+        "require_pricing_ready": true,
+        "min_confidence": 0.7
+    },
+    "base_rates": {
+        "walls": {
+            "unit": "sqft",
+            "rate_usd": 2.75
+        },
+        "ceilings": {
+            "unit": "sqft",
+            "rate_usd": 3.25
+        },
+        "exterior_siding": {
+            "unit": "sqft",
+            "rate_usd": 4.50
+        },
+        "trim": {
+            "unit": "fixed",
+            "base_usd": 300
+        },
+        "doors": {
+            "unit": "per_item",
+            "rate_usd": 120
+        }
+    },
+    "multipliers": {
+        "prep_level": {
+            "light": 1.0,
+            "medium": 1.25,
+            "heavy": 1.6
+        },
+        "access_risk": {
+            "low": 1.0,
+            "medium": 1.15,
+            "high": 1.35
+        },
+        "complexity": {
+            "low": 1.0,
+            "medium": 1.2,
+            "high": 1.4
+        }
+    },
+    "cost_split": {
+        "labor_ratio": 0.7,
+        "materials_ratio": 0.3
+    },
+    "margin": {
+        "target": 0.25,
+        "minimum": 0.15
+    },
+    "estimate_range": {
+        "low_factor": 0.85,
+        "high_factor": 1.15
+    },
+    "hard_blocks": {}
+}

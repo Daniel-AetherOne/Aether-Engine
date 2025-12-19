@@ -2,6 +2,8 @@
 from __future__ import annotations
 from typing import List, Optional
 from datetime import datetime
+from sqlalchemy import Column, String
+
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import (
@@ -18,6 +20,8 @@ from app.db import Base  # pas aan als jouw Base elders staat
 
 class Lead(Base):
     __tablename__ = "leads"
+
+    vertical = Column(String(64), nullable=True, index=True)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 

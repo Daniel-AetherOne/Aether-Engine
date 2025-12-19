@@ -1,13 +1,18 @@
 # app/main.py
+import os
+
+print(os.getenv("APP_NAME"))
 import time
 import sentry_sdk
 
 from fastapi import FastAPI, Request
+from app.verticals import register_verticals
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from app.routers.debug_aws import router as debug_aws_router
 
 from app.core.settings import settings
 from app.core.logging_config import setup_logging, logger
@@ -16,20 +21,21 @@ from app.db import Base, engine
 from app import models  # noqa: F401  (registreert SQLAlchemy modellen)
 from app.middleware.request_id import RequestIdMiddleware
 
+from app.routers.vision_debug import router as vision_router
+
 from app.routers import uploads, intake, quotes, files
 from app.observability.metrics import router as metrics_router
 
 
-# ----------------------------------------------------
-# Sentry (optioneel: alleen als DSN bestaat)
-# ----------------------------------------------------
-if getattr(settings, "SENTRY_DSN", None):
-    sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        integrations=[FastApiIntegration()],
-        traces_sample_rate=1.0,
-        send_default_pii=True,
-    )
+# --- AWS safety guard (geen static keys) ---
+def assert_no_static_aws_keys_in_env():
+    banned = ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN")
+    present = [k for k in banned if os.getenv(k)]
+    if present:
+        raise RuntimeError(
+            f"Static AWS keys found in env: {present}. "
+            "Use AWS_PROFILE (local) or IAM Role / WIF (prod)."
+        )
 
 
 # ----------------------------------------------------
@@ -37,8 +43,25 @@ if getattr(settings, "SENTRY_DSN", None):
 # ----------------------------------------------------
 app = FastAPI(title="LevelAI", version="0.1.0")
 
+
+@app.on_event("startup")
+def _startup_guard():
+    # Deze draait netjes bij app startup (niet bij import)
+    assert_no_static_aws_keys_in_env()
+
+
+# ----------------------------------------------------
+# App init
+# ----------------------------------------------------
+app = FastAPI(title="LevelAI", version="0.1.0")
+
+register_verticals()
+
 setup_logging()
 logger.info("startup", service="levelai-api")
+
+
+app.include_router(debug_aws_router)
 
 
 # ----------------------------------------------------
@@ -109,6 +132,7 @@ app.include_router(quotes.router)
 app.include_router(files.router)
 app.include_router(intake.router)
 app.include_router(metrics_router)  # /metrics
+app.include_router(vision_router)
 
 
 # ----------------------------------------------------
