@@ -4,7 +4,8 @@ import httpx
 from datetime import datetime
 from sqlalchemy.orm import Session
 from app.models.upload_status import UploadStatus
-from app.config import settings  # of vervang door je eigen configmodule
+from app.core.settings import settings  # of vervang door je eigen configmodule
+
 
 async def verify_object(session: Session, status: UploadStatus):
     s3_url = f"{settings.S3_BASE_URL}/{status.object_key}"
