@@ -28,4 +28,4 @@ def setup_logging() -> None:
 
 
 # Globale logger die je overal kunt importeren
-logger = structlog.get_logger("levelai")
+logger = structlog.get_logger("aether")

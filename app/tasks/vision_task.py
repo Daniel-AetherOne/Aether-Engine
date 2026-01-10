@@ -3,16 +3,15 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import boto3
 from sqlalchemy.orm import Session
 
 from app.core.settings import settings
 from app.models import Lead, LeadFile
-from app.tasks.vision import predict_images
-from app.verticals.painters_us.vision_aggregate_us import aggregate_images_to_surfaces
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,11 @@ def _get_s3_client():
 
 
 def _tmp_dir_for_lead(lead_id: int) -> Path:
-    d = Path(".tmp") / "vision" / str(lead_id)
+    """
+    Cloud Run only guarantees /tmp as writable.
+    """
+    base = Path(os.getenv("UPLOAD_DIR", "/tmp/uploads"))
+    d = base / "vision" / str(lead_id)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -33,11 +36,9 @@ def _download_s3_key_to_local(s3_key: str, lead_id: int) -> str:
     """
     tmp_dir = _tmp_dir_for_lead(lead_id)
 
-    # Keep original filename if possible
     filename = Path(s3_key).name or f"{s3_key.replace('/', '_')}.jpg"
     local_path = tmp_dir / filename
 
-    # Skip download if file already exists
     if local_path.exists() and local_path.stat().st_size > 0:
         return str(local_path)
 
@@ -76,15 +77,28 @@ def _collect_image_paths(files: List[LeadFile], lead_id: int) -> List[str]:
     return paths
 
 
+def _painters_us_enabled() -> bool:
+    """
+    Prefer settings if present, else fall back to env var.
+    Accepts: "1"/"true"/"yes" as enabled.
+    """
+    v = getattr(settings, "ENABLE_PAINTERS_US", None)
+    if v is None:
+        v = os.getenv("ENABLE_PAINTERS_US", "0")
+    return str(v).strip().lower() in {"1", "true", "yes", "y"}
+
+
 def run_vision_for_lead(db: Session, lead_id: int) -> Dict[str, Any]:
     """
     Runs vision for a lead:
     - loads Lead + LeadFile
     - collects local image paths (local_path OR downloads from S3 via s3_key)
-    - runs predict_images(local_paths)
-    - aggregates to surface-level vision_output for painters_us
+    - runs predict_images(local_paths)  (safe: falls back if torch missing)
+    - if painters_us enabled: aggregates to surface-level output
+      else: store raw image_predictions
     - stores on lead.vision_json (string) or lead.vision_output (dict)
     """
+
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise ValueError("Lead not found")
@@ -94,40 +108,63 @@ def run_vision_for_lead(db: Session, lead_id: int) -> Dict[str, Any]:
         raise ValueError("No files found for this lead (LeadFile records missing).")
 
     image_paths = _collect_image_paths(files, lead_id)
-
     if not image_paths:
         raise ValueError(
             "No usable image paths. LeadFile.local_path is empty and S3 downloads via LeadFile.s3_key failed."
         )
 
-    # Run image-level predictions
+    # Run image-level predictions (will heuristic-fallback if torch not installed)
+    from app.tasks.vision import predict_images
+
     image_predictions = predict_images(image_paths)
 
-    # US painters surface-level aggregation (MVP)
-    vision_output = aggregate_images_to_surfaces(image_predictions)
+    # Decide aggregation strategy
+    if _painters_us_enabled():
+        try:
+            from app.verticals.painters_us.vision_aggregate_us import (
+                aggregate_images_to_surfaces,
+            )
 
-    # Validate output
+            vision_output: Dict[str, Any] = aggregate_images_to_surfaces(
+                image_predictions
+            )
+        except Exception as e:
+            logger.exception(
+                f"PaintersUS aggregation failed for lead_id={lead_id}: {e}"
+            )
+            vision_output = {
+                "mode": "image_predictions_only",
+                "reason": "aggregation_failed",
+                "error": str(e),
+                "image_predictions": image_predictions,
+            }
+    else:
+        vision_output = {
+            "mode": "image_predictions_only",
+            "reason": "painters_us_disabled",
+            "image_predictions": image_predictions,
+        }
+
+    # Optional validation
     surfaces = (
         vision_output.get("surfaces") if isinstance(vision_output, dict) else None
     )
-    if not surfaces:
+    if _painters_us_enabled() and not surfaces:
         logger.warning(
             f"Vision aggregation produced empty surfaces for lead_id={lead_id}. "
             f"images={len(image_paths)} preds={len(image_predictions)}"
         )
 
-    # Store on lead for later publish/render
+    # Store on lead
+    payload = json.dumps(vision_output)
+
     if hasattr(lead, "vision_json"):
-        lead.vision_json = json.dumps(vision_output)
+        lead.vision_json = payload
     elif hasattr(lead, "vision_output"):
         lead.vision_output = vision_output
     else:
-        # last resort: store in notes (not recommended)
-        lead.notes = (lead.notes or "") + "\n\nVISION_JSON=" + json.dumps(vision_output)
-
-        # ALWAYS also store a backup in notes (for MVP debugging / compatibility)
         lead.notes = lead.notes or ""
-        lead.notes += "\n\nVISION_JSON=" + json.dumps(vision_output)
+        lead.notes += "\n\nVISION_JSON=" + payload
 
     db.commit()
     return vision_output

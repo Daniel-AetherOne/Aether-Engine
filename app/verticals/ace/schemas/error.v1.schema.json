@@ -1,0 +1,35 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://aether.engine/schemas/ace-wholesale/error.v1.schema.json",
+    "title": "ACE Wholesale Error (v1)",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "contractVersion",
+        "errorType",
+        "message"
+    ],
+    "properties": {
+        "contractVersion": {
+            "type": "string",
+            "const": "v1"
+        },
+        "errorType": {
+            "type": "string",
+            "enum": [
+                "VALIDATION_ERROR",
+                "ENGINE_ERROR"
+            ]
+        },
+        "message": {
+            "type": "string",
+            "minLength": 1
+        },
+        "details": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    }
+}

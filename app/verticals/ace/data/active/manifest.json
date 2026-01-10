@@ -1,0 +1,50 @@
+{
+  "activeVersionId": "test2",
+  "datasets": [
+    {
+      "type": "articles",
+      "versionId": "test2",
+      "filename": "articles.csv",
+      "uploadedBy": "admin",
+      "uploadedAt": "2026-01-09T16:58:20+00:00",
+      "checksum": "92eff696359f749f51e0a47df94f26ab88ea23ebadf134905db08f62041a86ee",
+      "rowCount": 1
+    },
+    {
+      "type": "tiers",
+      "versionId": "test2",
+      "filename": "tiers.csv",
+      "uploadedBy": "admin",
+      "uploadedAt": "2026-01-09T16:58:20+00:00",
+      "checksum": "5cd5874677d28124d2c7db1a6b222ce8e01f99284736104d6f508b856e4c844d",
+      "rowCount": 3
+    },
+    {
+      "type": "supplier_factors",
+      "versionId": "test2",
+      "filename": "supplier_factors.csv",
+      "uploadedBy": "admin",
+      "uploadedAt": "2026-01-09T16:58:20+00:00",
+      "checksum": "77c9a90b10be92decefa513ccad25494a7746ba41a24a139939fbd58395560a3",
+      "rowCount": 1
+    },
+    {
+      "type": "transport",
+      "versionId": "test2",
+      "filename": "transport.csv",
+      "uploadedBy": "admin",
+      "uploadedAt": "2026-01-09T16:58:20+00:00",
+      "checksum": "97943f7e004ad3030176db677387c5e5827330627a353a85cd96c8ac9a7e31c9",
+      "rowCount": 1
+    },
+    {
+      "type": "customers",
+      "versionId": "test2",
+      "filename": "customers.xlsx",
+      "uploadedBy": "admin",
+      "uploadedAt": "2026-01-09T16:58:20+00:00",
+      "checksum": "d684ae2251b4d25b04524e70acec3627dd69769949113b84e01b2992951682d5",
+      "rowCount": 2
+    }
+  ]
+}

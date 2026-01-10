@@ -12,6 +12,7 @@ from app.logging_config import get_logger
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 logger = get_logger(__name__)
 
+
 # ------------------------------
 # Prometheus exposition endpoint
 # ------------------------------
@@ -23,6 +24,7 @@ async def prometheus_metrics():
     payload = generate_latest()
     return Response(content=payload, media_type=CONTENT_TYPE_LATEST)
 
+
 # ------------------------------
 # JSON summaries / dashboards
 # ------------------------------
@@ -31,6 +33,7 @@ async def metrics_summary():
     """Krijg een samenvatting van alle metrics (JSON)"""
     logger.info("metrics_summary requested")
     return get_metrics_summary()
+
 
 @router.get("/rate-limits", summary="Alle rate limits (voorbeeld)")
 async def rate_limits_info():
@@ -56,6 +59,7 @@ async def rate_limits_info():
         }
     }
 
+
 @router.get("/rate-limits/{tenant_id}", summary="Rate limits per tenant")
 async def tenant_rate_limits(tenant_id: str):
     """Krijg rate limit informatie voor een specifieke tenant"""
@@ -63,12 +67,14 @@ async def tenant_rate_limits(tenant_id: str):
     rate_limit_info = get_rate_limit_info(tenant_id)
     return {"tenant_id": tenant_id, "rate_limits": rate_limit_info}
 
+
 @router.post("/rate-limits/reset", summary="Reset alle rate limits")
 async def reset_all_rate_limits():
     """Reset alle rate limits"""
     logger.info("reset_all_rate_limits requested")
     count = reset_rate_limits()
     return {"message": f"Reset {count} rate limit counters", "reset_count": count}
+
 
 @router.post("/rate-limits/{tenant_id}/reset", summary="Reset rate limits per tenant")
 async def reset_tenant_rate_limits(tenant_id: str):
@@ -80,6 +86,7 @@ async def reset_tenant_rate_limits(tenant_id: str):
         "tenant_id": tenant_id,
         "reset_count": count,
     }
+
 
 @router.get("/dashboard", response_class=HTMLResponse, summary="HTML metrics dashboard")
 async def metrics_dashboard():
@@ -207,6 +214,7 @@ async def metrics_dashboard():
     """
     return HTMLResponse(content=html_content)
 
+
 @router.get("/health/detailed", summary="Gedetailleerde health + metrics")
 async def detailed_health():
     """Gedetailleerde health check met metrics"""
@@ -218,7 +226,7 @@ async def detailed_health():
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "metrics": summary,
             "services": {
-                "redis": "connected",     # TODO: echte checks koppelen
+                "redis": ("not_configured" if not settings.REDIS_URL else "unknown"),
                 "database": "connected",
                 "celery": "running",
             },

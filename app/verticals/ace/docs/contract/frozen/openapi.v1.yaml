@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info:
+  title: ACE Wholesale API
+  version: v1
+paths:
+  /quote:
+    post:
+      summary: Generate quote (deterministic)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/input.v1.schema.json"
+      responses:
+        "200":
+          description: Quote output (may include warnings/blocking)
+          content:
+            application/json:
+              schema:
+                $ref: "../schemas/output.v1.schema.json"
+        "400":
+          description: Validation error (input/schema invalid)
+          content:
+            application/json:
+              schema:
+                $ref: "../schemas/error.v1.schema.json"
+        "500":
+          description: Engine failure
+          content:
+            application/json:
+              schema:
+                $ref: "../schemas/error.v1.schema.json"

@@ -7,7 +7,7 @@ from datetime import datetime
 
 # Celery configuratie
 celery_app = Celery(
-    "levelai",
+    "aether",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
 )

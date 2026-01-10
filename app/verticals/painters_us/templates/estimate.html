@@ -6,255 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{{ copy.doc_title if copy and copy.doc_title else "Painting Estimate" }}</title>
 
-  <style>
-    :root{
-      --bg:#f6f7fb;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#5b6474;
-      --line:#e7e9f1;
-
-      --brand:#2563eb;      /* blue */
-      --brand2:#16a34a;     /* green */
-      --warn:#f59e0b;       /* amber */
-      --danger:#dc2626;
-
-      --shadow:0 18px 45px rgba(15,23,42,.10);
-      --radius:18px;
-    }
-
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background:
-        radial-gradient(900px 520px at 18% 0%, rgba(37,99,235,.10), transparent 60%),
-        radial-gradient(900px 520px at 86% 12%, rgba(22,163,74,.08), transparent 60%),
-        linear-gradient(180deg, #fbfcff, var(--bg));
-      color:var(--text);
-      padding:28px 16px;
-    }
-
-    .wrap{max-width:1100px;margin:0 auto}
-
-    /* Top bar */
-    .topbar{
-      display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
-      align-items:flex-end;
-      margin-bottom:14px;
-    }
-    .brand{
-      display:flex;flex-direction:column;gap:6px;
-    }
-    .brand h1{
-      font-size:18px;
-      font-weight:900;
-      letter-spacing:.2px;
-      line-height:1.2;
-    }
-    .brand .muted{
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.35;
-    }
-
-    .badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:8px 10px;border-radius:999px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.75);
-      color:var(--muted);font-size:12px;
-      box-shadow: 0 8px 22px rgba(15,23,42,.04);
-      backdrop-filter: blur(8px);
-    }
-    .pill strong{color:var(--text);font-weight:900}
-
-    .statusBadge{
-      display:inline-flex;align-items:center;gap:10px;
-      padding:10px 12px;border-radius:999px;
-      font-size:12px;font-weight:900;letter-spacing:.35px;
-      border:1px solid var(--line);
-      background:#fff;
-      box-shadow: 0 10px 26px rgba(15,23,42,.06);
-      text-transform:uppercase;
-    }
-    .statusBadge i{
-      width:10px;height:10px;border-radius:999px;display:inline-block
-    }
-    .statusBadge.good{border-color: rgba(22,163,74,.25)}
-    .statusBadge.good i{background: var(--brand2); box-shadow:0 0 0 4px rgba(22,163,74,.12)}
-    .statusBadge.warn{border-color: rgba(245,158,11,.25)}
-    .statusBadge.warn i{background: var(--warn); box-shadow:0 0 0 4px rgba(245,158,11,.12)}
-
-    /* Cards / layout */
-    .card{
-      border:1px solid var(--line);
-      background: var(--card);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-    .cardHeader{
-      padding:18px 20px 14px 20px;
-      border-bottom:1px solid var(--line);
-      background:
-        radial-gradient(900px 240px at 0% 0%, rgba(37,99,235,.08), transparent 60%),
-        radial-gradient(900px 240px at 100% 0%, rgba(22,163,74,.06), transparent 60%);
-    }
-    .cardBody{padding:16px 20px 20px 20px}
-
-    .heroTitle{
-      font-size:24px;
-      font-weight:950;
-      letter-spacing:.2px;
-      line-height:1.15;
-    }
-    .lead{
-      margin-top:8px;
-      font-size:14px;
-      line-height:1.55;
-      color:var(--text);
-    }
-    .lead .muted{color:var(--muted)}
-
-    .sectionTitle{
-      font-size:12px;
-      color:var(--muted);
-      text-transform:uppercase;
-      letter-spacing:.38px;
-      margin-bottom:10px;
-      font-weight:950;
-    }
-
-    .noteBox{
-      border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(37,99,235,.03), rgba(22,163,74,.02));
-      border-radius:16px;
-      padding:12px;
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.6;
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 1.2fr .8fr;
-      gap:14px;
-      margin-top:14px;
-    }
-    @media (max-width: 980px){
-      .grid{grid-template-columns:1fr}
-      .badges{justify-content:flex-start}
-    }
-
-    /* Key/Value tiles */
-    .kv{display:grid;grid-template-columns: 1fr 1fr;gap:10px}
-    @media (max-width:640px){.kv{grid-template-columns:1fr}}
-    .kv .item{
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:16px;
-      padding:12px;
-    }
-    .kv b{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      margin-bottom:6px;
-      font-weight:950;
-      text-transform:uppercase;
-      letter-spacing:.3px;
-    }
-    .kv span{
-      display:block;
-      font-size:14px;
-      color:var(--text);
-      line-height:1.35;
-      font-weight:800;
-    }
-
-    /* Table */
-    table{
-      width:100%;
-      border-collapse:separate;
-      border-spacing:0;
-      overflow:hidden;
-      border:1px solid var(--line);
-      border-radius:16px;
-      background:#fff;
-    }
-    th, td{
-      padding:12px 12px;
-      border-bottom:1px solid var(--line);
-      vertical-align:top;
-      font-size:13px;
-    }
-    th{
-      color:var(--muted);
-      text-transform:uppercase;
-      letter-spacing:.3px;
-      font-weight:950;
-      font-size:11px;
-      background: rgba(15,23,42,.02);
-    }
-    tr:last-child td{border-bottom:none}
-    td .muted{color:var(--muted);font-size:12px}
-    .right{text-align:right}
-
-    /* Totals */
-    .totals{display:grid;gap:10px}
-    .totalRow{
-      display:flex;justify-content:space-between;gap:10px;
-      padding:12px;
-      border-radius:16px;
-      border:1px solid var(--line);
-      background:#fff;
-      font-size:13px;
-    }
-    .totalRow b{
-      color:var(--muted);
-      font-weight:950;
-      text-transform:uppercase;
-      letter-spacing:.3px;
-      font-size:12px;
-    }
-    .totalRow strong{font-weight:950}
-    .grand{
-      background: linear-gradient(135deg, rgba(37,99,235,.06), rgba(22,163,74,.06));
-      border-color: rgba(37,99,235,.22);
-    }
-    .muted{color:var(--muted)}
-
-    .cta{
-      margin-top:12px;
-      border:1px solid rgba(22,163,74,.18);
-      background: rgba(22,163,74,.06);
-      border-radius:16px;
-      padding:12px;
-      color:var(--text);
-      font-size:13px;
-      line-height:1.6;
-    }
-
-    ul{margin-left:18px}
-    li{margin:6px 0;color:var(--text);font-size:13px;line-height:1.6}
-
-    .footer{
-      margin-top:14px;
-      color:var(--muted);
-      font-size:12px;
-      text-align:center;
-      line-height:1.5;
-    }
-    .smallLink{color:var(--brand);text-decoration:none;font-weight:950}
-
-    /* Print friendliness (optional) */
-    @media print{
-      body{background:#fff;padding:0}
-      .card{box-shadow:none}
-      .pill,.statusBadge{box-shadow:none}
-    }
-  </style>
+  <link rel="stylesheet" href="https://offers.getpaintly.com/static/v1/app.css">
+  <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
 </head>
 
 <body>
@@ -262,7 +15,7 @@
 
   <div class="topbar">
     <div class="brand">
-      <h1>{{ company.name if company and company.name else "LevelAI Painting" }}</h1>
+      <h1>{{ company.name if company and company.name else "Paintly" }}</h1>
       <div class="muted">
         {% if company.phone %}{{ company.phone }}{% endif %}
         {% if company.phone and company.email %} • {% endif %}
@@ -327,7 +80,7 @@
       <div class="cardHeader">
         <div class="sectionTitle">Itemized breakdown</div>
         <div class="muted" style="font-size:13px;line-height:1.5;">
-          Each line item is derived from vision output (surfaces) + prep/access assumptions.
+          Each line item reflects the areas identified from your photos and standard assumptions.
         </div>
       </div>
 
@@ -342,21 +95,40 @@
               <th class="right" style="width:16%;">Line total</th>
             </tr>
           </thead>
+
           <tbody>
-            {% for item in items %}
+            {% for item in pricing.line_items %}
               <tr>
                 <td>
                   <div style="font-weight:950;">{{ item.label }}</div>
-                  {% if item.notes %}<div class="muted">{{ item.notes }}</div>{% endif %}
+                  {% if item.description %}
+                    <div class="muted">{{ item.description }}</div>
+                  {% endif %}
                 </td>
+
                 <td>
-                  {{ "%.0f"|format(item.quantity) }} {{ item.unit }}
+                  {{ fmt_qty(item.quantity, item.unit) }} {{ item.unit }}
                 </td>
-                <td>{{ item.prep_level }}</td>
-                <td>{{ item.access_risk }}</td>
+
+                <td>
+                  {% if item.assumptions and item.assumptions.prep_level %}
+                    {{ item.assumptions.prep_level }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if item.assumptions and item.assumptions.access %}
+                    {{ item.assumptions.access }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
                 <td class="right">
-                  {% if pricing_ready and item.total_usd is not none %}
-                    <span style="font-weight:950;">{{ fmt_usd(item.total_usd) }}</span>
+                  {% if pricing_ready and item.total %}
+                    <span style="font-weight:950;">{{ fmt_usd(item.total) }}</span>
                   {% else %}
                     <span class="muted">TBD</span>
                   {% endif %}
@@ -425,19 +197,50 @@
           {% if pricing_ready %}
             <div class="totalRow">
               <b>{{ copy.labor_label if copy and copy.labor_label else "Labor" }}</b>
-              <strong>{{ fmt_usd(pricing_labor_usd) }}</strong>
+              <strong>{{ fmt_usd(pricing.subtotals.labor) }}</strong>
             </div>
+
             <div class="totalRow">
               <b>{{ copy.materials_label if copy and copy.materials_label else "Materials" }}</b>
-              <strong>{{ fmt_usd(pricing_materials_usd) }}</strong>
+              <strong>{{ fmt_usd(pricing.subtotals.materials) }}</strong>
             </div>
+
+{% if show_tax %}
+  <div class="totalRow">
+    <b>Sales tax (if applicable)</b>
+    <strong>
+      {% if pricing.tax and pricing.tax.tax_amount is not none %}
+        {{ fmt_usd(pricing.tax.tax_amount) }}
+      {% else %}
+        —
+      {% endif %}
+    </strong>
+  </div>
+{% endif %}
+
+
             <div class="totalRow grand">
-              <b>Total</b>
-              <strong>{{ fmt_usd(pricing_total_usd) }}</strong>
-            </div>
-            <div class="muted" style="font-size:12px;line-height:1.5;margin-top:6px;">
-              Materials include paint & consumables unless noted.
-            </div>
+  <b>Total</b>
+  <strong>{{ fmt_usd(pricing.totals.grand_total) }}</strong>
+</div>
+
+{% if subject_to_verification_copy %}
+  <div class="muted" style="font-size:12px;line-height:1.5;margin-top:6px;">
+    {{ subject_to_verification_copy }}
+  </div>
+{% endif %}
+
+{% if validity_copy %}
+  <div class="muted" style="font-size:12px;line-height:1.5;margin-top:4px;">
+    {{ validity_copy }}
+  </div>
+{% endif %}
+
+<div class="muted" style="font-size:12px;line-height:1.5;margin-top:6px;">
+  Materials include paint & consumables unless noted.
+</div>
+
+			
           {% else %}
             <div class="totalRow">
               <b>Pricing</b>
@@ -459,11 +262,25 @@
   </div>
 
   <div class="footer">
-    Generated by LevelAI •
+
+  {% if pricing_ready and copy and copy.disclaimer_pricing_ready %}
+    <div class="muted" style="font-size:11px;line-height:1.5;margin-bottom:10px;">
+      {{ copy.disclaimer_pricing_ready }}
+    </div>
+  {% elif (not pricing_ready) and copy and copy.disclaimer_needs_review %}
+    <div class="muted" style="font-size:11px;line-height:1.5;margin-bottom:10px;">
+      {{ copy.disclaimer_needs_review }}
+    </div>
+  {% endif %}
+
+  <div class="muted" style="font-size:11px;line-height:1.5;">
+    Generated by Paintly
     {% if project and project.lead_id %}
-      Lead #{{ project.lead_id }}
+      • Lead #{{ project.lead_id }}
     {% endif %}
   </div>
+
+</div>
 
 </div>
 </body>

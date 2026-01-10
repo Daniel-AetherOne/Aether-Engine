@@ -8,18 +8,22 @@ class Settings(BaseSettings):
     # --- Core app ---
     ENV: str = "development"
     APP_ENV: str = "development"
-    APP_NAME: str = "LevelAI SaaS"
+    APP_NAME: str = "Aether Engine"
     APP_VERSION: str = "0.1.0"
+    SERVICE_NAME: str = "aether-api"
+    ENABLE_DEV_ROUTES: bool = False
+    ENABLE_LLM_PRICING: bool = False
+
     DEBUG: bool = True
     SECRET_KEY: str = "change-me"
 
     # --- Database & Redis ---
-    DATABASE_URL: str = "postgresql://username:password@localhost:5432/levelai_db"
+    DATABASE_URL: str = "sqlite:///./aether.db"
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # --- Storage / S3 ---
     AWS_REGION: str = "eu-west-1"
-    S3_BUCKET: str = "levelai-prod-files"
+    S3_BUCKET: str = "aether-prod-files"
     AWS_S3_BUCKET_NAME: Optional[str] = None
 
     USE_LOCAL_STORAGE: bool = False
@@ -70,7 +74,7 @@ class Settings(BaseSettings):
     SMTP_USER: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     SMTP_FROM_EMAIL: Optional[str] = None
-    SMTP_FROM_NAME: str = "LevelAI"
+    SMTP_FROM_NAME: str = "Aether Engine"
 
     # --- External services ---
     WHATSAPP_API_KEY: Optional[str] = None

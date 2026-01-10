@@ -10,12 +10,12 @@ from app.models import Lead
 
 class PricingEngine:
     """Prijsengine voor het berekenen van totaalprijzen op basis van m², substrate en issues."""
-    
+
     def __init__(self, rules_file: str = "rules/pricing_rules.json"):
         """Initialiseer de pricing engine met regels uit JSON bestand."""
         self.rules_file = rules_file
         self.rules = self._load_rules()
-    
+
     def _load_rules(self) -> Dict:
         """Laad prijsregels uit JSON bestand."""
         try:
@@ -25,64 +25,68 @@ class PricingEngine:
                 # Probeer absoluut pad vanuit workspace root
                 workspace_root = Path(__file__).parent.parent.parent
                 rules_path = workspace_root / self.rules_file
-            
+
             with open(rules_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             raise RuntimeError(f"Kon prijsregels niet laden: {e}")
-    
-    def compute_price(self, m2: float, substrate: str, issues: Optional[List[str]] = None) -> Dict:
+
+    def compute_price(
+        self, m2: float, substrate: str, issues: Optional[List[str]] = None
+    ) -> Dict:
         """
         Bereken totaalprijs op basis van m², substrate en issues.
-        
+
         Args:
             m2: Oppervlakte in vierkante meters
             substrate: Type substrate (gipsplaat, beton, bestaand)
             issues: Lijst van issues (vocht, scheuren)
-            
+
         Returns:
             Dict met subtotal, discount, vat_amount, total, aannames en doorlooptijd
         """
         if issues is None:
             issues = []
-        
+
         # Valideer input
         if m2 <= 0:
             raise ValueError("m2 moet groter zijn dan 0")
-        
+
         if substrate not in self.rules["base_per_m2"]:
             valid = list(self.rules["base_per_m2"].keys())
-            raise ValueError(f"Ongeldig substrate: {substrate}. Geldige opties: {valid}")
-        
+            raise ValueError(
+                f"Ongeldig substrate: {substrate}. Geldige opties: {valid}"
+            )
+
         # Bereken basisprijs
         base_price_per_m2 = self.rules["base_per_m2"][substrate]
         subtotal = m2 * base_price_per_m2
-        
+
         # Pas surcharges toe voor issues
         total_surcharge = 0.0
         for issue in issues:
             if issue in self.rules.get("surcharge", {}):
                 total_surcharge += self.rules["surcharge"][issue]
-        
+
         if total_surcharge > 0:
-            subtotal *= (1 + total_surcharge)
-        
+            subtotal *= 1 + total_surcharge
+
         # Pas minimum totaal toe
         min_total = self.rules.get("min_total")
         if min_total is not None and subtotal < min_total:
             subtotal = min_total
-        
+
         # Bereken BTW
         vat_percent = self.rules.get("vat_percent", 21)
         vat_amount = subtotal * (vat_percent / 100)
-        
+
         # Totaalprijs
         total = subtotal + vat_amount
-        
+
         # Bepaal aannames en doorlooptijd op basis van eenvoudige regels
         aannames = self._determine_aannames(m2, substrate, issues)
         doorlooptijd = self._determine_doorlooptijd(m2, substrate, issues)
-        
+
         return {
             "subtotal": round(subtotal, 2),
             "discount": 0.0,  # Geen korting volgens specificaties
@@ -93,11 +97,13 @@ class PricingEngine:
             "vat_percent": vat_percent,
             "base_price_per_m2": base_price_per_m2,
         }
-    
-    def _determine_aannames(self, m2: float, substrate: str, issues: List[str]) -> List[str]:
+
+    def _determine_aannames(
+        self, m2: float, substrate: str, issues: List[str]
+    ) -> List[str]:
         """Bepaal aannames op basis van input parameters."""
         aannames: List[str] = []
-        
+
         # Basis aannames per substrate
         if substrate == "gipsplaat":
             aannames.append("Gipsplaat is beschikbaar en in goede staat.")
@@ -108,22 +114,24 @@ class PricingEngine:
         elif substrate == "bestaand":
             aannames.append("Bestaand oppervlak is geschikt voor behandeling.")
             aannames.append("Geen verborgen gebreken aanwezig.")
-        
+
         # Issue-specifieke aannames
         if "vocht" in issues:
             aannames.append("Vochtprobleem is lokaal en niet structureel.")
             aannames.append("Voldoende ventilatie is mogelijk.")
-        
+
         if "scheuren" in issues:
             aannames.append("Scheuren zijn oppervlakkig en niet structureel.")
-        
+
         # Algemene aannames
         aannames.append(f"Werkruimte is circa {m2} m² en goed toegankelijk.")
         aannames.append("Materiaal, stroom en water zijn op locatie beschikbaar.")
-        
+
         return aannames
-    
-    def _determine_doorlooptijd(self, m2: float, substrate: str, issues: List[str]) -> str:
+
+    def _determine_doorlooptijd(
+        self, m2: float, substrate: str, issues: List[str]
+    ) -> str:
         """Bepaal geschatte doorlooptijd op basis van eenvoudige regels."""
         # Basis doorlooptijd per m²
         base_days_per_10m2 = {
@@ -131,21 +139,21 @@ class PricingEngine:
             "beton": 1.5,
             "bestaand": 1.2,
         }
-        
+
         base_days = (m2 / 10.0) * base_days_per_10m2[substrate]
-        
+
         # Extra tijd voor issues
         extra_days = 0.0
         if "vocht" in issues:
             extra_days += 1.0  # Extra dag voor droging
         if "scheuren" in issues:
             extra_days += 0.5  # Extra halve dag voor reparatie
-        
+
         total_days = base_days + extra_days
-        
+
         # Rond af naar halve dagen
         total_days = round(total_days * 2) / 2
-        
+
         if total_days <= 1:
             return "circa 1 werkdag"
         elif total_days <= 2:
@@ -158,9 +166,10 @@ class PricingEngine:
                 return f"circa {weeks:.1f} werkweken"
 
 
-# --------------------------------------------------------------------
-# High-level API voor LevelAI / Aether Engine: calculate_quote(...)
-# --------------------------------------------------------------------
+# ----------------------------------------------------------
+# High-level API voor / Aether Engine: calculate_quote(...)
+# ----------------------------------------------------------
+
 
 def _infer_substrate_from_payload(payload: IntakePayload) -> str:
     """
@@ -174,8 +183,12 @@ def _infer_substrate_from_payload(payload: IntakePayload) -> str:
     if hasattr(payload, "surface_type") and payload.surface_type:
         return str(payload.surface_type)
 
-    # TODO: later: AI/LLM laten bepalen op basis van project_description / foto's
-    return "bestaand"
+    # Optional: LLM pricing is not implemented yet (feature-flagged).
+
+    if getattr(settings, "ENABLE_LLM_PRICING", False):
+        raise NotImplementedError(
+            "ENABLE_LLM_PRICING is set but LLM pricing is not implemented yet."
+        )
 
 
 def _infer_issues_from_payload(payload: IntakePayload) -> List[str]:
@@ -208,7 +221,7 @@ def _infer_issues_from_payload(payload: IntakePayload) -> List[str]:
 def calculate_quote(payload: IntakePayload, lead: Optional[Lead] = None) -> Quote:
     """
     Hoog-niveau functie zoals in de roadmap (6.2).
-    
+
     - gebruikt intake payload (en optioneel lead) als input
     - bepaalt m2, substrate & issues
     - roept PricingEngine aan
@@ -231,7 +244,6 @@ def calculate_quote(payload: IntakePayload, lead: Optional[Lead] = None) -> Quot
             m2_raw,
         )
         m2 = 50.0
-
 
     substrate = _infer_substrate_from_payload(payload)
     issues = _infer_issues_from_payload(payload)
@@ -275,7 +287,9 @@ def calculate_quote(payload: IntakePayload, lead: Optional[Lead] = None) -> Quot
         issues_str = ", ".join(issues)
         notes_parts.append(f"Bijzonderheden gedetecteerd: {issues_str}.")
 
-    notes_parts.append("Let op: dit is een indicatieve prijs op basis van de online intake.")
+    notes_parts.append(
+        "Let op: dit is een indicatieve prijs op basis van de online intake."
+    )
 
     notes = "\n".join(notes_parts)
 

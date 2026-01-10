@@ -1,0 +1,108 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://aether.engine/schemas/ace-wholesale/output.v1.schema.json",
+    "title": "ACE Wholesale Engine Output (v1)",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "quoteId",
+        "quoteDate",
+        "validUntil",
+        "contractVersion",
+        "currency",
+        "lines",
+        "totalSell",
+        "marginPct",
+        "warnings",
+        "blocking"
+    ],
+    "properties": {
+        "quoteId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 64
+        },
+        "quoteDate": {
+            "type": "string",
+            "format": "date"
+        },
+        "validUntil": {
+            "type": "string",
+            "format": "date"
+        },
+        "contractVersion": {
+            "type": "string",
+            "const": "v1"
+        },
+        "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+        },
+        "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "sku",
+                    "qty",
+                    "netSell",
+                    "marginPct",
+                    "priceBreakdown"
+                ],
+                "properties": {
+                    "sku": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                    },
+                    "qty": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000000
+                    },
+                    "netSell": {
+                        "type": "string",
+                        "pattern": "^-?\\d+\\.\\d{2}$",
+                        "description": "Decimal string with 2 dp."
+                    },
+                    "marginPct": {
+                        "type": "string",
+                        "pattern": "^-?\\d+\\.\\d{2,6}$",
+                        "description": "Fractional margin (e.g., 0.2100 = 21%)."
+                    },
+                    "priceBreakdown": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    }
+                }
+            }
+        },
+        "totalSell": {
+            "type": "string",
+            "pattern": "^-?\\d+\\.\\d{2}$"
+        },
+        "marginPct": {
+            "type": "string",
+            "pattern": "^-?\\d+\\.\\d{2,6}$"
+        },
+        "warnings": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "blocking": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    }
+}

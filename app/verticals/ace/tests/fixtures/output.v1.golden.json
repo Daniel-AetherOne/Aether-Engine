@@ -1,0 +1,33 @@
+{
+  "blocking": [],
+  "contractVersion": "v1",
+  "currency": "EUR",
+  "lines": [
+    {
+      "marginPct": "0.0000",
+      "netSell": "0.00",
+      "priceBreakdown": [
+        "01. RULE base_price | +0.00 | inputs:sku=SKU-001 | reason:Contract reference base",
+        "01. RULE qty_capture | +0.00 | inputs:qty=10 | reason:Contract reference qty"
+      ],
+      "qty": 10,
+      "sku": "SKU-001"
+    },
+    {
+      "marginPct": "0.0000",
+      "netSell": "0.00",
+      "priceBreakdown": [
+        "02. RULE base_price | +0.00 | inputs:sku=SKU-ABC | reason:Contract reference base",
+        "02. RULE qty_capture | +0.00 | inputs:qty=1 | reason:Contract reference qty"
+      ],
+      "qty": 1,
+      "sku": "SKU-ABC"
+    }
+  ],
+  "marginPct": "0.0000",
+  "quoteDate": "2026-01-07",
+  "quoteId": "q_cbfb6061c3bfcd6d",
+  "totalSell": "0.00",
+  "validUntil": "2026-01-21",
+  "warnings": []
+}

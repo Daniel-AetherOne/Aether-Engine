@@ -1,0 +1,65 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# ---- Virtualenv ----
+.venv/
+venv/
+ENV/
+env/
+
+# ---- Environment files ----
+.env
+.env.*
+*.env
+
+# ---- IDE / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- Local databases ----
+*.sqlite
+*.sqlite3
+db/
+data/db/
+
+# ---- Uploads / user files ----
+uploads/
+data/uploads/
+tmp/
+tmp_uploads/
+
+# ---- Secrets / keys ----
+*.pem
+*.key
+*.crt
+secrets/
+credentials.json
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+
+# ---- Docker ----
+*.local.yml
+
+# ---- Test artifacts ----
+test-results/

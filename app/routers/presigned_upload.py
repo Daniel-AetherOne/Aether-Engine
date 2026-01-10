@@ -7,23 +7,28 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, constr
 
 from app.core.settings import settings
-from app.services.s3 import (
-    _get_s3_client,
-    generate_intake_upload_key,
-)
+from app.services.s3 import _get_s3_client, generate_intake_upload_key
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 
-# ---------- Mock-auth dependency ----------
+# ---------- Auth dependency (dev-only fallback) ----------
 class User(BaseModel):
     id: str
     tenant_id: Optional[str] = None
 
 
 def get_current_user() -> User:
-    # TODO: vervang later door echte auth/JWT
-    return User(id="test-user", tenant_id="default")
+    """
+    Auth is not implemented yet.
+
+    Hardening:
+    - In production (ENABLE_DEV_ROUTES=False) this endpoint requires real auth and returns 401.
+    - In dev (ENABLE_DEV_ROUTES=True) we return a deterministic dev user.
+    """
+    if not getattr(settings, "ENABLE_DEV_ROUTES", False):
+        raise HTTPException(status_code=401, detail="Auth not configured")
+    return User(id="dev-user", tenant_id="default")
 
 
 # ---------- Body + Response Models ----------
@@ -73,24 +78,19 @@ def create_presigned_put(
             detail=f"file too large; max={max_bytes} bytes",
         )
 
-    bucket = (
-        getattr(settings, "s3_bucket", None)
-        or getattr(settings, "AWS_S3_BUCKET_NAME", None)
-        or getattr(settings, "S3_BUCKET", None)
-    )
+    # 2) Bucket
+    bucket = settings.S3_BUCKET
     if not bucket:
-        raise HTTPException(status_code=500, detail="S3 bucket ontbreekt in settings")
+        raise HTTPException(status_code=500, detail="S3_BUCKET ontbreekt in settings")
 
-    # 2) Key bouwen
-    object_key = generate_intake_upload_key(
-        current_user.tenant_id or "default", body.filename
-    )
+    # 3) Key bouwen
+    tenant_id = current_user.tenant_id or "default"
+    object_key = generate_intake_upload_key(tenant_id, body.filename)
 
-    # 3) S3 client + presigned URL (via _get_s3_client uit s3.py)
+    # 4) S3 client + presigned URL
     try:
         s3 = _get_s3_client()
     except RuntimeError as e:
-        # Dit komt rechtstreeks uit s3.py als credentials/bucket ontbreken
         raise HTTPException(status_code=500, detail=str(e))
 
     expires = 600  # seconden
@@ -107,18 +107,12 @@ def create_presigned_put(
             HttpMethod="PUT",
         )
     except Exception as e:
-        # Hier zie je nu de rauwe boto3 error terug
         raise HTTPException(status_code=500, detail=f"presign_failed: {e}")
 
-    required_headers = {
-        "Content-Type": body.content_type,
-    }
+    required_headers = {"Content-Type": body.content_type}
 
-    public_url = (
-        f"{settings.S3_PUBLIC_BASE_URL.rstrip('/')}/{object_key}"
-        if getattr(settings, "S3_PUBLIC_BASE_URL", None)
-        else None
-    )
+    public_base = getattr(settings, "S3_PUBLIC_BASE_URL", None)
+    public_url = f"{public_base.rstrip('/')}/{object_key}" if public_base else None
 
     return PresignResponse(
         upload_url=url,

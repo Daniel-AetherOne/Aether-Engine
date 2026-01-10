@@ -42,7 +42,7 @@ def _dummy_quote(quote_id: str) -> Quote:
     )
 
     tenant = SimpleNamespace(
-        company_name="LevelAI Demo",
+        company_name="Aether Engine",
         primary_color="#2563eb",
         secondary_color="#64748b",
         logo_url=None,
@@ -97,12 +97,22 @@ def mark_quote_published(
     s3_key: str,
     version_key: str | None = None,
 ) -> None:
-    # TODO: later in DB opslaan dat deze quote is gepubliceerd + versie
-    print(f"[quotes] Mark quote {quote_id} published at {s3_key}")
-    if version_key:
-        print(f"[quotes]   version stored at {version_key}")
+    """
+    Publication tracking is not implemented yet.
+
+    For now we only emit a log/print so the publish flow keeps working.
+    In a later step this will write to the DB (published_at, s3_key, version_key).
+    """
+    print(
+        f"[quotes] published quote_id={quote_id} s3_key={s3_key} version_key={version_key}"
+    )
 
 
 def mark_quote_unpublished(quote_id: str) -> None:
-    # TODO: later in DB bijhouden dat deze quote niet meer gepubliceerd is
-    print(f"[quotes] Mark quote {quote_id} UNPUBLISHED")
+    """
+    Unpublish tracking is not implemented yet.
+
+    For now we only emit a log/print so the flow keeps working.
+    In a later step this will update the DB (unpublished_at / active_version etc).
+    """
+    print(f"[quotes] unpublished quote_id={quote_id}")

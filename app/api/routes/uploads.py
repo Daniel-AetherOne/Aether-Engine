@@ -17,6 +17,7 @@ from app.observability.metrics import verify_counter, latency_hist
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
+
 @router.post("/presign")
 def presign_image_upload(request: Request) -> dict:
     """
@@ -34,7 +35,7 @@ def presign_image_upload(request: Request) -> dict:
                     "event": "presign",
                     "result": "success",
                     "trace_id": trace_id,
-                    "bucket": "levelai-prod-files",
+                    "bucket": settings.S3_BUCKET,
                     "prefix": "uploads/",
                 }
             },
@@ -54,7 +55,9 @@ def presign_image_upload(request: Request) -> dict:
                 }
             },
         )
-        raise HTTPException(status_code=500, detail="Could not create presigned upload URL")
+        raise HTTPException(
+            status_code=500, detail="Could not create presigned upload URL"
+        )
 
 
 def _start_processing_background(upload_id: int) -> None:
@@ -62,6 +65,7 @@ def _start_processing_background(upload_id: int) -> None:
     Vervang dit door Celery/RQ als je een echte worker hebt.
     """
     from app.tasks.process_upload import process_upload  # lokale/background fn
+
     process_upload(upload_id)
 
 

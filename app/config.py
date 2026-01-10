@@ -11,7 +11,7 @@ from app.core.settings import settings as env_settings
 
 class Settings(BaseSettings):
     """
-    Secondary settings layer used by older LevelAI modules.
+    Secondary settings layer used by older aether_engine modules.
     Reads .env via env_settings (the new core settings class).
     """
 

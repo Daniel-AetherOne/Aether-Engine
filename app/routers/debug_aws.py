@@ -28,7 +28,7 @@ def debug_aws_wif():
     sts = boto3.client("sts", region_name=region)
     creds = sts.assume_role_with_web_identity(
         RoleArn=role_arn,
-        RoleSessionName="levelai-cloudrun",
+        RoleSessionName="aether-cloudrun",
         WebIdentityToken=token,
         DurationSeconds=3600,
     )["Credentials"]

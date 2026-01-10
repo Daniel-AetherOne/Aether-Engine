@@ -3,6 +3,10 @@ from __future__ import annotations
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Dict, List
+from app.verticals.painters_us.pricing_output_builder import (
+    build_pricing_output_from_legacy,
+)
+
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -10,7 +14,10 @@ from app.verticals.painters_us.copy import (
     US_PAINTERS_ESTIMATE_COPY,
     fmt_usd,
     fmt_usd_range,
+    fmt_qty,
 )
+
+
 from app.verticals.painters_us.item_mapping import map_surfaces_to_items
 from app.verticals.painters_us.assumptions import US_PAINTERS_SCOPE_ASSUMPTIONS
 from app.verticals.painters_us.disclaimer import US_PAINTERS_ESTIMATE_DISCLAIMER
@@ -18,6 +25,13 @@ from app.verticals.painters_us.needs_review import US_PAINTERS_NEEDS_REVIEW_COPY
 
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
+
+
+def _show_tax(pricing) -> bool:
+    tax = getattr(pricing, "tax", None)
+    if not tax:
+        return False
+    return (tax.tax_amount is not None) or (tax.tax_rate is not None)
 
 
 def _as_list(val: Any) -> List[str]:
@@ -69,24 +83,34 @@ def render_us_estimate_html(
         ),
     }
 
-    # Scope bullets: prefer assumptions if it contains bullets, else project fallback
-    scope_bullets = (
-        project.get("scope_bullets")
-        or getattr(US_PAINTERS_SCOPE_ASSUMPTIONS, "bullets", None)
-        or US_PAINTERS_SCOPE_ASSUMPTIONS
+    canonical_pricing = build_pricing_output_from_legacy(
+        pricing_output=pricing_output,
+        items=items,
+        project=proj,
     )
+
+    # --- Footer / legal readiness (10.5.5) ---
+    VALID_DAYS = 30
+    validity_copy = US_PAINTERS_ESTIMATE_COPY.validity_copy.format(days=VALID_DAYS)
+
+    subject_to_verification_copy = (
+        US_PAINTERS_ESTIMATE_COPY.subject_to_verification_copy
+    )
+
+    # Scope bullets: prefer assumptions if it contains bullets, else project fallback
+    # Scope bullets: prefer assumptions.included → project fallback → default list
+    scope_bullets = getattr(
+        US_PAINTERS_SCOPE_ASSUMPTIONS, "included", None
+    ) or project.get("scope_bullets")
+
     scope_bullets = _as_list(scope_bullets) or [
         "Surface preparation as needed (scrape/sand/patch) and priming of repaired areas.",
         "Application of finish coats to listed surfaces only.",
         "Standard protection (masking/drop cloths) and cleanup.",
     ]
 
-    # Exclusions: prefer disclaimer if it has exclusions, else fallback list
-    exclusions = (
-        getattr(US_PAINTERS_ESTIMATE_DISCLAIMER, "exclusions", None)
-        or getattr(US_PAINTERS_ESTIMATE_DISCLAIMER, "bullets", None)
-        or US_PAINTERS_ESTIMATE_DISCLAIMER
-    )
+    # Exclusions: prefer disclaimer bullets → empty list
+    exclusions = getattr(US_PAINTERS_ESTIMATE_DISCLAIMER, "bullets", None)
     exclusions = _as_list(exclusions)
 
     # Normalize pricing
@@ -103,11 +127,11 @@ def render_us_estimate_html(
     # Expose formatters to Jinja
     env.globals["fmt_usd"] = fmt_usd
     env.globals["fmt_usd_range"] = fmt_usd_range
+    env.globals["fmt_qty"] = fmt_qty
 
     tmpl = env.get_template("estimate.html")
 
     html = tmpl.render(
-        # template expects these
         pricing_ready=pricing_ready,
         items=items,
         scope_bullets=scope_bullets,
@@ -115,6 +139,10 @@ def render_us_estimate_html(
         pricing_labor_usd=pricing_labor_usd,
         pricing_materials_usd=pricing_materials_usd,
         pricing_total_usd=pricing_total_usd,
+        pricing=canonical_pricing,
+        show_tax=_show_tax(canonical_pricing),
+        validity_copy=validity_copy,
+        subject_to_verification_copy=subject_to_verification_copy,
         copy=US_PAINTERS_ESTIMATE_COPY,
         needs_review=US_PAINTERS_NEEDS_REVIEW_COPY,
         project=proj,

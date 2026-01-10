@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>ACE Admin Data</title>
+  <style>
+    body { font-family: system-ui, Arial; margin: 24px; max-width: 1100px; }
+    .row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+    .box { border: 1px solid #ddd; padding: 12px; border-radius: 8px; }
+    .muted { color: #666; font-size: 12px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #eee; padding: 6px 8px; text-align: left; font-size: 13px; }
+    textarea { width: 100%; min-height: 140px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+    button { padding: 8px 12px; }
+    .pill { display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; font-size:12px; margin-right:6px; }
+  </style>
+</head>
+<body>
+  <h1>ACE Admin Data</h1>
+
+  <div class="box">
+    <div class="muted">Current staging datasetId</div>
+    <div style="font-size:18px; font-weight:600;">{{ dataset_id }}</div>
+    <div class="muted">Upload files into this staging bundle, then validate + activate.</div>
+    <form action="/admin/data/reset_staging" method="post" style="margin-top:10px;">
+      <input type="hidden" name="dataset_id" value="{{ dataset_id }}" />
+      <button type="submit">Reset staging</button>
+    </form>
+  </div>
+
+  <h2>1) Upload</h2>
+  <div class="box">
+    <form action="/admin/data/upload" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="dataset_id" value="{{ dataset_id }}" />
+
+      <div class="row">
+        <div>
+          <div class="muted">Dataset type</div>
+          <select name="dataset_type" required>
+            {% for t, fname, exts in dataset_types %}
+              <option value="{{ t }}">{{ t }} ({{ fname }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <div class="muted">File</div>
+          <input type="file" name="file" required />
+        </div>
+
+        <div>
+          <button type="submit">Upload (replace)</button>
+        </div>
+      </div>
+    </form>
+
+    <div style="margin-top:12px;">
+      <div class="muted">Uploaded in this staging bundle:</div>
+      {% if uploaded_files %}
+        {% for f in uploaded_files %}
+          <span class="pill">{{ f }}</span>
+        {% endfor %}
+      {% else %}
+        <span class="muted">None yet.</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <h2>2) Validate</h2>
+  <div class="box">
+    <form id="validateForm" action="/admin/data/validate" method="post">
+      <input type="hidden" name="dataset_id" value="{{ dataset_id }}" />
+      <button type="submit">Validate (JSON)</button>
+      <span class="muted">Opens JSON response (copy/paste friendly)</span>
+    </form>
+
+    <div style="margin-top:10px;" class="muted">
+      Tip: JSON output is copy-pastable; for Excel fixes, copy the errors list.
+    </div>
+  </div>
+
+  <h2>3) Activate</h2>
+  <div class="box">
+    <form action="/admin/data/activate" method="post">
+      <input type="hidden" name="dataset_id" value="{{ dataset_id }}" />
+      <button type="submit">Activate (only if OK)</button>
+      <span class="muted">This will validate server-side; activation fails if not OK.</span>
+    </form>
+  </div>
+
+  <h2>Active</h2>
+  <div class="box">
+    {% if active_manifest %}
+      <div class="muted">activeVersionId</div>
+      <div style="font-weight:600;">{{ active_manifest["activeVersionId"] }}</div>
+      <table style="margin-top:8px;">
+        <thead>
+          <tr>
+            <th>type</th>
+            <th>filename</th>
+            <th>checksum</th>
+            <th>rowCount</th>
+            <th>uploadedAt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in active_manifest["datasets"] %}
+          <tr>
+            <td>{{ d["type"] }}</td>
+            <td>{{ d["filename"] }}</td>
+            <td style="font-family: ui-monospace, Menlo, Consolas, monospace;">{{ d["checksum"][:16] }}…</td>
+            <td>{{ d["rowCount"] }}</td>
+            <td>{{ d["uploadedAt"] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <span class="muted">No active manifest found yet.</span>
+    {% endif %}
+  </div>
+
+  <h2>History / Rollback</h2>
+  <div class="box">
+    <div class="muted">Archive versions (folders in data/archive)</div>
+    {% if archive_versions %}
+      <form action="/admin/data/rollback" method="post" style="margin-top:10px;">
+        <select name="version_id" required style="min-width: 420px;">
+          {% for v in archive_versions %}
+            <option value="{{ v }}">{{ v }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit">Rollback</button>
+      </form>
+      <div class="muted" style="margin-top:8px;">Rollback runs validation on the archived snapshot before switching.</div>
+    {% else %}
+      <span class="muted">No archived versions yet.</span>
+    {% endif %}
+  </div>
+</body>
+</html>
