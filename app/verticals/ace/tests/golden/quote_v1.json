@@ -1,0 +1,124 @@
+{
+  "blocks": [
+    {
+      "code": "MARGIN_BLOCK",
+      "message": "Minimum margin not met.",
+      "meta": {
+        "cost": "34.65",
+        "lineId": "l1",
+        "margin_pct": "-2.03",
+        "min_margin_pct": "0",
+        "productGroup": "A",
+        "ruleId": "min_margin_1",
+        "ruleType": "min_margin",
+        "sell": "33.96",
+        "sku": "SKU1"
+      }
+    }
+  ],
+  "currency": "EUR",
+  "price_breakdown": [
+    {
+      "decision": "APPLIED",
+      "delta": {
+        "amount": "34.65",
+        "currency": "EUR"
+      },
+      "meta": {
+        "lines": 1,
+        "mode": "per_line"
+      },
+      "rule_id": "net_cost_1",
+      "rule_type": "net_cost",
+      "subtotal_after": {
+        "amount": "34.65",
+        "currency": "EUR"
+      },
+      "title": "Netto inkoop"
+    },
+    {
+      "decision": "APPLIED",
+      "delta": {
+        "amount": "0.00",
+        "currency": "EUR"
+      },
+      "meta": {
+        "lines": 1,
+        "mode": "per_line"
+      },
+      "rule_id": "tier_discount_1",
+      "rule_type": "tier_discount",
+      "subtotal_after": {
+        "amount": "34.65",
+        "currency": "EUR"
+      },
+      "title": "Staffel-korting"
+    },
+    {
+      "decision": "APPLIED",
+      "delta": {
+        "amount": "0.00",
+        "currency": "EUR"
+      },
+      "meta": {
+        "lines": 1,
+        "mode": "per_line"
+      },
+      "rule_id": "transport_1",
+      "rule_type": "transport",
+      "subtotal_after": {
+        "amount": "34.65",
+        "currency": "EUR"
+      },
+      "title": "Transport toeslag"
+    },
+    {
+      "decision": "APPLIED",
+      "delta": {
+        "amount": "-0.69",
+        "currency": "EUR"
+      },
+      "meta": {
+        "lines": 1,
+        "mode": "per_line"
+      },
+      "rule_id": "customer_discount_1",
+      "rule_type": "customer_discount",
+      "subtotal_after": {
+        "amount": "33.96",
+        "currency": "EUR"
+      },
+      "title": "Klantkorting"
+    },
+    {
+      "decision": "BLOCKED",
+      "delta": {
+        "amount": "0.00",
+        "currency": "EUR"
+      },
+      "meta": {
+        "cost": "34.65",
+        "lineId": "l1",
+        "margin_pct": "-2.03",
+        "min_margin_pct": "0",
+        "mode": "per_line",
+        "productGroup": "A",
+        "sell": "33.96",
+        "sku": "SKU1"
+      },
+      "rule_id": "min_margin_1",
+      "rule_type": "min_margin",
+      "subtotal_after": {
+        "amount": "33.96",
+        "currency": "EUR"
+      },
+      "title": "Minimummarge"
+    }
+  ],
+  "status": "BLOCKED",
+  "total": {
+    "amount": "33.96",
+    "currency": "EUR"
+  },
+  "version": "v1"
+}
