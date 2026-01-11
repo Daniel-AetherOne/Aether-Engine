@@ -1,0 +1,42 @@
+ruleSetVersion: v1
+
+executionOrder:
+  - transport_1
+  - tier_discount_1
+  - customer_discount_1
+  - min_margin_1
+
+rules:
+  - id: transport_1
+    type: transport
+    title: Transportkosten
+    enabled: true
+    params:
+      per_km: "0.85"
+
+  - id: tier_discount_1
+    type: tier_discount
+    title: Staffelkorting
+    enabled: true
+    params:
+      tiers:
+        - min: "0"
+          percent: "0"
+        - min: "1000"
+          percent: "3"
+        - min: "2500"
+          percent: "5"
+
+  - id: customer_discount_1
+    type: customer_discount
+    title: Klantkorting
+    enabled: true
+    params:
+      default_percent: "0"
+
+  - id: min_margin_1
+    type: min_margin
+    title: Minimummarge check
+    enabled: true
+    params:
+      min_margin_pct: "20"

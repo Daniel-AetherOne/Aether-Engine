@@ -1,55 +1,132 @@
-# LevelAI SaaS Platform
+﻿# Aether Engine
 
-LevelAI is een AI-gedreven SaaS-platform dat intake, voorspellingslogica, prijsbepaling en offertegeneratie automatiseert voor de bouw- en afbouwsector.  
-Het systeem koppelt intake-gegevens, bestandsuploads en prijsregels aan HTML/PDF-offertes en CRM-integraties.
+**Aether Engine** is een AI-powered decision infrastructure platform voor bedrijven met complexe business- en prijsbeslissingen.
 
----
+Het platform automatiseert het traject van **input → interpretatie → beslissing → output**, waarbij AI-reasoning wordt gecombineerd met deterministische regels.
 
-## Architectuur en Workflow
-
-Pipeline:  
-**Intake (web/WhatsApp)** → **Predict (vision placeholder)** → **Price Engine** → **Quote Generator (HTML/PDF)** → **CRM Integration**
-
-Het platform is modulair opgebouwd met aparte modules voor intake, uploads, prijsbepaling, observability en achtergrondverwerking.
+> Aether Engine is geen applicatie, maar een beslissingslaag die boven bestaande systemen opereert.
 
 ---
 
-## Belangrijkste Features
+## 🧠 Wat is Aether Engine?
 
-- **Intake Management** – Webformulier met uploadondersteuning  
-- **Dynamic Pricing** – Regelgebaseerde prijsengine met JSON-configuraties  
-- **Quote Generation** – HTML- en PDF-offertes via Jinja2 + WeasyPrint  
-- **CRM Integration** – HubSpot en andere CRM-koppelingen  
-- **AI Prediction (placeholder)** – Vision-worker voor toekomstige beeldanalyse  
-- **Async Processing** – Voorbereid voor achtergrondtaken  
-- **Observability** – Prometheus/Grafana monitoring en structured logging
+Aether Engine is een **core decision engine** die:
 
----
+- complexe input interpreteert (data, tekst, bestanden, API-calls)
+- bedrijfslogica en regels toepast
+- AI inzet waar interpretatie nodig is
+- **bindende beslissingen** neemt (zoals prijzen, classificaties of uitkomsten)
+- resultaten teruggeeft aan andere systemen (ERP, CRM, portals, documenten)
 
-## Technische Stack
-
-- **Backend:** FastAPI (Python 3.11+)  
-- **Database:** PostgreSQL 15+  
-- **Cache/Queue:** Redis 7+  
-- **Storage:** AWS S3  
-- **Infra:** Docker + Compose  
-- **OS:** Windows, macOS, Linux
+Het platform is **vertical-agnostisch** en ontworpen om meerdere gespecialiseerde engines (“verticals”) te ondersteunen.
 
 ---
 
-## Lokale Ontwikkelomgeving
+## 🧱 Platform vs. verticals
 
-In productie draait LevelAI als SaaS.  
-De volgende stappen zijn bedoeld voor lokale ontwikkeling of testen.
+Aether Engine vormt de **technische en conceptuele kern**.
 
-### Setup
+Bovenop deze kern worden **verticale decision engines** gebouwd voor specifieke domeinen.
 
-```bash
-git clone https://github.com/Daniel-AetherOne/LevelAI_SaaS.git
-cd LevelAI_SaaS
-python -m venv venv
-venv\Scripts\activate  # Windows
-source venv/bin/activate  # macOS/Linux
-pip install -e ".[dev]"
-copy env.example .env  # Voeg eigen variabelen toe
-docker-compose up -d postgres redis
+### Voorbeeld verticals
+
+- **Aether Commerce Engine (ACE)**  
+  → pricing & offerte-automatisering voor B2B-groothandels
+
+- (toekomstig)
+  - field service & installatie
+  - verzekeringen & acceptatie
+  - industriële configuraties
+  - inspecties & calculaties
+
+Elke vertical hergebruikt:
+- dezelfde decision engine
+- dezelfde AI + rules architectuur
+- dezelfde output- en integratielaag
+
+Maar bevat **domeinspecifieke logica en regels**.
+
+---
+
+## 🏗 Architectuur (high level)
+
+
+---
+
+## 🔑 Kernprincipes
+
+- **Decision-first**
+  Geen workflows of UI’s, maar beslissingen als primaire output.
+
+- **AI + determinisme**
+  AI voor interpretatie, regels voor exactheid en controle.
+
+- **Vertical-agnostisch**
+  Eén engine, meerdere domeinen.
+
+- **Integratiegericht**
+  Ontworpen om bestaande systemen aan te sturen, niet te vervangen.
+
+- **Modulair**
+  Elke vertical is een configureerbare laag boven de core.
+
+---
+
+## 🧩 Aether Commerce Engine (ACE)
+
+**Aether Commerce Engine** is een verticale implementatie van Aether Engine, gericht op **B2B-groothandels met complexe prijsstructuren**.
+
+ACE automatiseert o.a.:
+- klantafspraken
+- staffelprijzen
+- marges en uitzonderingen
+- maatwerkoffertes
+
+Meer informatie over deze vertical:  
+👉 https://aetherone.tech/b2b-groothandels
+
+---
+
+## 🛠 Tech stack
+
+- **Backend:** Python, FastAPI
+- **AI:** LLM-based reasoning gecombineerd met rule engines
+- **Templates:** HTML / PDF
+- **Integraties:** API-first (ERP / CRM / externe systemen)
+- **Deployment:** Cloud-agnostic
+
+---
+
+## 📦 Repository structuur (indicatief)
+
+
+
+---
+
+## 🔒 Status
+
+Aether Engine is **actief in ontwikkeling** en vormt de basis voor commerciële implementaties.
+
+De repository is bedoeld als:
+- core platform
+- foundation voor verticale decision engines
+- interne en partner-implementaties
+
+Niet als plug-and-play eindgebruikerssoftware.
+
+---
+
+## 📄 License
+
+Proprietary / All rights reserved.  
+Neem contact op voor gebruik, implementatie of samenwerking.
+
+---
+
+## 📬 Contact
+
+Website:  
+👉 https://aetherone.tech
+
+Vertical (B2B groothandels):  
+👉 https://aetherone.tech/b2b-groothandels

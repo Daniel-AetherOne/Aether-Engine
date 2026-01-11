@@ -1,0 +1,10 @@
+ruleSetVersion: v1
+executionOrder:
+  - min_margin_1
+rules:
+  - id: min_margin_1
+    type: min_margin
+    title: Minimummarge check
+    enabled: true
+    params:
+      min_margin_pct: "10"
