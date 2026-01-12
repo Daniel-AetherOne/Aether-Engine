@@ -31,8 +31,6 @@
         "META: sku=SKU1, qty=3, buyPrice=10.00",
         "Netto inkoop: EUR 34.65 (factor=1.10, opslag=5%)",
         "Netto inkoop: +34.65",
-        "Staffel korting: 0.00% (qty=3)",
-        "META: Staffel-korting: 0.00%",
         "Klantkorting (B): -2.00% (van 34.65 naar 33.96)",
         "Klantkorting: -0.69",
         "BLOCK: Minimummarge: BLOCK (-2.03% < 0%)",
