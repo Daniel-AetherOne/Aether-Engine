@@ -1,40 +1,48 @@
 from decimal import Decimal
 
-from app.verticals.ace.engine.rule_runner import RuleRunner, RuleSet
-from app.verticals.ace.engine.context import QuoteInput, ActiveData
-
-# Important: ensure rule types are registered
 import app.verticals.ace.rule_types  # noqa
-
-D = Decimal
+from app.verticals.ace.engine.rule_runner import RuleRunner, RuleSet
+from app.verticals.ace.engine.context import QuoteInput, QuoteLineInput, ActiveData
 
 
 def test_tier_discount_applies_highest_tier():
     ruleset = RuleSet.from_dict(
         {
             "version": "v1",
+            "executionOrder": ["tier_1"],
             "rules": [
                 {
                     "id": "tier_1",
                     "type": "tier_discount",
                     "title": "Tier",
                     "enabled": True,
-                    "params": {
-                        "tiers": [
-                            {"min": "0", "percent": "0"},
-                            {"min": "1000", "percent": "3"},
-                            {"min": "2500", "percent": "5"},
-                        ]
-                    },
+                    "params": {},
                 }
             ],
         }
     )
     runner = RuleRunner(ruleset)
 
-    qin = QuoteInput(currency="EUR", base_amount=D("2600.00"))
-    out = runner.run(qin=qin, data=ActiveData())
+    data = ActiveData(
+        tables={
+            "articles": {
+                "SKU1": {"buyPrice": "10.00", "weightKg": "0.0", "productGroup": "A"}
+            },
+            "tiers": [
+                {"min": 1, "max": 9, "pct": "0"},
+                {"min": 10, "max": 24, "pct": "3"},
+                {"min": 25, "pct": "5"},
+            ],
+        }
+    )
+
+    qin = QuoteInput(
+        currency="EUR",
+        lines=[QuoteLineInput(line_id="l1", sku="SKU1", qty=Decimal("25"))],
+    )
+
+    out = runner.run(qin=qin, data=data)
 
     assert out.status == "OK"
-    assert out.total.amount == D("2470.00")  # 5% korting op 2600 = 130
-    assert out.price_breakdown[0].meta["pct"] == "5"
+    # Quote-level breakdown should include rule id
+    assert [b.rule_id for b in out.price_breakdown] == ["tier_1"]

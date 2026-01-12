@@ -1,7 +1,7 @@
 # app/services/upload_status_service.py
 import asyncio
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models.upload_status import UploadStatus
 from app.core.settings import settings  # of vervang door je eigen configmodule
@@ -15,7 +15,7 @@ async def verify_object(session: Session, status: UploadStatus):
             r = await client.head(s3_url, timeout=5.0)
             if r.status_code == 200:
                 status.status = "verified"
-                status.verified_at = datetime.utcnow()
+                status.verified_at = datetime.now(timezone.utc)
             else:
                 status.status = "failed"
                 status.error = f"HEAD {r.status_code}"

@@ -1,7 +1,7 @@
 # app/routers/uploads.py
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import PurePath
 from typing import Dict, Optional
 
@@ -77,7 +77,7 @@ def _make_temp_key(filename: str) -> str:
     Voorbeeld: 'uploads/2025-11-01/550e8400.../TEST.jpg'
     Let op: de tenant-prefix wordt ERVOOR geplakt bij presign.
     """
-    today = datetime.utcnow().date().isoformat()
+    today = datetime.now(timezone.utc).date().isoformat()
     safe_name = _safe_filename(PurePath(filename).name)
     return f"{TEMP_PREFIX}{today}/{uuid4().hex}/{safe_name}"
 

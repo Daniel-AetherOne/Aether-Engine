@@ -1,34 +1,27 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from typing import Any, Dict
-
-import yaml
-from jsonschema import validate
+from dataclasses import dataclass
+from typing import Optional
+from datetime import datetime
 
 from .context import ActiveData, QuoteInput, QuoteOutputV1
-from .rule_runner import RuleRunner, RuleSet
+from .rule_loader import RuleLoader
 
 
+@dataclass
 class QuoteEngine:
-    def __init__(self, ruleset_dict: Dict[str, Any]):
-        self.ruleset = RuleSet.from_dict(ruleset_dict)
-        self.runner = RuleRunner(self.ruleset)
+    """
+    3.7 — QuoteEngine with hot-reloadable ruleset.
+    """
 
-    @classmethod
-    def from_yaml_file(cls, path: str) -> "QuoteEngine":
-        ruleset_path = Path(path)
+    rule_loader: RuleLoader
 
-        with ruleset_path.open("r", encoding="utf-8") as f:
-            d = yaml.safe_load(f)
+    @staticmethod
+    def from_yaml_file(path: str) -> "QuoteEngine":
+        return QuoteEngine(rule_loader=RuleLoader(path))
 
-        schema_path = ruleset_path.parents[1] / "schemas" / "rule_set.schema.json"
-        with schema_path.open("r", encoding="utf-8") as f:
-            schema = json.load(f)
-
-        validate(instance=d, schema=schema)
-        return cls(d)
-
-    def calculate(self, qin: QuoteInput, active_data: ActiveData) -> QuoteOutputV1:
-        return self.runner.run(qin=qin, data=active_data)
+    def calculate(
+        self, qin, data=None, *, quote_id="quote_1", now: Optional[datetime] = None
+    ):
+        loaded = self.rule_loader.get()
+        return loaded.runner.run(qin=qin, data=data, quote_id=quote_id, now=now)

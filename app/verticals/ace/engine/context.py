@@ -9,6 +9,11 @@ from uuid import uuid4
 D = Decimal
 
 
+# -----------------------------
+# Money
+# -----------------------------
+
+
 @dataclass(frozen=True)
 class Money:
     currency: str
@@ -16,6 +21,11 @@ class Money:
 
     def quantized(self) -> "Money":
         return Money(self.currency, self.amount.quantize(D("0.01")))
+
+
+# -----------------------------
+# Output models (contract v1)
+# -----------------------------
 
 
 @dataclass(frozen=True)
@@ -30,13 +40,38 @@ class PriceBreakdownLineV1:
 
 
 @dataclass(frozen=True)
+class QuoteLineOutputV1:
+    """
+    Per-offertregel output.
+    Belangrijk voor FASE 4: steps is list[str] (UI/Excel/mail consumeren strings).
+    """
+
+    line_id: str
+    sku: str
+    qty: D
+    net_sell: Money
+    steps: List[str] = field(default_factory=list)
+    meta: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class QuoteOutputV1:
     version: str  # "v1"
     currency: str
     status: str  # "OK" | "BLOCKED"
     total: Money
+
+    # Phase 3 (quote-level rule audit trail)
     price_breakdown: List[PriceBreakdownLineV1]
+
+    # Phase 4 (per-line explainable steps)
+    lines: List[QuoteLineOutputV1] = field(default_factory=list)
+
+    # Blocking always present (even OK can have empty list)
     blocks: List[Dict[str, Any]] = field(default_factory=list)
+
+    # (optioneel) warnings als je ze ook al expose’t in contract v1
+    warnings: List[Dict[str, Any]] = field(default_factory=list)
 
 
 # -----------------------------
@@ -46,12 +81,9 @@ class QuoteOutputV1:
 
 @dataclass
 class QuoteLineInput:
-    """
-    MVP line. Later kun je dit koppelen aan articles/tiers/etc.
-    """
-
     line_id: str
-    base_amount: D = D("0.00")
+    sku: str
+    qty: D = D("1")
     meta: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -111,27 +143,18 @@ class QuoteState:
 
 
 @dataclass
-class LineState:
-    """
-    Per line mutable state. MVP: we houden alleen subtotal bij.
-    """
-
-    line_id: str
-    subtotal: D
-    meta: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
 class EngineContext:
     """
     3.2 — Execution context (per request, stateless outside this object).
 
-    Bevat:
     - input (QuoteInput)
     - active data (ActiveData)
     - runtime: quote_id, now, contract_version
     - output accumulators: warnings, blocking
     - quote state: subtotal/breakdown/blocks
+
+    NB: ExplainCollector kun je later terugbrengen, maar is niet nodig
+    als je nu per line Breakdown -> steps output doet.
     """
 
     input: QuoteInput
@@ -147,7 +170,8 @@ class EngineContext:
 
     def __post_init__(self) -> None:
         self.state = QuoteState(
-            currency=self.input.currency, subtotal=self.input.base_amount
+            currency=self.input.currency,
+            subtotal=self.input.base_amount,
         )
         # laat blocks shared zijn (1 bron)
         self.state.blocks = self.blocking

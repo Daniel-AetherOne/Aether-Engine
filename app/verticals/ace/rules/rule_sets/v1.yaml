@@ -1,42 +1,38 @@
 ruleSetVersion: v1
-
 executionOrder:
-  - transport_1
+  - net_cost_1
   - tier_discount_1
-  - customer_discount_1
+  - transport_1
+  - customer_discount_1 
   - min_margin_1
 
 rules:
-  - id: transport_1
-    type: transport
-    title: Transportkosten
+  - id: net_cost_1
+    type: net_cost
+    title: Netto inkoop
     enabled: true
-    params:
-      per_km: "0.85"
+    params: {}
 
   - id: tier_discount_1
     type: tier_discount
-    title: Staffelkorting
+    title: Staffel-korting
     enabled: true
-    params:
-      tiers:
-        - min: "0"
-          percent: "0"
-        - min: "1000"
-          percent: "3"
-        - min: "2500"
-          percent: "5"
+    params: {}
+
+  - id: transport_1
+    type: transport
+    title: Transport toeslag
+    enabled: true
+    params: {}
 
   - id: customer_discount_1
     type: customer_discount
     title: Klantkorting
     enabled: true
-    params:
-      default_percent: "0"
+    params: {}
 
   - id: min_margin_1
     type: min_margin
-    title: Minimummarge check
+    title: Minimummarge
     enabled: true
-    params:
-      min_margin_pct: "20"
+    params: {}
