@@ -1,43 +1,61 @@
-# app/verticals/ace/explain/formatter.py
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal
-from typing import List
-
-from .explain_models import ExplainEntry
+from typing import Iterable, List
 
 
-def money(eur: Decimal) -> str:
-    # MVP: simpele format, later locale-aware
-    q = eur.quantize(Decimal("0.01"))
-    s = f"{q:.2f}"
-    return f"€ {s}"
+def _clean_step(s: str) -> str:
+    # steps zijn al newline/tab-vrij via BreakdownBuilder, maar extra safety
+    s = str(s).replace("\r", "").replace("\n", " ").replace("\t", " ").strip()
+    return s
+
+
+def format_steps_newlines(steps: Iterable[str]) -> str:
+    """
+    Excel export: 1 cel met newline joins.
+    Consumers: gebruiken dit letterlijk (geen eigen join logic).
+    """
+    items = [_clean_step(s) for s in steps if str(s).strip()]
+    return "\n".join(items)
+
+
+def format_steps_bullets(steps: Iterable[str], bullet: str = "•") -> List[str]:
+    """
+    UI: bullets onder elke line. Return List[str] zodat UI makkelijk map() kan doen.
+    Mail: kan ook direct joinen met newline.
+    """
+    items = [_clean_step(s) for s in steps if str(s).strip()]
+    return [f"{bullet} {s}" for s in items]
+
+
+def format_steps_bullets_text(steps: Iterable[str], bullet: str = "•") -> str:
+    """
+    Mail: 1 tekstblok met bullets per regel.
+    """
+    return "\n".join(format_steps_bullets(steps, bullet=bullet))
 
 
 @dataclass(frozen=True)
-class FormatOptions:
-    show_plus_sign: bool = True
+class Notice:
+    code: str
+    message: str
 
 
-class ExplainFormatter:
-    def __init__(self, opts: FormatOptions | None = None) -> None:
-        self._opts = opts or FormatOptions()
-
-    def format_line_entries(self, entries: List[ExplainEntry]) -> List[str]:
-        """
-        Output = list[str] regels, klaar voor UI/Excel/mail.
-        """
-        lines: List[str] = []
-        for e in entries:
-            lines.append(self._format_entry(e))
-        return lines
-
-    def _format_entry(self, e: ExplainEntry) -> str:
-        d = e.delta
-        if d == Decimal("0"):
-            return f"{e.label}"
-        sign = ""
-        if self._opts.show_plus_sign and d > 0:
-            sign = "+"
-        return f"{e.label}: {sign}{money(d)}"
+def format_notices_header(title: str, notices: list[dict], bullet: str = "•") -> str:
+    """
+    Voor warnings/blocks in mail of bovenaan exports.
+    Houd het simpel: Title + bullet list.
+    """
+    if not notices:
+        return ""
+    lines = [title]
+    for n in notices:
+        msg = _clean_step(n.get("message") or "")
+        code = _clean_step(n.get("code") or "")
+        if code and msg:
+            lines.append(f"{bullet} [{code}] {msg}")
+        elif msg:
+            lines.append(f"{bullet} {msg}")
+        elif code:
+            lines.append(f"{bullet} [{code}]")
+    return "\n".join(lines)

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "profileCode": "A",
+      "standaardKortingPct": 5.0,
+      "maxExtraKortingPct": 2.0,
+      "beschrijving": null,
+      "active": true,
+      "updatedAt": "2026-01-16T15:28:27.803513+00:00"
+    }
+  ]
+}

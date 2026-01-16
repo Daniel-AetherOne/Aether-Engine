@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif;">
+    <h2>Approval vereist — Quote {{ quote.quoteId }}</h2>
+
+    <p>
+      <b>Klant:</b> {{ customer_id or "onbekend" }}<br/>
+      <b>Totale waarde:</b> {{ quote.totalSell }}<br/>
+      <b>Totale marge%:</b> {{ quote.marginPct }}
+    </p>
+
+    <hr/>
+
+    <h3>Override</h3>
+    <p><b>Extra korting:</b> {{ override_pct }}%</p>
+    <p><b>Reden:</b> {{ reason }}</p>
+    <p><b>Waarom approval nodig is:</b><br/>
+      {{ why_approval }}
+    </p>
+
+    <hr/>
+
+    <h3>Regels</h3>
+    <ul>
+      {% for ln in quote.lines %}
+        <li>
+          <b>{{ ln.sku }}</b> — qty {{ ln.qty }} — netSell {{ ln.netSell }} — marginPct {{ ln.marginPct }}
+          <ul>
+            {% for b in ln.priceBreakdown %}
+              <li>{{ b }}</li>
+            {% endfor %}
+          </ul>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <hr/>
+
+    <p style="font-size: 16px;">
+      <a href="{{ approve_url }}">✅ Approve</a>
+      &nbsp; | &nbsp;
+      <a href="{{ reject_url }}">❌ Reject</a>
+    </p>
+
+    <p style="color:#666;font-size:12px;">
+      Deze link is tijdelijk geldig.
+    </p>
+  </body>
+</html>

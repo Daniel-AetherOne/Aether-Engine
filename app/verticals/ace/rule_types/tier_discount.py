@@ -49,15 +49,15 @@ class TierDiscountRule(Rule):
         pct = D(str(best.get("pct", "0"))).quantize(D("0.01"))
         line_state.tier_discount_pct = pct
 
-        # ✅ test expects "Staffel" somewhere in breakdown
-        line_state.add_breakdown(f"Staffel korting: {pct}% (qty={qty})")
+        # Policy A: alleen tonen als pct > 0
+        if pct > D("0.00"):
+            # legacy test zoekt "Staffel" in breakdown
+            line_state.add_breakdown(f"Staffel korting: {pct}% (qty={qty})")
 
-        # FASE 4: selector-only explain (delta 0) via Breakdown meta
-        # (kept as meta so Policy A can decide to show/hide later)
-        line_state.breakdown.add_meta(
-            "TIER_DISCOUNT",
-            f"{self.title}: {pct}%",
-        )
+            # ook een "clean" step voor UI/Excel/mail
+            line_state.breakdown.add_step(
+                "TIER_DISCOUNT",
+                f"Staffelkorting: -{pct}% (qty={qty})",
+            )
 
-        # ✅ selector-only: keep quote-level breakdown stable (does not change totals)
         return RuleResult.applied(D("0.00"), {"pct": str(pct), "qty": str(qty)})

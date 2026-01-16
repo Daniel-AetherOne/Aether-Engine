@@ -259,6 +259,8 @@ class RuleRunner:
                 currency=ctx.state.currency,
                 status="BLOCKED",
                 total=ctx.state.money(ctx.state.subtotal),
+                approval_required=bool(ctx.state.approval_required),
+                approval_status=ctx.state.approval_status,
                 price_breakdown=ctx.state.breakdown,
                 lines=self._build_output_lines(ctx, line_states),
                 blocks=ctx.blocking,
@@ -310,12 +312,13 @@ class RuleRunner:
                 )
 
                 self._finalize_line_steps(line_states)
-                # subtotal is already valid here
                 return QuoteOutputV1(
                     version="v1",
                     currency=ctx.state.currency,
                     status="BLOCKED",
                     total=ctx.state.money(ctx.state.subtotal),
+                    approval_required=bool(ctx.state.approval_required),
+                    approval_status=ctx.state.approval_status,
                     price_breakdown=ctx.state.breakdown,
                     lines=self._build_output_lines(ctx, line_states),
                     blocks=ctx.blocking,
@@ -382,11 +385,18 @@ class RuleRunner:
                         currency=ctx.state.currency,
                         status="BLOCKED",
                         total=ctx.state.money(ctx.state.subtotal),
+                        approval_required=bool(ctx.state.approval_required),
+                        approval_status=ctx.state.approval_status,
                         price_breakdown=ctx.state.breakdown,
                         lines=self._build_output_lines(ctx, line_states),
                         blocks=ctx.blocking,
                         warnings=ctx.warnings,
                     )
+
+                # --- 6.3: hoist rule meta -> quote-level approval flag ---
+                meta = getattr(result, "meta", None) or {}
+                if meta.get("approval_required") is True:
+                    ctx.state.approval_required = True
 
                 if result.decision == "APPLIED":
                     applied_any = True
@@ -426,6 +436,8 @@ class RuleRunner:
             currency=ctx.state.currency,
             status="OK",
             total=ctx.state.money(ctx.state.subtotal),
+            approval_required=bool(ctx.state.approval_required),
+            approval_status=ctx.state.approval_status,
             price_breakdown=ctx.state.breakdown,
             lines=self._build_output_lines(ctx, line_states),
             blocks=ctx.blocking,

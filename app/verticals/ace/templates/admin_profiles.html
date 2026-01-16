@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Admin — Kortingprofielen</title>
+  <style>
+    body { font-family: system-ui, Arial; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { text-align: left; background: #f6f6f6; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .card { border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px; }
+    input[type="text"], input[type="number"] { padding:6px; }
+  </style>
+</head>
+<body>
+  <h1>Kortingprofielen</h1>
+  <p>Maximaal {{ max_profiles }} profielen. Wijzigingen gaan direct live en worden geaudit.</p>
+
+  <div class="card">
+    <h3>Nieuw / aanpassen</h3>
+    <form method="post" action="/admin/profiles/upsert">
+      <div class="row">
+        <label>profielCode<br><input name="profileCode" type="text" required></label>
+        <label>standaardKortingPct<br><input name="standaardKortingPct" type="number" step="0.01" min="0" max="100" required></label>
+        <label>maxExtraKortingPct<br><input name="maxExtraKortingPct" type="number" step="0.01" min="0" max="100" required></label>
+        <label>beschrijving<br><input name="beschrijving" type="text"></label>
+        <label><br>
+          <input name="active" type="checkbox" value="true"> actief
+        </label>
+      </div>
+      <p><button type="submit">Opslaan</button></p>
+    </form>
+  </div>
+
+  <h3>Bestaande profielen</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Std %</th>
+        <th>Max extra %</th>
+        <th>Actief</th>
+        <th>Beschrijving</th>
+        <th>Updated</th>
+        <th>Actie</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in profiles %}
+      <tr>
+        <td>{{ p.profileCode }}</td>
+        <td>{{ p.standaardKortingPct }}</td>
+        <td>{{ p.maxExtraKortingPct }}</td>
+        <td>{{ "ja" if p.active else "nee" }}</td>
+        <td>{{ p.beschrijving or "" }}</td>
+        <td>{{ p.updatedAt or "" }}</td>
+        <td>
+          <form method="post" action="/admin/profiles/delete" style="margin:0">
+            <input type="hidden" name="profileCode" value="{{ p.profileCode }}">
+            <button type="submit">Verwijder</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

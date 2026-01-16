@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
+from enum import Enum
 
 D = Decimal
 
@@ -26,6 +27,13 @@ class Money:
 # -----------------------------
 # Output models (contract v1)
 # -----------------------------
+
+
+class ApprovalStatus(str, Enum):
+    NONE = "NONE"
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
 
 
 @dataclass(frozen=True)
@@ -60,9 +68,15 @@ class QuoteOutputV1:
     currency: str
     status: str  # "OK" | "BLOCKED"
     total: Money
+    approval_status: ApprovalStatus = ApprovalStatus.NONE
+    approval_id: Optional[str] = None
+    approval_status = ctx.state.approval_status
+
+    # 6.3 — engine-level approval flag (quote-level)
+    approval_required: bool = False
 
     # Phase 3 (quote-level rule audit trail)
-    price_breakdown: List[PriceBreakdownLineV1]
+    price_breakdown: List[PriceBreakdownLineV1] = field(default_factory=list)
 
     # Phase 4 (per-line explainable steps)
     lines: List[QuoteLineOutputV1] = field(default_factory=list)
@@ -70,7 +84,7 @@ class QuoteOutputV1:
     # Blocking always present (even OK can have empty list)
     blocks: List[Dict[str, Any]] = field(default_factory=list)
 
-    # (optioneel) warnings als je ze ook al expose’t in contract v1
+    # Warnings exposed in contract v1
     warnings: List[Dict[str, Any]] = field(default_factory=list)
 
 
@@ -137,6 +151,10 @@ class QuoteState:
     subtotal: D
     breakdown: List[PriceBreakdownLineV1] = field(default_factory=list)
     blocks: List[Dict[str, Any]] = field(default_factory=list)
+    approval_status: ApprovalStatus = ApprovalStatus.NONE
+
+    # 6.3 — engine beslist approval (quote-level)
+    approval_required: bool = False
 
     def money(self, amount: D) -> Money:
         return Money(self.currency, amount).quantized()
@@ -144,6 +162,15 @@ class QuoteState:
 
 @dataclass
 class EngineContext:
+
+    def set_approval_status(self, new_status: ApprovalStatus) -> None:
+        current = self.state.approval_status
+        if current in (ApprovalStatus.APPROVED, ApprovalStatus.REJECTED):
+            raise ValueError(
+                f"Approval status immutable after terminal state: {current}"
+            )
+        self.state.approval_status = new_status
+
     """
     3.2 — Execution context (per request, stateless outside this object).
 

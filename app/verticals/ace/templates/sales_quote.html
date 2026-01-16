@@ -1,0 +1,819 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sales Quote</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --border2:#d1d5db;
+      --ok:#059669;
+      --danger:#b00020;
+      --warnbg:#fff6db;
+      --warnbd:#ffe39a;
+      --blockbg:#ffe8e8;
+      --blockbd:#ffb3b3;
+      --shadow: 0 6px 20px rgba(17,24,39,.08);
+      --radius: 14px;
+    }
+
+    *{ box-sizing: border-box; }
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      line-height: 1.45;
+    }
+
+    .wrap{
+      max-width: 1040px;
+      margin: 28px auto;
+      padding: 0 16px 48px;
+    }
+
+    header{
+      display:flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    h1{
+      margin:0;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+    }
+    .subtitle{
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 980px){
+      .grid{
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .card h2{
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+    .muted{ color: var(--muted); }
+
+    .row{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    label{
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    select, textarea{
+      border:1px solid var(--border2);
+      border-radius: 10px;
+      padding: 10px 10px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+    }
+    select{ min-width: 220px; }
+    textarea{
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      line-height: 1.35;
+    }
+    textarea::placeholder{ color:#9ca3af; }
+
+    .hint{
+      font-size: 13px;
+      color: var(--muted);
+      margin: 6px 0 10px;
+    }
+    code{
+      background:#f3f4f6;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 12px;
+      border:1px solid var(--border);
+    }
+
+    .errors{
+      color: var(--danger);
+      white-space: pre-wrap;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .status{
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .ok{ color: var(--ok); font-weight: 600; }
+
+    button{
+      border:1px solid var(--border2);
+      background:#fff;
+      border-radius: 10px;
+      padding: 9px 12px;
+      cursor:pointer;
+      font-size: 14px;
+    }
+    button:hover{ border-color: #9ca3af; }
+    button:disabled{
+      opacity: .45;
+      cursor:not-allowed;
+    }
+    .primary{
+      background: #111827;
+      color: #fff;
+      border-color: #111827;
+      font-weight: 700;
+    }
+    .primary:hover{ opacity:.92; }
+
+    .actionbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap: wrap;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      margin-top: 10px;
+    }
+    .small{ font-size: 12px; color: var(--muted); }
+
+    .bar{
+      display:flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .kv{
+      min-width: 170px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fbfbfd;
+    }
+    .kv b{
+      display:block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .kv span{ font-size: 16px; font-weight: 700; }
+
+    .alert{
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin: 10px 0;
+      border: 1px solid var(--border);
+    }
+    .alert.blocking{ background: var(--blockbg); border-color: var(--blockbd); }
+    .alert.warning{ background: var(--warnbg); border-color: var(--warnbd); }
+    .alert b{ display:block; margin-bottom: 6px; }
+    .alert ul{ margin: 0; padding-left: 18px; }
+
+    table{
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+    th, td{
+      border-bottom: 1px solid var(--border);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th{
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    details > summary{
+      cursor:pointer;
+      color: #111827;
+      font-weight: 600;
+    }
+    details[open] > summary{ margin-bottom: 8px; }
+    .breakdown ul{ margin: 0; padding-left: 18px; }
+
+    pre{
+      background: #0b1020;
+      color: #e5e7eb;
+      padding: 12px;
+      overflow:auto;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.08);
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Quote (Sales UI)</h1>
+        <div class="subtitle">Read-only engine output. Geen handmatige prijzen/kortingen. Geen editor.</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- INPUT -->
+      <section class="card">
+        <h2>Input</h2>
+
+        <div class="row">
+          <label for="customer">Klant</label>
+          <select id="customer">
+            <option value="">— kies —</option>
+            <option value="cust_demo">Demo klant</option>
+          </select>
+          <span class="status" id="status"></span>
+        </div>
+
+        <div class="hint">
+          Plak regels als: <code>SKU [tab/spatie] qty</code> &nbsp; bijv. <code>ABC123 15</code>
+        </div>
+
+        <textarea id="paste" placeholder="ABC123    15&#10;XYZ999     3"></textarea>
+
+        <div class="row">
+          <button id="calc" class="primary" disabled>Bereken</button>
+          <span class="small">Tip: aanpassen = opnieuw berekenen (geen inline edits)</span>
+        </div>
+
+        <div id="errors" class="errors"></div>
+        <div id="engineError" class="errors"></div>
+      </section>
+
+      <!-- OUTPUT -->
+      <section class="card">
+        <h2>Output</h2>
+
+        <div id="summary"></div>
+
+        <div id="actions" class="card" style="box-shadow:none; margin-top:12px;">
+          <div class="row" style="margin:0;">
+            <button id="btnExport" disabled>Export Excel</button>
+            <button id="btnCopy" disabled>Copy table</button>
+            <button id="btnApproval" disabled>Verstuur approval</button>
+          </div>
+          <div class="actionbar">
+            <span class="small" id="actionHint">Bereken eerst een offerte.</span>
+            <span class="small muted">Acties werken op engine output. Geen edits.</span>
+          </div>
+        </div>
+
+        <div id="alerts"></div>
+        <div id="lines"></div>
+
+        <details style="margin-top:12px;">
+          <summary class="small">Debug JSON</summary>
+          <pre id="out"></pre>
+        </details>
+      </section>
+    </div>
+  </div>
+
+<script>
+  const pasteEl = document.getElementById("paste");
+  const customerEl = document.getElementById("customer");
+  const calcBtn = document.getElementById("calc");
+  const errorsEl = document.getElementById("errors");
+  const engineErrorEl = document.getElementById("engineError");
+  const outEl = document.getElementById("out");
+  const statusEl = document.getElementById("status");
+
+  const summaryEl = document.getElementById("summary");
+  const alertsEl = document.getElementById("alerts");
+  const linesEl = document.getElementById("lines");
+
+  const btnExport = document.getElementById("btnExport");
+  const btnCopy = document.getElementById("btnCopy");
+  const btnApproval = document.getElementById("btnApproval");
+  const actionHint = document.getElementById("actionHint");
+
+  const MAX_LINES = 200;
+
+  // 5.6 state: only current input + last output
+  let lastInput = null;   // { channel, items, context }
+  let lastResult = null;  // QuoteOutputV1 response json
+
+  function setEngineError(msg) {
+    engineErrorEl.textContent = msg || "";
+  }
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function fmt(v) {
+    if (v === null || v === undefined || v === "") return "—";
+    return String(v);
+  }
+
+  function clearOutputUI() {
+    summaryEl.innerHTML = "";
+    alertsEl.innerHTML = "";
+    linesEl.innerHTML = "";
+    outEl.textContent = "";
+  }
+
+  // ---------- 5.5 action logging (MVP) ----------
+  function logAction(event, fields = {}) {
+    const payload = {
+      event,
+      ts: new Date().toISOString(),
+      customer_id: customerEl.value || null,
+      quote_id: lastResult?.payload?.quoteId ?? lastResult?.calculation_id ?? null,
+      line_count: (() => {
+        const parsed = parseLines(pasteEl.value);
+        return parsed.items.length;
+      })(),
+      ...fields,
+    };
+
+    // MVP: console
+    console.log("[ui_event]", payload);
+
+    // Optional: later KPI logging endpoint (safe if missing)
+    try {
+      if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+        navigator.sendBeacon("/api/ui/event", blob);
+      }
+    } catch (_) {}
+  }
+
+  // ---------- 5.5 actions enable/disable ----------
+  function hasBlocking(data) {
+    const p = data?.payload || {};
+    const blocking = p.blocking || p.blocking_errors || p.blockingErrors || [];
+    return Array.isArray(blocking) && blocking.length > 0;
+  }
+
+  function getWarnings(data) {
+    const p = data?.payload || {};
+    return p.warnings || p.warning || [];
+  }
+
+  function hasApprovalRequiredWarning(data) {
+    const warnings = getWarnings(data);
+    return Array.isArray(warnings) && warnings.some(w =>
+      String(w).toLowerCase().includes("approval required")
+    );
+  }
+
+  function getLines(data) {
+    const p = data?.payload || {};
+    return p.lines || p.line_items || p.lineItems || p.items || [];
+  }
+
+  function updateActions(data) {
+    lastResult = data;
+
+    if (!data) {
+      btnExport.disabled = true;
+      btnCopy.disabled = true;
+      btnApproval.disabled = true;
+      actionHint.textContent = "Bereken eerst een offerte.";
+      return;
+    }
+
+    const blocking = hasBlocking(data);
+    const approvalReq = hasApprovalRequiredWarning(data);
+    const lines = getLines(data);
+    const hasLines = Array.isArray(lines) && lines.length > 0;
+
+    btnExport.disabled = blocking || !lastInput;
+    btnCopy.disabled = !hasLines;
+    btnApproval.disabled = blocking || !approvalReq || !lastInput;
+
+    if (blocking) actionHint.textContent = "Acties uitgeschakeld: blocking.";
+    else if (approvalReq) actionHint.textContent = "Approval required → Verstuur approval mogelijk.";
+    else actionHint.textContent = "";
+  }
+
+  function resetActions() {
+    lastInput = null;
+    lastResult = null;
+    btnExport.disabled = true;
+    btnCopy.disabled = true;
+    btnApproval.disabled = true;
+    actionHint.textContent = "Bereken eerst een offerte.";
+  }
+
+  // ---------- 5.2 parse ----------
+  function parseLines(text) {
+    const lines = text.split(/\r?\n/);
+    const items = [];
+    const errors = [];
+    let nonEmptyCount = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const raw = lines[i];
+      const line = raw.trim();
+      if (!line) continue;
+
+      nonEmptyCount++;
+      const n = i + 1;
+
+      const parts = line.split(/\s+/);
+      if (parts.length < 2) { errors.push(`Regel ${n}: mist qty`); continue; }
+
+      const sku = (parts[0] || "").trim();
+      const qtyStr = (parts[1] || "").trim();
+
+      if (!sku) { errors.push(`Regel ${n}: SKU ontbreekt`); continue; }
+
+      const qty = Number(qtyStr);
+      if (!Number.isFinite(qty)) { errors.push(`Regel ${n}: qty is geen getal`); continue; }
+      if (!(qty > 0)) { errors.push(`Regel ${n}: qty moet >= 1`); continue; }
+
+      items.push({ sku, qty });
+    }
+
+    if (nonEmptyCount > MAX_LINES) errors.push(`Te veel regels (max ${MAX_LINES}).`);
+
+    return { items, errors };
+  }
+
+  // 5.6: input change invalidates last output (prevents editor drift)
+  function invalidateCalculatedState() {
+    clearOutputUI();
+    setEngineError("");
+    resetActions();
+    statusEl.textContent = "";
+    statusEl.className = "status";
+  }
+
+  function refresh() {
+    const { items, errors } = parseLines(pasteEl.value);
+
+    errorsEl.textContent =
+      errors.slice(0, 8).join("\n") +
+      (errors.length > 8 ? `\n+ ${errors.length - 8} meer` : "");
+
+    if (errors.length) {
+      statusEl.textContent = "";
+      statusEl.className = "status";
+      setEngineError("");
+      clearOutputUI();
+      resetActions();
+    } else {
+      statusEl.textContent = items.length ? `${items.length} regels OK` : "";
+      statusEl.className = items.length ? "status ok" : "status";
+    }
+
+    // MVP: klant optioneel. Maak verplicht door: && !!customerEl.value
+    const canCalculate = items.length > 0 && errors.length === 0;
+    calcBtn.disabled = !canCalculate;
+
+    return { items, errors };
+  }
+
+  // ---------- 5.3 request flow ----------
+  function withTimeout(ms) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), ms);
+    return { controller, cancel: () => clearTimeout(id) };
+  }
+
+  async function calculateQuote(items) {
+    lastInput = {
+      channel: "sales_ui",
+      items,
+      context: customerEl.value ? { customer_id: customerEl.value } : undefined
+    };
+
+    let spinnerTimer = setTimeout(() => {
+      statusEl.textContent = "Berekenen…";
+      statusEl.className = "status";
+    }, 300);
+
+    const { controller, cancel } = withTimeout(8000);
+
+    try {
+      const res = await fetch("/api/ace/quote/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastInput),
+        signal: controller.signal
+      });
+
+      let data = null;
+      try { data = await res.json(); } catch (_) {}
+
+      return { ok: res.ok, status: res.status, data };
+    } finally {
+      clearTimeout(spinnerTimer);
+      cancel();
+    }
+  }
+
+  // ---------- 5.4 output viewer (read-only) ----------
+  // GUARDRAIL (5.6): read-only view. No inline edit, no remove-line, no manual price fields.
+  function renderOutput(data) {
+    const p = data?.payload || {};
+
+    const quoteId = data?.calculation_id ?? p.quoteId ?? p.quote_id ?? p.quoteID ?? "—";
+    const totalSell = p.totalSell ?? p.total_sell ?? p.totals?.totalSell ?? p.totals?.total_sell ?? p.totals?.total ?? "—";
+    const marginPct = p.marginPct ?? p.margin_pct ?? p.totals?.marginPct ?? p.totals?.margin_pct ?? "—";
+    const validUntil = p.validUntil ?? p.valid_until ?? p.validity?.until ?? "—";
+
+    summaryEl.innerHTML = `
+      <div class="bar">
+        <div class="kv"><b>QuoteId</b><span>${esc(fmt(quoteId))}</span></div>
+        <div class="kv"><b>totalSell</b><span>${esc(fmt(totalSell))}</span></div>
+        <div class="kv"><b>marginPct</b><span>${esc(fmt(marginPct))}</span></div>
+        <div class="kv"><b>validUntil</b><span>${esc(fmt(validUntil))}</span></div>
+      </div>
+      <div class="small" style="margin-top:8px;">Prijzen zijn read-only (engine output).</div>
+    `;
+
+    const blocking = p.blocking || p.blocking_errors || p.blockingErrors || [];
+    const warnings = p.warnings || p.warning || [];
+
+    let alertsHtml = "";
+    if (Array.isArray(blocking) && blocking.length) {
+      alertsHtml += `
+        <div class="alert blocking">
+          <b>Blocking</b>
+          <ul>${blocking.map(x => `<li>${esc(String(x))}</li>`).join("")}</ul>
+        </div>
+      `;
+    }
+    if (Array.isArray(warnings) && warnings.length) {
+      alertsHtml += `
+        <div class="alert warning">
+          <b>Warnings</b>
+          <ul>${warnings.map(x => `<li>${esc(String(x))}</li>`).join("")}</ul>
+        </div>
+      `;
+    }
+    alertsEl.innerHTML = alertsHtml || "";
+
+    const lines = p.lines || p.line_items || p.lineItems || p.items || [];
+    if (!Array.isArray(lines) || !lines.length) {
+      linesEl.innerHTML = `<div class="card" style="box-shadow:none;">Geen regels om te tonen.</div>`;
+      return;
+    }
+
+    const rowsHtml = lines.map((ln) => {
+      const sku = ln.sku ?? ln.SKU ?? "—";
+      const qty = ln.qty ?? ln.quantity ?? "—";
+      const netSell = ln.netSell ?? ln.net_sell ?? ln.net ?? "—";
+      const mPct = ln.marginPct ?? ln.margin_pct ?? "—";
+      const breakdown = ln.priceBreakdown ?? ln.price_breakdown ?? ln.breakdown ?? ln.price_breakdown_lines ?? [];
+
+      const breakdownHtml =
+        Array.isArray(breakdown) && breakdown.length
+          ? `<div class="breakdown"><ul>${breakdown.map(s => `<li>${esc(String(s))}</li>`).join("")}</ul></div>`
+          : `<span class="small">—</span>`;
+
+      return `
+        <tr>
+          <td>${esc(fmt(sku))}</td>
+          <td>${esc(fmt(qty))}</td>
+          <td>${esc(fmt(netSell))}</td>
+          <td>${esc(fmt(mPct))}</td>
+          <td>
+            <details>
+              <summary>toon</summary>
+              ${breakdownHtml}
+            </details>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    linesEl.innerHTML = `
+      <div style="margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Qty</th>
+              <th>netSell</th>
+              <th>marginPct</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // ---------- 5.5 action handlers ----------
+  btnCopy.addEventListener("click", async () => {
+    if (!lastResult) return;
+
+    const lines = getLines(lastResult);
+    if (!Array.isArray(lines) || !lines.length) {
+      actionHint.textContent = "Geen regels om te kopiëren.";
+      return;
+    }
+
+    const header = ["SKU", "qty", "netSell", "marginPct"].join("\t");
+    const rows = lines.map(ln => {
+      const sku = ln.sku ?? ln.SKU ?? "";
+      const qty = ln.qty ?? ln.quantity ?? "";
+      const netSell = ln.netSell ?? ln.net_sell ?? ln.net ?? "";
+      const marginPct = ln.marginPct ?? ln.margin_pct ?? "";
+      return [sku, qty, netSell, marginPct].join("\t");
+    });
+
+    const tsv = [header, ...rows].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(tsv);
+      actionHint.textContent = "Tabel gekopieerd.";
+      logAction("ui.copy_table", { ok: true, rows: rows.length });
+    } catch (e) {
+      // fallback
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = tsv;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        actionHint.textContent = "Tabel gekopieerd.";
+        logAction("ui.copy_table", { ok: true, rows: rows.length, fallback: true });
+      } catch (e2) {
+        actionHint.textContent = "Copy mislukt.";
+        logAction("ui.copy_table", { ok: false });
+      }
+    }
+  });
+
+  btnExport.addEventListener("click", async () => {
+    if (!lastInput || !lastResult) return;
+    if (hasBlocking(lastResult)) return;
+
+    actionHint.textContent = "Export voorbereiden…";
+    logAction("ui.export_xlsx_click");
+
+    try {
+      const res = await fetch("/api/ace/quote/export/xlsx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastInput)
+      });
+
+      if (!res.ok) {
+        actionHint.textContent = `Export error (${res.status})`;
+        logAction("ui.export_xlsx_done", { ok: false, status: res.status });
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "quote.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      actionHint.textContent = "Export gedownload.";
+      logAction("ui.export_xlsx_done", { ok: true });
+    } catch (e) {
+      actionHint.textContent = "Export mislukt (engine niet bereikbaar).";
+      logAction("ui.export_xlsx_done", { ok: false, error: String(e) });
+    }
+  });
+
+  btnApproval.addEventListener("click", async () => {
+    if (!lastInput || !lastResult) return;
+    if (hasBlocking(lastResult)) return;
+    if (!hasApprovalRequiredWarning(lastResult)) return;
+
+    actionHint.textContent = "Approval versturen…";
+    logAction("ui.send_approval_click");
+
+    try {
+      const res = await fetch("/api/ace/quote/approval/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastInput)
+      });
+
+      if (!res.ok) {
+        actionHint.textContent = `Approval error (${res.status})`;
+        logAction("ui.send_approval_done", { ok: false, status: res.status });
+        return;
+      }
+
+      actionHint.textContent = "Approval verstuurd.";
+      logAction("ui.send_approval_done", { ok: true });
+    } catch (e) {
+      actionHint.textContent = "Approval mislukt (engine niet bereikbaar).";
+      logAction("ui.send_approval_done", { ok: false, error: String(e) });
+    }
+  });
+
+  // ---------- input change events ----------
+  pasteEl.addEventListener("input", () => {
+    invalidateCalculatedState();
+    refresh();
+  });
+
+  customerEl.addEventListener("change", () => {
+    invalidateCalculatedState();
+    refresh();
+  });
+
+  // ---------- calculate ----------
+  calcBtn.addEventListener("click", async () => {
+    setEngineError("");
+    clearOutputUI();
+    resetActions();
+
+    const { items, errors } = refresh();
+    if (errors.length) return;
+
+    calcBtn.disabled = true;
+
+    try {
+      const result = await calculateQuote(items);
+
+      outEl.textContent = JSON.stringify(
+        result.data ?? { error: `No JSON response (HTTP ${result.status})` },
+        null,
+        2
+      );
+
+      if (result.data) {
+        renderOutput(result.data);
+        updateActions(result.data);
+      } else {
+        updateActions(null);
+      }
+
+      if (!result.ok) {
+        if (result.status >= 500) setEngineError("Engine niet bereikbaar. Probeer opnieuw.");
+        statusEl.textContent = `Error ${result.status}`;
+        statusEl.className = "status";
+      } else {
+        statusEl.textContent = "Klaar";
+        statusEl.className = "status ok";
+      }
+
+      logAction("ui.calculate_done", { ok: result.ok, status: result.status });
+    } catch (e) {
+      const msg = (e && e.name === "AbortError")
+        ? "Engine niet bereikbaar (timeout)."
+        : "Engine niet bereikbaar. Controleer je verbinding.";
+      setEngineError(msg);
+      statusEl.textContent = "Error";
+      statusEl.className = "status";
+      outEl.textContent = JSON.stringify({ error: msg }, null, 2);
+      clearOutputUI();
+      resetActions();
+      logAction("ui.calculate_done", { ok: false, error: String(e) });
+    } finally {
+      refresh();
+    }
+  });
+
+  // init
+  resetActions();
+  refresh();
+</script>
+</body>
+</html>

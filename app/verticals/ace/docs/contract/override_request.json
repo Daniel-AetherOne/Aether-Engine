@@ -1,0 +1,52 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "OverrideRequestV1",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "quoteId",
+        "overridePct",
+        "reason",
+        "requestedBy"
+    ],
+    "properties": {
+        "quoteId": {
+            "type": "string",
+            "minLength": 8,
+            "description": "Quote identifier returned by /calculate."
+        },
+        "overridePct": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 50,
+            "description": "Extra discount percentage (e.g., 5.0 = 5%). Hard-capped server-side."
+        },
+        "reason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 500,
+            "description": "Human justification. Required for auditability."
+        },
+        "requestedBy": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200,
+            "description": "User identifier or email of the requester."
+        },
+        "requestSource": {
+            "type": "string",
+            "enum": [
+                "SALES_UI",
+                "API",
+                "INTERNAL"
+            ],
+            "default": "SALES_UI"
+        },
+        "clientRequestId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 100,
+            "description": "Optional idempotency key to prevent duplicate requests."
+        }
+    }
+}
