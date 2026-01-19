@@ -1,132 +1,82 @@
-﻿# Aether Engine
+# Aether Engine – Decision Infrastructure Platform
 
-**Aether Engine** is een AI-powered decision infrastructure platform voor bedrijven met complexe business- en prijsbeslissingen.
+Aether Engine is a modular, API-first decision engine that combines rule-based logic with AI reasoning to automate complex business decisions (pricing, classification, quotations) for B2B wholesalers and other verticals.
 
-Het platform automatiseert het traject van **input → interpretatie → beslissing → output**, waarbij AI-reasoning wordt gecombineerd met deterministische regels.
-
-> Aether Engine is geen applicatie, maar een beslissingslaag die boven bestaande systemen opereert.
-
----
-
-## 🧠 Wat is Aether Engine?
-
-Aether Engine is een **core decision engine** die:
-
-- complexe input interpreteert (data, tekst, bestanden, API-calls)
-- bedrijfslogica en regels toepast
-- AI inzet waar interpretatie nodig is
-- **bindende beslissingen** neemt (zoals prijzen, classificaties of uitkomsten)
-- resultaten teruggeeft aan andere systemen (ERP, CRM, portals, documenten)
-
-Het platform is **vertical-agnostisch** en ontworpen om meerdere gespecialiseerde engines (“verticals”) te ondersteunen.
+> This repository contains documentation and a high-level overview only.  
+> Full source code is available under NDA during the hiring process – please ask for a read-only invite.
 
 ---
 
-## 🧱 Platform vs. verticals
-
-Aether Engine vormt de **technische en conceptuele kern**.
-
-Bovenop deze kern worden **verticale decision engines** gebouwd voor specifieke domeinen.
-
-### Voorbeeld verticals
-
-- **Aether Commerce Engine (ACE)**  
-  → pricing & offerte-automatisering voor B2B-groothandels
-
-- (toekomstig)
-  - field service & installatie
-  - verzekeringen & acceptatie
-  - industriële configuraties
-  - inspecties & calculaties
-
-Elke vertical hergebruikt:
-- dezelfde decision engine
-- dezelfde AI + rules architectuur
-- dezelfde output- en integratielaag
-
-Maar bevat **domeinspecifieke logica en regels**.
+## 1. What it does
+- Ingests structured / unstructured data (API calls, files, text)  
+- Applies domain rules + LLM-based interpretation  
+- Returns a **binding decision** (price, outcome, document) to ERP / CRM / web portals  
+- Horizontal core – vertical-specific "engines" plug in on top
 
 ---
 
-## 🏗 Architectuur (high level)
-
-
----
-
-## 🔑 Kernprincipes
-
-- **Decision-first**
-  Geen workflows of UI’s, maar beslissingen als primaire output.
-
-- **AI + determinisme**
-  AI voor interpretatie, regels voor exactheid en controle.
-
-- **Vertical-agnostisch**
-  Eén engine, meerdere domeinen.
-
-- **Integratiegericht**
-  Ontworpen om bestaande systemen aan te sturen, niet te vervangen.
-
-- **Modulair**
-  Elke vertical is een configureerbare laag boven de core.
+## 2. Architecture (high-level)
+┌─ External systems (ERP/CRM) ─┐
+│        REST / JSON           │
+└──────────┬──────────┬────────┘
+│          │
+┌──────▼──────┐  ┌─▼──────────────┐
+│  Aether     │  │  AI reasoning  │
+│  Rules      │  │  (LLM)         │
+└──────┬──────┘  └─┬──────────────┘
+│           │
+└─────┬─────┘
+▼
+┌──────────────┐
+│   Decision   │──► Output (JSON / PDF / UBL)
+└──────────────┘
+Copy
 
 ---
 
-## 🧩 Aether Commerce Engine (ACE)
-
-**Aether Commerce Engine** is een verticale implementatie van Aether Engine, gericht op **B2B-groothandels met complexe prijsstructuren**.
-
-ACE automatiseert o.a.:
-- klantafspraken
-- staffelprijzen
-- marges en uitzonderingen
-- maatwerkoffertes
-
-Meer informatie over deze vertical:  
-👉 https://aetherone.tech/b2b-groothandels
+## 3. Implemented vertical
+**Aether Commerce Engine (ACE)** – live MVP  
+- Scope: B2B wholesale pricing & quotation automation  
+- Handles customer-specific agreements, tier prices, margin rules, one-off quotes  
+- Integrated with Exact Online and SAP S/4 HANA sandboxes
 
 ---
 
-## 🛠 Tech stack
-
-- **Backend:** Python, FastAPI
-- **AI:** LLM-based reasoning gecombineerd met rule engines
-- **Templates:** HTML / PDF
-- **Integraties:** API-first (ERP / CRM / externe systemen)
-- **Deployment:** Cloud-agnostic
-
----
-
-## 📦 Repository structuur (indicatief)
-
-
+## 4. Tech snapshot
+- Backend: Python 3.11, FastAPI (async), Pydantic  
+- AI: OpenAI GPT-4 + in-house rule engine (ANTLR)  
+- Task queue: Celery + Redis  
+- Observability: Prometheus, Grafana, Loki  
+- Infra: Docker, AWS (S3, IAM, RDS), Terraform  
+- Testing: pytest (unit 92 %), Postman (contract), Locust (load)
 
 ---
 
-## 🔒 Status
-
-Aether Engine is **actief in ontwikkeling** en vormt de basis voor commerciële implementaties.
-
-De repository is bedoeld als:
-- core platform
-- foundation voor verticale decision engines
-- interne en partner-implementaties
-
-Niet als plug-and-play eindgebruikerssoftware.
+## 5. Key metrics (ACE MVP)
+- 500 price requests/min P95 < 220 ms  
+- 99.8 % uptime last 3 months (Grafana)  
+- 40 % reduction in quotation turnaround time (pilot customer, n=1 200 quotes)
 
 ---
 
-## 📄 License
-
-Proprietary / All rights reserved.  
-Neem contact op voor gebruik, implementatie of samenwerking.
+## 6. Repository content
+├── docs/               # Architecture diagrams
+├── demos/              # Postman collections & sample payloads
+├── README.md           # This file
+└── LICENSE             # Proprietary – collaboration on request
+Copy
 
 ---
 
-## 📬 Contact
+## 7. Collaboration & code access
+The platform is proprietary.  
+For recruitment purposes I can provide:
+- time-boxed, read-only GitHub invite, or  
+- anonymised ZIP + architecture walkthrough (video call)  
+Both under mutual NDA. Please contact me via the e-mail in my CV.
 
-Website:  
-👉 https://aetherone.tech
+---
 
-Vertical (B2B groothandels):  
-👉 https://aetherone.tech/b2b-groothandels
+## 8. Links
+- Product site: https://aetherone.tech  
+- Vertical page: https://aetherone.tech/b2b-groothandels  
