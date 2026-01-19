@@ -16,27 +16,11 @@ Aether Engine is a modular, API-first decision engine that combines rule-based l
 ---
 
 ## 2. Architecture (high-level)
-ERP / CRM / Portals
-        │
-        ▼
-   [API Gateway]
-   REST │ JSON
-        ▼
-   +------------------+
-   │ Rule Engine      │<--┐
-   +------------------+   │
-        ▼                │
-   +------------------+   │
-   │ AI Reasoning     │---┘
-   │ (LLM)            │
-   +------------------+
-        ▼
-   +------------------+
-   │ Decision Core    │
-   +------------------+
-        │
-        ▼
-   JSON / PDF / UBL  (output)
+┌──────────┐     ┌──────────┐     ┌──────────┐
+│  Input   │────►│  Logic   │────►│  Output  │
+│  Layer   │     │  Layer   │     │  Layer   │
+│ (ERP/API)│     │Rules+AI  │     │JSON/PDF  │
+└──────────┘     └──────────┘     └──────────┘
 ---
 
 ## 3. Implemented vertical
