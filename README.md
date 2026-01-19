@@ -49,12 +49,10 @@ Data flow:
 ---
 
 ## 6. Repository content
-├── docs/               # Architecture diagrams
-├── demos/              # Postman collections & sample payloads
-├── README.md           # This file
-└── LICENSE             # Proprietary – collaboration on request
-Copy
-
+- `docs/`          – architecture diagrams (PNG/Markdown)  
+- `demos/`         – Postman collections & sample payloads  
+- `README.md`      – this overview  
+- `LICENSE`        – proprietary, collaboration on request
 ---
 
 ## 7. Collaboration & code access
