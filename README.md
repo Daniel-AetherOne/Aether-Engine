@@ -10,7 +10,7 @@ Aether Engine is a modular, API-first decision engine that combines rule-based l
 ## 1. What it does
 - Ingests structured / unstructured data (API calls, files, text)  
 - Applies domain rules + LLM-based interpretation  
-- Returns a **binding decision** (price, outcome, document) to ERP / CRM / web portals  
+- Returns a binding decision (price, outcome, document), suitable for downstream execution in ERP or CRM systems.  
 - Horizontal core – vertical-specific "engines" plug in on top
 
 ---
@@ -33,7 +33,7 @@ Data flow:
 
 ## 4. Tech snapshot
 - Backend: Python 3.11, FastAPI (async), Pydantic  
-- AI: OpenAI GPT-4 + in-house rule engine (ANTLR)  
+- AI: OpenAI LLMs (GPT-class) + in-house rule engine (ANTLR)
 - Task queue: Celery + Redis  
 - Observability: Prometheus, Grafana, Loki  
 - Infra: Docker, AWS (S3, IAM, RDS), Terraform  
@@ -52,7 +52,7 @@ Data flow:
 - `docs/`          – architecture diagrams (PNG/Markdown)  
 - `demos/`         – Postman collections & sample payloads  
 - `README.md`      – this overview  
-- `LICENSE`        – proprietary, collaboration on request
+- `LICENSE`        – proprietary (not open source)
 ---
 
 ## 7. Collaboration & code access
