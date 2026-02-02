@@ -4,331 +4,337 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Painting Estimate Request — {{ tenant_id or "painters_us" }}</title>
+<style>
+  /* Geist (CDN) */
+  @import url("https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css");
 
-  <style>
-    :root{
-      --bg:#f6f7fb;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#5b6474;
-      --line:#e7e9f1;
+  :root{
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --text: #0b1220;
+    --muted: #5b6474;
+    --muted2:#798394;
+    --line: #e7e9f1;
 
-      --brand:#2563eb;      /* blue */
-      --brand2:#16a34a;     /* green */
-      --danger:#dc2626;
+    --brand: #5b5cff;      /* modern indigo */
+    --brand2:#16a34a;      /* green */
+    --danger:#dc2626;
 
-      --shadow:0 18px 45px rgba(15,23,42,.10);
-      --radius:18px;
-    }
+    --shadow: 0 18px 50px rgba(15,23,42,.08);
+    --shadow2: 0 10px 26px rgba(15,23,42,.06);
 
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-      color:var(--text);
-      background:
-        radial-gradient(900px 520px at 18% 0%, rgba(37,99,235,.10), transparent 60%),
-        radial-gradient(900px 520px at 86% 12%, rgba(22,163,74,.08), transparent 60%),
-        linear-gradient(180deg, #fbfcff, var(--bg));
-      min-height:100vh;
-      padding:28px 16px;
-    }
+    --radius: 18px;
+    --radius2: 22px;
+  }
 
-    .topbar{
-      max-width:1100px;
-      margin:0 auto 14px auto;
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-end;
-      gap:12px;
-    }
-    .brandBlock{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .brandTitle{
-      font-size:18px;
-      font-weight:800;
-      letter-spacing:.2px;
-    }
-    .brandSub{
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.35;
-    }
+  *{box-sizing:border-box;margin:0;padding:0}
 
-    .badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 10px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.65);
-      border-radius:999px;
-      font-size:12px;
-      color:var(--muted);
-      box-shadow: 0 8px 22px rgba(15,23,42,.04);
-      backdrop-filter: blur(8px);
-    }
-    .badge strong{color:var(--text);font-weight:800}
+  body{
+    font-family: "Geist Sans", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 20% -10%, rgba(91,92,255,.12), transparent 60%),
+      radial-gradient(900px 520px at 95% 10%, rgba(22,163,74,.09), transparent 60%),
+      linear-gradient(180deg, #fbfcff, var(--bg));
+    min-height:100vh;
+    padding: 30px 16px;
+  }
 
-    .wrap{
-      max-width:1100px;
-      margin:0 auto;
-      display:grid;
-      grid-template-columns: 1.35fr .65fr;
-      gap:16px;
-    }
-    @media (max-width: 980px){
-      .topbar{align-items:flex-start;flex-direction:column}
-      .badges{justify-content:flex-start}
-      .wrap{grid-template-columns:1fr}
-    }
+  /* top */
+  .topbar{
+    max-width:1120px;
+    margin:0 auto 16px auto;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:12px;
+  }
+  .brandBlock{display:flex;flex-direction:column;gap:6px}
+  .brandTitle{
+    font-size:18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .brandSub{
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.35;
+    max-width: 80ch;
+  }
 
-    .card{
-      background: var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
+  .badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.7);
+    border-radius:999px;
+    font-size:12px;
+    color:var(--muted);
+    box-shadow: var(--shadow2);
+    backdrop-filter: blur(8px);
+  }
+  .badge strong{color:var(--text);font-weight:650}
 
-    .header{
-      padding:20px 22px 16px 22px;
-      border-bottom:1px solid var(--line);
-      background:
-        radial-gradient(900px 240px at 0% 0%, rgba(37,99,235,.08), transparent 60%),
-        radial-gradient(900px 240px at 100% 0%, rgba(22,163,74,.06), transparent 60%);
-    }
-    .title{
-      font-size: 22px;
-      font-weight: 900;
-      letter-spacing:.2px;
-      margin-bottom:6px;
-    }
-    .subtitle{
-      color:var(--muted);
-      line-height:1.5;
-      font-size:14px;
-      max-width: 70ch;
-    }
+  /* layout */
+  .wrap{
+    max-width:1120px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns: 1.45fr .55fr;
+    gap:16px;
+  }
+  @media (max-width: 980px){
+    .topbar{align-items:flex-start;flex-direction:column}
+    .badges{justify-content:flex-start}
+    .wrap{grid-template-columns:1fr}
+  }
 
-    .content{padding:18px 22px 22px 22px}
+  .card{
+    background: var(--card);
+    border:1px solid var(--line);
+    border-radius: var(--radius2);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
 
-    .stepRow{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:14px;
-    }
-    .step{
-      display:flex;align-items:center;gap:10px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:#fff;
-      font-size:13px;
-      color:var(--muted);
-    }
-    .dot{
-      width:10px;height:10px;border-radius:999px;
-      background: rgba(37,99,235,.25);
-      box-shadow: 0 0 0 4px rgba(37,99,235,.08);
-    }
-    .step strong{color:var(--text);font-weight:900}
+  .header{
+    padding:22px 22px 16px 22px;
+    border-bottom:1px solid var(--line);
+    background:
+      radial-gradient(900px 240px at 0% 0%, rgba(91,92,255,.10), transparent 60%),
+      radial-gradient(900px 240px at 100% 0%, rgba(22,163,74,.08), transparent 60%);
+  }
+  .title{
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing:-0.02em;
+    margin-bottom:6px;
+  }
+  .subtitle{
+    color:var(--muted);
+    line-height:1.55;
+    font-size:14px;
+    max-width: 72ch;
+  }
 
-    .grid{display:grid;gap:14px}
-    .grid.two{grid-template-columns:1fr 1fr}
-    .grid.three{grid-template-columns:1fr 1fr 1fr}
-    @media (max-width: 740px){
-      .grid.two, .grid.three{grid-template-columns:1fr}
-    }
+  .content{padding:18px 22px 22px 22px}
 
-    label{
-      display:block;
-      font-size:12px;
-      letter-spacing:.35px;
-      color:var(--muted);
-      margin:0 0 8px 2px;
-      text-transform:uppercase;
-      font-weight:800;
-    }
+  /* steps */
+  .stepRow{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+  }
+  .step{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 12px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:#fff;
+    font-size:12px;
+    color:var(--muted);
+    font-weight:600;
+  }
+  .dot{
+    width:9px;height:9px;border-radius:999px;
+    background: rgba(91,92,255,.38);
+    box-shadow: 0 0 0 4px rgba(91,92,255,.10);
+  }
+  .step strong{color:var(--text);font-weight:700}
 
-    input, textarea, select{
-      width:100%;
-      padding:12px 12px;
-      border-radius:14px;
-      border:1px solid #d9dce8;
-      background:#fff;
-      color:var(--text);
-      outline:none;
-      transition: border .15s ease, box-shadow .15s ease, transform .05s ease;
-    }
-    input:focus, textarea:focus, select:focus{
-      border-color: rgba(37,99,235,.55);
-      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
-    }
-    textarea{min-height:110px;resize:vertical}
+  /* form */
+  .grid{display:grid;gap:14px}
+  .grid.two{grid-template-columns:1fr 1fr}
+  .grid.three{grid-template-columns:1fr 1fr 1fr}
+  @media (max-width: 740px){
+    .grid.two, .grid.three{grid-template-columns:1fr}
+  }
 
-    .hint{
-      font-size:13px;
-      color:var(--muted);
-      line-height:1.5;
-      margin-top:10px;
-    }
+  label{
+    display:block;
+    font-size:12px;
+    letter-spacing:.35px;
+    color:var(--muted2);
+    margin:0 0 8px 2px;
+    text-transform:uppercase;
+    font-weight:700;
+  }
 
-    .section{
-      margin-top:16px;
-      padding-top:16px;
-      border-top:1px dashed var(--line);
-    }
-    .sectionTitle{
-      font-weight:900;
-      font-size:14px;
-      margin-bottom:10px;
-      letter-spacing:.2px;
-    }
+  input, textarea, select{
+    width:100%;
+    padding:12px 12px;
+    border-radius:14px;
+    border:1px solid #d9dce8;
+    background:#fff;
+    color:var(--text);
+    outline:none;
+    transition: border .15s ease, box-shadow .15s ease, transform .05s ease;
+  }
+  input::placeholder, textarea::placeholder{color: rgba(15,23,42,.35)}
+  input:focus, textarea:focus, select:focus{
+    border-color: rgba(91,92,255,.55);
+    box-shadow: 0 0 0 4px rgba(91,92,255,.12);
+  }
+  textarea{min-height:110px;resize:vertical}
 
-    .uploadBox{
-      border:2px dashed rgba(37,99,235,.35);
-      border-radius:16px;
-      padding:16px;
-      background: linear-gradient(180deg, rgba(37,99,235,.04), rgba(22,163,74,.03));
-      cursor:pointer;
-      transition: border .15s ease, transform .05s ease, background .15s ease;
-    }
-    .uploadBox:hover{
-      border-color: rgba(22,163,74,.45);
-      background: linear-gradient(180deg, rgba(37,99,235,.06), rgba(22,163,74,.05));
-    }
-    .uploadTop{
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-      margin-bottom:10px;
-    }
-    .uploadTitle{font-weight:900;font-size:14px}
-    .uploadMeta{color:var(--muted);font-size:12px}
+  .hint{
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.5;
+    margin-top:10px;
+  }
 
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 10px;
-      border-radius:999px;
-      font-size:12px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.75);
-      color:var(--muted);
-      font-weight:800;
-    }
+  .section{
+    margin-top:18px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .sectionTitle{
+    font-weight:700;
+    font-size:14px;
+    margin-bottom:10px;
+    letter-spacing:-0.01em;
+  }
 
-    .files{
-      margin-top:10px;
-      display:grid;
-      gap:8px;
-    }
-    .fileRow{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      padding:10px 10px;
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:14px;
-      font-size:13px;
-      color:var(--text);
-    }
-    .fileRow small{color:var(--muted)}
-    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+  /* Upload */
+  .uploadBox{
+    border:1.5px dashed rgba(91,92,255,.35);
+    border-radius:16px;
+    padding:16px;
+    background: linear-gradient(180deg, rgba(91,92,255,.05), rgba(22,163,74,.03));
+    cursor:pointer;
+    transition: border .15s ease, transform .05s ease, background .15s ease;
+    display:block;
+  }
+  .uploadBox:hover{
+    border-color: rgba(22,163,74,.45);
+    background: linear-gradient(180deg, rgba(91,92,255,.07), rgba(22,163,74,.04));
+  }
+  .uploadTop{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-bottom:10px;
+  }
+  .uploadTitle{font-weight:700;font-size:14px;letter-spacing:-0.01em}
+  .uploadMeta{color:var(--muted);font-size:12px}
 
-    .actions{
-      margin-top:16px;
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .btn{
-      appearance:none;
-      border:none;
-      border-radius:14px;
-      padding:12px 14px;
-      font-weight:900;
-      cursor:pointer;
-      transition: transform .05s ease, opacity .15s ease, box-shadow .15s ease;
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-    }
-    .btn:active{transform: translateY(1px)}
-    .btnPrimary{
-      background: linear-gradient(135deg, rgba(37,99,235,.98), rgba(22,163,74,.92));
-      color:#ffffff;
-      box-shadow: 0 14px 30px rgba(37,99,235,.18);
-    }
-    .btnGhost{
-      background:#fff;
-      color:var(--text);
-      border:1px solid var(--line);
-    }
-    .btn[disabled]{opacity:.55;cursor:not-allowed}
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 10px;
+    border-radius:999px;
+    font-size:12px;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.75);
+    color:var(--muted);
+    font-weight:700;
+  }
 
-    .msg{
-      display:none;
-      margin-bottom:12px;
-      padding:12px 12px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:#fff;
-      font-size:13px;
-      line-height:1.5;
-    }
-    .msg.ok{border-color: rgba(22,163,74,.35)}
-    .msg.err{border-color: rgba(220,38,38,.35)}
-    .msg strong{font-weight:900}
-    .linkish{
-      color:var(--brand);
-      text-decoration:none;
-      font-weight:900;
-    }
+  .files{margin-top:10px;display:grid;gap:8px}
+  .fileRow{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 10px;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:14px;
+    font-size:13px;
+    color:var(--text);
+  }
+  .fileRow small{color:var(--muted)}
+  .status{margin-top:10px;font-size:13px;color:var(--muted)}
 
-    .tiny{
-      font-size:12px;
-      color:var(--muted);
-      margin-top:10px;
-      line-height:1.4;
-    }
+  /* Buttons */
+  .actions{
+    margin-top:16px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    appearance:none;
+    border:none;
+    border-radius:14px;
+    padding:12px 14px;
+    font-weight:700;
+    cursor:pointer;
+    transition: transform .05s ease, opacity .15s ease, box-shadow .15s ease, border .15s ease;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+  }
+  .btn:active{transform: translateY(1px)}
+  .btnPrimary{
+    background: linear-gradient(135deg, rgba(91,92,255,.98), rgba(22,163,74,.88));
+    color:#ffffff;
+    box-shadow: 0 14px 30px rgba(91,92,255,.18);
+  }
+  .btnGhost{
+    background:#fff;
+    color:var(--text);
+    border:1px solid var(--line);
+  }
+  .btn[disabled]{opacity:.55;cursor:not-allowed}
 
-    /* Sidebar */
-    .sideCard .content{padding:16px}
-    .sideTitle{
-      font-weight:900;
-      font-size:14px;
-      margin-bottom:10px;
-      letter-spacing:.2px;
-    }
-    .sideList{display:grid;gap:10px}
-    .sideItem{
-      padding:12px;
-      border-radius:16px;
-      border:1px solid var(--line);
-      background:#fff;
-    }
-    .sideItem b{display:block;margin-bottom:4px;font-weight:900}
-    .sideItem span{color:var(--muted);font-size:13px;line-height:1.45}
+  /* Messages */
+  .msg{
+    display:none;
+    margin-bottom:12px;
+    padding:12px 12px;
+    border-radius:14px;
+    border:1px solid var(--line);
+    background:#fff;
+    font-size:13px;
+    line-height:1.5;
+  }
+  .msg.ok{border-color: rgba(22,163,74,.35)}
+  .msg.err{border-color: rgba(220,38,38,.35)}
+  .msg strong{font-weight:700}
 
-    .summary{
-      margin-top:12px;
-      border-top:1px dashed var(--line);
-      padding-top:12px;
-      display:grid;
-      gap:8px;
-      color:var(--muted);
-      font-size:13px;
-    }
-    .kv{display:flex;justify-content:space-between;gap:10px}
-    .kv strong{color:var(--text);font-weight:900}
+  .tiny{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:10px;
+    line-height:1.4;
+  }
 
-  </style>
+  /* Sidebar */
+  .sideCard .content{padding:16px}
+  .sideTitle{
+    font-weight:700;
+    font-size:14px;
+    margin-bottom:10px;
+    letter-spacing:-0.01em;
+  }
+  .sideList{display:grid;gap:10px}
+  .sideItem{
+    padding:12px;
+    border-radius:18px;
+    border:1px solid var(--line);
+    background:#fff;
+  }
+  .sideItem b{display:block;margin-bottom:4px;font-weight:700}
+  .sideItem span{color:var(--muted);font-size:13px;line-height:1.45}
+
+  .summary{
+    margin-top:12px;
+    border-top:1px solid var(--line);
+    padding-top:12px;
+    display:grid;
+    gap:8px;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .kv{display:flex;justify-content:space-between;gap:10px}
+  .kv strong{color:var(--text);font-weight:700}
+</style>
+
+
 </head>
 
 <body>
@@ -448,12 +454,23 @@
             </div>
           </div>
 
+          <!-- ✅ Photos section (robust multi-select) -->
           <div class="section">
             <div class="sectionTitle">Photos</div>
 
             <div>
               <label>Upload Photos (1–5 images) *</label>
-              <div class="uploadBox" id="uploadBox">
+
+              <label class="uploadBox" id="uploadBox" for="files" style="display:block;">
+                <input
+                  type="file"
+                  id="files"
+                  name="files"
+                  multiple
+                  accept="image/*"
+                  style="display:none"
+                />
+
                 <div class="uploadTop">
                   <div>
                     <div class="uploadTitle">Click to select photos</div>
@@ -462,11 +479,10 @@
                   <div class="pill">S3 presigned</div>
                 </div>
 
-                <input type="file" id="files" multiple accept="image/*" style="display:none" required />
                 <div class="files" id="fileList"></div>
                 <div class="status" id="uploadStatus">No files selected yet.</div>
                 <div id="photoKeysContainer"></div>
-              </div>
+              </label>
             </div>
 
             <div class="actions">
@@ -527,8 +543,13 @@
   </div>
 
 <script>
+  const TENANT_ID = "{{ tenant_id or 'painters_us' }}";
+
+  const MAX_FILES = 5;
+  const MAX_BYTES = 15 * 1024 * 1024; // moet matchen met backend (UPLOAD_MAX_BYTES)
+  const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
   const form = document.getElementById('intakeForm');
-  const uploadBox = document.getElementById('uploadBox');
   const fileInput = document.getElementById('files');
   const fileList = document.getElementById('fileList');
   const uploadStatus = document.getElementById('uploadStatus');
@@ -546,11 +567,13 @@
     msgOk.innerHTML = html;
     msgOk.style.display = 'block';
   }
+
   function showErr(text){
     msgOk.style.display = 'none';
     msgErr.textContent = text;
     msgErr.style.display = 'block';
   }
+
   function clearMsgs(){
     msgOk.style.display = 'none';
     msgErr.style.display = 'none';
@@ -560,18 +583,65 @@
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = 'photo_keys';
-    input.value = key;
+    input.value = key; // OBJECT_KEY (tenant/uploads/...)
     photoKeysContainer.appendChild(input);
   }
 
+  function normalizeType(file){
+    return (file.type || "image/jpeg").toLowerCase();
+  }
+
+  function formatBytes(bytes){
+    const mb = bytes / 1024 / 1024;
+    return `${mb.toFixed(mb >= 10 ? 0 : 2)} MB`;
+  }
+
+  function createFileRow(file){
+    const row = document.createElement('div');
+    row.className = 'fileRow';
+
+    row.innerHTML = `
+      <div class="fileLeft">
+        <div class="fileName" title="${file.name}">${file.name}</div>
+        <small>${formatBytes(file.size)}</small>
+      </div>
+      <div class="fileMeta">
+        <span class="tag up">Uploading…</span>
+      </div>
+    `;
+
+    const tag = row.querySelector('.tag');
+    return { row, tag };
+  }
+
   async function uploadFileToS3(file){
-    const params = new URLSearchParams({
-      filename: file.name,
-      content_type: file.type || 'image/jpeg',
+    const ctype = normalizeType(file);
+
+    if(file.size <= 0 || file.size > MAX_BYTES){
+      throw new Error("file_too_large");
+    }
+    if(!ALLOWED_TYPES.has(ctype)){
+      throw new Error("unsupported_type");
+    }
+
+    const res = await fetch('/uploads/presign', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer demo' // MVP auth
+      },
+      body: JSON.stringify({
+        filename: file.name,
+        tenant_id: TENANT_ID,
+        content_type: ctype,
+        size: file.size
+      })
     });
 
-    const res = await fetch(`/files/presign-upload?${params.toString()}`);
-    if(!res.ok) throw new Error('Could not get presigned upload');
+    if(!res.ok){
+      const t = await res.text();
+      throw new Error("presign_failed: " + t);
+    }
 
     const data = await res.json();
 
@@ -580,15 +650,17 @@
     formData.append('file', file);
 
     const s3Res = await fetch(data.url, { method:'POST', body: formData });
-    if(!s3Res.ok) throw new Error('S3 upload failed');
+    if(!s3Res.ok){
+      throw new Error("s3_upload_failed");
+    }
 
-    return data.key;
+    // BELANGRIJK: object_key opslaan (met tenant-prefix)
+    return data.object_key;
   }
-
-  uploadBox.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', async function(){
     clearMsgs();
+
     const files = Array.from(this.files || []);
     fileList.innerHTML = '';
     photoKeysContainer.innerHTML = '';
@@ -597,15 +669,24 @@
       uploadStatus.textContent = 'No files selected yet.';
       return;
     }
-    if(files.length > 5){
-      showErr('Maximum 5 files allowed.');
+
+    if(files.length > MAX_FILES){
+      showErr(`Maximum ${MAX_FILES} files allowed.`);
       this.value = '';
       uploadStatus.textContent = 'Upload cancelled.';
       return;
     }
+
     for(const f of files){
-      if(!f.type.startsWith('image/')){
-        showErr('Only image files are allowed.');
+      const ctype = normalizeType(f);
+      if(!ALLOWED_TYPES.has(ctype)){
+        showErr('Only JPG, PNG or WebP images are allowed.');
+        this.value = '';
+        uploadStatus.textContent = 'Upload cancelled.';
+        return;
+      }
+      if(f.size <= 0 || f.size > MAX_BYTES){
+        showErr(`Each file must be under ${Math.floor(MAX_BYTES/1024/1024)} MB.`);
         this.value = '';
         uploadStatus.textContent = 'Upload cancelled.';
         return;
@@ -614,26 +695,48 @@
 
     uploadInProgress = true;
     submitBtn.disabled = true;
-    uploadStatus.textContent = 'Uploading photos...';
+    uploadStatus.textContent = `Uploading ${files.length} photo(s)…`;
 
     try{
-      const keys = [];
+      let uploaded = 0;
 
       for(const f of files){
-        const row = document.createElement('div');
-        row.className = 'fileRow';
-        row.innerHTML = `<span>${f.name}</span><small>${(f.size/1024/1024).toFixed(2)} MB</small>`;
+        const { row, tag } = createFileRow(f);
         fileList.appendChild(row);
 
-        const key = await uploadFileToS3(f);
-        keys.push(key);
-        createHiddenPhotoKey(key);
+        try{
+          const key = await uploadFileToS3(f);
+          createHiddenPhotoKey(key);
+
+          uploaded += 1;
+          tag.textContent = 'Uploaded';
+          tag.classList.remove('up');
+          tag.classList.add('ok');
+
+          uploadStatus.textContent = `✅ Uploaded ${uploaded}/${files.length} photo(s)`;
+        }catch(e){
+          tag.textContent = 'Failed';
+          tag.classList.remove('up');
+          tag.classList.add('err');
+          throw e;
+        }
       }
 
-      uploadStatus.textContent = `✅ Uploaded ${keys.length} photo(s)`;
+      uploadStatus.textContent = `✅ Uploaded ${uploaded} photo(s)`;
     }catch(err){
       console.error(err);
-      showErr('Photo upload failed. Please try again.');
+
+      const msg = String(err?.message || err || '');
+      if(msg.includes('file_too_large')){
+        showErr(`One of the files is too large (max ${Math.floor(MAX_BYTES/1024/1024)} MB).`);
+      }else if(msg.includes('unsupported_type')){
+        showErr('Unsupported file type. Please use JPG, PNG, or WebP.');
+      }else if(msg.includes('presign_failed')){
+        showErr('Could not start upload (presign failed). Please try again.');
+      }else{
+        showErr('Photo upload failed. Please try again.');
+      }
+
       this.value = '';
       fileList.innerHTML = '';
       photoKeysContainer.innerHTML = '';
@@ -676,7 +779,7 @@
 
     try{
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting...';
+      submitBtn.textContent = 'Submitting…';
 
       const street = (form.querySelector('#street')?.value || '').trim();
       const city = (form.querySelector('#city')?.value || '').trim();
@@ -690,31 +793,33 @@
       }
 
       const formData = new FormData(form);
-
       const res = await fetch('/intake/lead', { method:'POST', body: formData });
-      const data = await res.json();
 
-      if(!res.ok){
-        showErr(data.detail ? JSON.stringify(data.detail) : 'Submission failed.');
+      if (res.redirected) {
+        window.location.href = res.url;
         return;
       }
 
-      const leadId = data.lead_id;
-      const visionUrl = data.next?.vision ? data.next.vision : '';
-      const publishUrl = data.next?.publish_estimate ? data.next.publish_estimate : '';
+      const loc = res.headers.get('location');
+      if ([301,302,303,307,308].includes(res.status) && loc) {
+        window.location.href = loc;
+        return;
+      }
 
-      showOk(`
-        <strong>Submitted successfully.</strong><br/>
-        Lead ID: <strong>${leadId}</strong><br/>
-        Vertical: <strong>${data.vertical || ''}</strong><br/><br/>
-        Next:
-        ${visionUrl ? `<a class="linkish" href="${visionUrl}" target="_blank">Run Vision</a>` : '' }
-        ${publishUrl ? ` • <a class="linkish" href="${publishUrl}" target="_blank">Publish Estimate</a>` : '' }
-        <div class="hint" style="margin-top:8px;">
-          Tip: You can also run these from Swagger: <code>/docs</code>
-        </div>
-      `);
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      const data = ct.includes('application/json') ? await res.json() : null;
 
+      if(!res.ok){
+        showErr(data?.detail ? JSON.stringify(data.detail) : 'Submission failed.');
+        return;
+      }
+
+      if (data?.lead_id) {
+        window.location.href = `/quotes/${data.lead_id}/status?autostart=1`;
+        return;
+      }
+
+      showErr('Unexpected response from server.');
     }catch(err){
       console.error(err);
       showErr('Unexpected error submitting request.');
@@ -724,5 +829,6 @@
     }
   });
 </script>
+
 </body>
 </html>

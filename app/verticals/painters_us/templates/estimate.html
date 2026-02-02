@@ -13,6 +13,10 @@
 <body>
 <div class="wrap">
 
+<div style="color:red;font-weight:bold;">
+  TEMPLATE TEST – {{ company.name }}
+</div>
+
   <div class="topbar">
     <div class="brand">
       <h1>{{ company.name if company and company.name else "Paintly" }}</h1>

@@ -3,21 +3,18 @@ from __future__ import annotations
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Dict, List
-from app.verticals.painters_us.pricing_output_builder import (
-    build_pricing_output_from_legacy,
-)
-
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from app.verticals.painters_us.pricing_output_builder import (
+    build_pricing_output_from_legacy,
+)
 from app.verticals.painters_us.copy import (
     US_PAINTERS_ESTIMATE_COPY,
     fmt_usd,
     fmt_usd_range,
     fmt_qty,
 )
-
-
 from app.verticals.painters_us.item_mapping import map_surfaces_to_items
 from app.verticals.painters_us.assumptions import US_PAINTERS_SCOPE_ASSUMPTIONS
 from app.verticals.painters_us.disclaimer import US_PAINTERS_ESTIMATE_DISCLAIMER
@@ -97,7 +94,6 @@ def render_us_estimate_html(
         US_PAINTERS_ESTIMATE_COPY.subject_to_verification_copy
     )
 
-    # Scope bullets: prefer assumptions if it contains bullets, else project fallback
     # Scope bullets: prefer assumptions.included → project fallback → default list
     scope_bullets = getattr(
         US_PAINTERS_SCOPE_ASSUMPTIONS, "included", None
@@ -157,3 +153,46 @@ def render_us_estimate_html(
         )
 
     return html
+
+
+# -------------------------
+# Pipeline compatibility wrapper
+# -------------------------
+def render_estimate_html(estimate: Dict[str, Any]) -> str:
+    """
+    Pipeline expects: render_estimate_html(estimate_dict) -> html str
+
+    Your existing renderer expects (vision_output, pricing_output, project, company).
+    We derive those from the estimate payload in a resilient way.
+    """
+    # Try a few common estimate shapes
+    vision_output = (
+        estimate.get("vision_output")
+        or estimate.get("vision")
+        or {"surfaces": estimate.get("surfaces", []) or []}
+    )
+
+    pricing_output = (
+        estimate.get("pricing_output")
+        or estimate.get("pricing")
+        or estimate.get("pricing_result")
+        or {}
+    )
+
+    project = estimate.get("project") or {
+        "lead_id": estimate.get("lead_id") or estimate.get("lead", {}).get("id"),
+        "estimate_id": estimate.get("estimate_id"),
+        "location": estimate.get("location"),
+        "date": estimate.get("date"),
+        "valid_until": estimate.get("valid_until"),
+        "scope_bullets": estimate.get("scope_bullets"),
+    }
+
+    company = estimate.get("company") or estimate.get("tenant") or {}
+
+    return render_us_estimate_html(
+        vision_output=vision_output,
+        pricing_output=pricing_output,
+        project=project,
+        company=company,
+    )

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 from app.verticals.painters_us.pricing_output_schema import (
     PricingLineItem,
@@ -31,6 +31,34 @@ def _to_decimal(val: Any, default: Decimal = Decimal("0.00")) -> Decimal:
         return default
 
 
+def _to_date(val: Any) -> date:
+    """
+    Accepts:
+      - ISO date string (YYYY-MM-DD)
+      - datetime.date
+      - datetime.datetime
+      - None
+    Returns a date (defaults to today if invalid).
+    """
+    if val is None:
+        return date.today()
+
+    # datetime is also a date subclass, so check datetime first
+    if isinstance(val, datetime):
+        return val.date()
+
+    if isinstance(val, date):
+        return val
+
+    if isinstance(val, str):
+        try:
+            return date.fromisoformat(val)
+        except Exception:
+            return date.today()
+
+    return date.today()
+
+
 def build_pricing_output_from_legacy(
     *,
     pricing_output: Dict[str, Any],
@@ -46,12 +74,10 @@ def build_pricing_output_from_legacy(
 
     # ---- meta ----
     meta = PricingMeta(
-        estimate_id=str(project["estimate_id"]),
-        date=date.fromisoformat(project["date"]),
+        estimate_id=str(project.get("estimate_id") or ""),
+        date=_to_date(project.get("date")),
         valid_until=(
-            date.fromisoformat(project["valid_until"])
-            if project.get("valid_until")
-            else None
+            _to_date(project.get("valid_until")) if project.get("valid_until") else None
         ),
         currency="USD",
     )
@@ -130,3 +156,58 @@ def build_pricing_output_from_legacy(
         tax=tax,
         notes=[],
     )
+
+
+# -------------------------
+# Pipeline compatibility wrapper
+# -------------------------
+def build_pricing_output(
+    lead: Any, vision: Any, pricing: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Pipeline expects: build_pricing_output(lead, vision, pricing) -> JSON-serializable dict.
+
+    Internally, we normalize into PricingOutput schema via build_pricing_output_from_legacy,
+    then return .model_dump() (Pydantic v2) or .dict() (Pydantic v1) depending on your schema models.
+    """
+    today = date.today()
+
+    # The legacy adapter expects:
+    # - pricing_output: dict with totals fields (we pass `pricing`)
+    # - items: list of dicts/objects with quantity + total_usd, etc.
+    #   Your pricing_engine_us returns `line_items` with base_total_usd, not total_usd.
+    #   We'll map minimally so totals render.
+    raw_items: List[Any] = []
+    for li in (pricing or {}).get("line_items", []) or []:
+        if isinstance(li, dict):
+            # map base_total_usd -> total_usd if needed
+            if li.get("total_usd") is None and li.get("base_total_usd") is not None:
+                li = {**li, "total_usd": li.get("base_total_usd")}
+            # ensure quantity key exists
+            if li.get("quantity") is None:
+                li = {**li, "quantity": li.get("sqft") or li.get("count") or 1}
+            raw_items.append(li)
+        else:
+            raw_items.append(li)
+
+    project = {
+        "estimate_id": f"lead_{getattr(lead, 'id', '')}",
+        "date": today.isoformat(),
+        # 30d validity default
+        "valid_until": (today + timedelta(days=30)).isoformat(),
+    }
+
+    out = build_pricing_output_from_legacy(
+        pricing_output=pricing or {},
+        items=raw_items,
+        project=project,
+    )
+
+    # Return JSON-friendly dict regardless of Pydantic version
+    if hasattr(out, "model_dump"):
+        return out.model_dump()
+    if hasattr(out, "dict"):
+        return out.dict()
+
+    # Fallback (should not happen): return minimal representation
+    return {"meta": {}, "line_items": [], "subtotals": {}, "totals": {}}

@@ -3,6 +3,8 @@ from typing import Optional, List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+import os
+
 
 class Settings(BaseSettings):
     # --- Core app ---
@@ -45,6 +47,7 @@ class Settings(BaseSettings):
     S3_UPLOAD_ALLOWED_TYPES: str = "image/jpeg,image/png,application/pdf"
     UPLOAD_DIR: str = "data/uploads"
     OFFERS_DIR: str = "data/offers"
+    UPLOAD_MAX_FILES: int = int(os.getenv("UPLOAD_MAX_FILES", "12"))
 
     S3_TEMP_PREFIX: str = "uploads/"
     S3_FINAL_PREFIX: str = "leads/"

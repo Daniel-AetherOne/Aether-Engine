@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.verticals.ace.api.dependencies.admin_auth import require_admin
 from app.verticals.ace.domain.auth import AdminIdentity
-from app.verticals.ace.audit_log import AuditLog, audit_db_path
+from app.verticals.ace.audit.logger import audit_logger, AuditWrite
 
 from app.verticals.ace.data_validators import validate_dataset_bundle
 from app.verticals.ace.storage.loader import (
@@ -30,8 +30,6 @@ router = APIRouter(prefix="/admin/data", tags=["admin-data"])
 templates = Jinja2Templates(
     directory=str(Path(__file__).resolve().parents[1] / "templates")
 )
-
-audit = AuditLog(audit_db_path())
 
 DATASET_TYPES = [
     ("articles", "articles.csv", {".csv"}),
@@ -86,12 +84,16 @@ def admin_page(
 
     archive_versions = _list_archive_versions()
 
-    # optional: log viewing (kan ook achterwege)
-    audit.append_deduped(
-        event_id=f"admin_data_viewed:{dataset_id}:{admin.username}",
-        event_type="ADMIN_DATA_VIEWED",
-        actor=admin,
-        meta={"dataset_id": dataset_id},
+    # Optional: log viewing (dedup per dataset+admin)
+    audit_logger.log_deduped(
+        AuditWrite(
+            action_type="ADMIN_DATA_VIEWED",
+            actor=admin,
+            target_type="DATASET_STAGING",
+            target_id=dataset_id,
+            meta={"dataset_id": dataset_id},
+            audit_id=f"admin_data_viewed:{dataset_id}:{admin.username}",
+        )
     )
 
     return templates.TemplateResponse(
@@ -119,33 +121,41 @@ async def upload_file(
 
     mapping = {t: (fname, exts) for (t, fname, exts) in DATASET_TYPES}
     if dataset_type not in mapping:
-        audit.append(
-            event_id=f"dataset_upload_failed:{dataset_id}:{uuid.uuid4().hex}",
-            event_type="DATASET_UPLOAD_FAILED",
-            actor=admin,
-            meta={
-                "dataset_id": dataset_id,
-                "dataset_type": dataset_type,
-                "reason": "unknown_dataset_type",
-            },
+        audit_logger.log(
+            AuditWrite(
+                action_type="DATASET_UPLOAD_FAILED",
+                actor=admin,
+                target_type="DATASET_STAGING",
+                target_id=dataset_id,
+                meta={
+                    "dataset_id": dataset_id,
+                    "dataset_type": dataset_type,
+                    "reason": "unknown_dataset_type",
+                },
+                audit_id=f"dataset_upload_failed:{dataset_id}:{uuid.uuid4().hex}",
+            )
         )
         raise HTTPException(status_code=400, detail="Unknown dataset_type")
 
     canonical_name, allowed_exts = mapping[dataset_type]
     ext = _safe_ext(file.filename or "")
     if ext not in allowed_exts:
-        audit.append(
-            event_id=f"dataset_upload_failed:{dataset_id}:{uuid.uuid4().hex}",
-            event_type="DATASET_UPLOAD_FAILED",
-            actor=admin,
-            meta={
-                "dataset_id": dataset_id,
-                "dataset_type": dataset_type,
-                "filename": file.filename,
-                "reason": "invalid_extension",
-                "ext": ext,
-                "allowed": sorted(allowed_exts),
-            },
+        audit_logger.log(
+            AuditWrite(
+                action_type="DATASET_UPLOAD_FAILED",
+                actor=admin,
+                target_type="DATASET_STAGING",
+                target_id=dataset_id,
+                meta={
+                    "dataset_id": dataset_id,
+                    "dataset_type": dataset_type,
+                    "filename": file.filename,
+                    "reason": "invalid_extension",
+                    "ext": ext,
+                    "allowed": sorted(allowed_exts),
+                },
+                audit_id=f"dataset_upload_failed:{dataset_id}:{uuid.uuid4().hex}",
+            )
         )
         raise HTTPException(
             status_code=400,
@@ -156,15 +166,20 @@ async def upload_file(
     ds_dir.mkdir(parents=True, exist_ok=True)
     dest = ds_dir / canonical_name
 
-    audit.append(
-        event_id=f"dataset_upload_started:{dataset_id}:{dataset_type}:{uuid.uuid4().hex}",
-        event_type="DATASET_UPLOAD_STARTED",
-        actor=admin,
-        meta={
-            "dataset_id": dataset_id,
-            "dataset_type": dataset_type,
-            "filename": file.filename,
-        },
+    audit_logger.log(
+        AuditWrite(
+            action_type="DATASET_UPLOAD_STARTED",
+            actor=admin,
+            target_type="DATASET_STAGING",
+            target_id=dataset_id,
+            meta={
+                "dataset_id": dataset_id,
+                "dataset_type": dataset_type,
+                "filename": file.filename,
+                "stored_as": dest.name,
+            },
+            audit_id=f"dataset_upload_started:{dataset_id}:{dataset_type}:{uuid.uuid4().hex}",
+        )
     )
 
     try:
@@ -180,15 +195,19 @@ async def upload_file(
         except Exception:
             pass
 
-    audit.append_deduped(
-        event_id=f"dataset_upload_completed:{dataset_id}:{dataset_type}:{dest.name}",
-        event_type="DATASET_UPLOAD_COMPLETED",
-        actor=admin,
-        meta={
-            "dataset_id": dataset_id,
-            "dataset_type": dataset_type,
-            "stored_as": dest.name,
-        },
+    audit_logger.log_deduped(
+        AuditWrite(
+            action_type="DATASET_UPLOAD_COMPLETED",
+            actor=admin,
+            target_type="DATASET_STAGING",
+            target_id=dataset_id,
+            meta={
+                "dataset_id": dataset_id,
+                "dataset_type": dataset_type,
+                "stored_as": dest.name,
+            },
+            audit_id=f"dataset_upload_completed:{dataset_id}:{dataset_type}:{dest.name}",
+        )
     )
 
     return RedirectResponse(url=f"/admin/data?dataset_id={dataset_id}", status_code=303)
@@ -202,16 +221,20 @@ def validate(
     ds_dir = staging_dataset_dir(dataset_id)
     res = validate_dataset_bundle(ds_dir)
 
-    audit.append(
-        event_id=f"dataset_validated:{dataset_id}:{uuid.uuid4().hex}",
-        event_type="DATASET_VALIDATED",
-        actor=admin,
-        meta={
-            "dataset_id": dataset_id,
-            "ok": res.ok,
-            "errors": [asdict(e) for e in res.errors],
-            "warnings": [asdict(w) for w in res.warnings],
-        },
+    audit_logger.log(
+        AuditWrite(
+            action_type="DATASET_VALIDATED",
+            actor=admin,
+            target_type="DATASET_STAGING",
+            target_id=dataset_id,
+            meta={
+                "dataset_id": dataset_id,
+                "ok": res.ok,
+                "errors": [asdict(e) for e in res.errors],
+                "warnings": [asdict(w) for w in res.warnings],
+            },
+            audit_id=f"dataset_validated:{dataset_id}:{uuid.uuid4().hex}",
+        )
     )
 
     return JSONResponse(
@@ -232,15 +255,19 @@ def activate(
     ds_dir = staging_dataset_dir(dataset_id)
     res = validate_dataset_bundle(ds_dir)
     if not res.ok:
-        audit.append(
-            event_id=f"dataset_activate_failed:{dataset_id}:{uuid.uuid4().hex}",
-            event_type="DATASET_ACTIVATE_FAILED",
-            actor=admin,
-            meta={
-                "dataset_id": dataset_id,
-                "errors": [asdict(e) for e in res.errors],
-                "warnings": [asdict(w) for w in res.warnings],
-            },
+        audit_logger.log(
+            AuditWrite(
+                action_type="DATASET_ACTIVATE_FAILED",
+                actor=admin,
+                target_type="DATASET_STAGING",
+                target_id=dataset_id,
+                meta={
+                    "dataset_id": dataset_id,
+                    "errors": [asdict(e) for e in res.errors],
+                    "warnings": [asdict(w) for w in res.warnings],
+                },
+                audit_id=f"dataset_activate_failed:{dataset_id}:{uuid.uuid4().hex}",
+            )
         )
         raise HTTPException(
             status_code=400,
@@ -253,23 +280,33 @@ def activate(
 
     act = activate_staging_dataset(dataset_id, uploaded_by=admin.username)
     if not act.ok:
-        audit.append(
-            event_id=f"dataset_activate_error:{dataset_id}:{uuid.uuid4().hex}",
-            event_type="DATASET_ACTIVATE_ERROR",
-            actor=admin,
-            meta={"dataset_id": dataset_id, "message": act.message},
+        audit_logger.log(
+            AuditWrite(
+                action_type="DATASET_ACTIVATE_ERROR",
+                actor=admin,
+                target_type="DATASET_STAGING",
+                target_id=dataset_id,
+                meta={"dataset_id": dataset_id, "message": act.message},
+                audit_id=f"dataset_activate_error:{dataset_id}:{uuid.uuid4().hex}",
+            )
         )
         raise HTTPException(status_code=500, detail={"message": act.message})
 
-    audit.append_deduped(
-        event_id=f"dataset_activated:{dataset_id}:{act.new_dataset_id}",
-        event_type="DATASET_ACTIVATED",
-        actor=admin,
-        meta={
-            "dataset_id": dataset_id,
-            "activated_dataset_id": act.new_dataset_id,
-            "previous_archived_id": act.previous_archived_id,
-        },
+    audit_logger.log_deduped(
+        AuditWrite(
+            action_type="DATASET_ACTIVATED",
+            actor=admin,
+            target_type="DATASET",
+            target_id=act.new_dataset_id,
+            old_value={"previous_archived_id": act.previous_archived_id},
+            new_value={"active_version_id": act.new_dataset_id},
+            meta={
+                "dataset_id": dataset_id,
+                "activated_dataset_id": act.new_dataset_id,
+                "previous_archived_id": act.previous_archived_id,
+            },
+            audit_id=f"dataset_activated:{dataset_id}:{act.new_dataset_id}",
+        )
     )
 
     return RedirectResponse(url="/admin/data", status_code=303)
@@ -283,15 +320,19 @@ def rollback(
     ds_dir = archive_root() / version_id
     res = validate_dataset_bundle(ds_dir)
     if not res.ok:
-        audit.append(
-            event_id=f"dataset_rollback_failed:{version_id}:{uuid.uuid4().hex}",
-            event_type="DATASET_ROLLBACK_FAILED",
-            actor=admin,
-            meta={
-                "version_id": version_id,
-                "errors": [asdict(e) for e in res.errors],
-                "warnings": [asdict(w) for w in res.warnings],
-            },
+        audit_logger.log(
+            AuditWrite(
+                action_type="DATASET_ROLLBACK_FAILED",
+                actor=admin,
+                target_type="DATASET_ARCHIVE",
+                target_id=version_id,
+                meta={
+                    "version_id": version_id,
+                    "errors": [asdict(e) for e in res.errors],
+                    "warnings": [asdict(w) for w in res.warnings],
+                },
+                audit_id=f"dataset_rollback_failed:{version_id}:{uuid.uuid4().hex}",
+            )
         )
         raise HTTPException(
             status_code=400,
@@ -304,23 +345,33 @@ def rollback(
 
     rb = rollback_to_version(version_id, uploaded_by=admin.username)
     if not rb.ok:
-        audit.append(
-            event_id=f"dataset_rollback_error:{version_id}:{uuid.uuid4().hex}",
-            event_type="DATASET_ROLLBACK_ERROR",
-            actor=admin,
-            meta={"version_id": version_id, "message": rb.message},
+        audit_logger.log(
+            AuditWrite(
+                action_type="DATASET_ROLLBACK_ERROR",
+                actor=admin,
+                target_type="DATASET_ARCHIVE",
+                target_id=version_id,
+                meta={"version_id": version_id, "message": rb.message},
+                audit_id=f"dataset_rollback_error:{version_id}:{uuid.uuid4().hex}",
+            )
         )
         raise HTTPException(status_code=500, detail={"message": rb.message})
 
-    audit.append_deduped(
-        event_id=f"dataset_rolled_back:{version_id}:{rb.new_dataset_id}",
-        event_type="DATASET_ROLLED_BACK",
-        actor=admin,
-        meta={
-            "version_id": version_id,
-            "active_version_id": rb.new_dataset_id,
-            "previous_archived_id": rb.previous_archived_id,
-        },
+    audit_logger.log_deduped(
+        AuditWrite(
+            action_type="DATASET_ROLLED_BACK",
+            actor=admin,
+            target_type="DATASET",
+            target_id=version_id,
+            old_value={"active_before": rb.previous_archived_id},
+            new_value={"active_after": rb.new_dataset_id},
+            meta={
+                "version_id": version_id,
+                "active_version_id": rb.new_dataset_id,
+                "previous_archived_id": rb.previous_archived_id,
+            },
+            audit_id=f"dataset_rolled_back:{version_id}:{rb.new_dataset_id}",
+        )
     )
 
     return RedirectResponse(url="/admin/data", status_code=303)
@@ -336,11 +387,15 @@ def reset_staging(
     if existed:
         shutil.rmtree(ds_dir)
 
-    audit.append(
-        event_id=f"staging_reset:{dataset_id}:{uuid.uuid4().hex}",
-        event_type="STAGING_RESET",
-        actor=admin,
-        meta={"dataset_id": dataset_id, "existed": existed},
+    audit_logger.log(
+        AuditWrite(
+            action_type="STAGING_RESET",
+            actor=admin,
+            target_type="DATASET_STAGING",
+            target_id=dataset_id,
+            meta={"dataset_id": dataset_id, "existed": existed},
+            audit_id=f"staging_reset:{dataset_id}:{uuid.uuid4().hex}",
+        )
     )
 
     return RedirectResponse(url="/admin/data", status_code=303)

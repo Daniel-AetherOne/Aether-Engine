@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Internal Leads</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px; }
+      .card { max-width: 980px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; }
+      .muted { color: #6b7280; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+      input, select { padding: 10px 12px; border-radius: 10px; border: 1px solid #d1d5db; }
+      .btn { display:inline-block; padding: 10px 12px; border-radius: 10px; border: 1px solid #111827; text-decoration:none; background:#fff; color:#111827;}
+      .btn.primary { background:#111827; color:#fff; }
+      .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; border:1px solid #e5e7eb; font-size:12px; }
+      .right { margin-left:auto; }
+      a { color: #111827; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="row">
+        <h1 style="margin:0;">Internal Leads</h1>
+        <div class="right muted">/internal/leads</div>
+      </div>
+
+      <form method="get" class="row" style="margin-top:12px;">
+        <select name="status">
+          {% for s in ["NEEDS_REVIEW","FAILED","SUCCEEDED","RUNNING","NEW"] %}
+            <option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+        <input name="q" value="{{ q }}" placeholder="Search name/email…" />
+        <button class="btn primary" type="submit">Filter</button>
+        <a class="btn" href="/internal/leads?status=NEEDS_REVIEW">NEEDS_REVIEW</a>
+        <a class="btn" href="/internal/leads?status=FAILED">FAILED</a>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Updated</th>
+            <th>Open</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lead in leads %}
+          <tr>
+            <td>#{{ lead.id }}</td>
+            <td><span class="pill">{{ lead.status }}</span></td>
+            <td>{{ lead.name or "" }}</td>
+            <td>{{ lead.email or "" }}</td>
+            <td class="muted">{{ lead.updated_at or "" }}</td>
+            <td><a href="/internal/leads/{{ lead.id }}">Review</a></td>
+          </tr>
+          {% endfor %}
+          {% if leads|length == 0 %}
+          <tr><td colspan="6" class="muted">No leads found.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>

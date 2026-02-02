@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Union
 
 
 # -------------------------
@@ -15,23 +15,30 @@ def complexity_bucket(value: float) -> str:
 
 
 def load_us_rules() -> Dict[str, Any]:
-    rules_path = Path(__file__).parent / "pricing_rules.json"
+    """
+    Fallback loader (used if engine does not inject rules).
+    """
+    rules_path = Path(__file__).parent / "rules" / "pricing_rules_us.json"
+    if not rules_path.exists():
+        raise FileNotFoundError(f"Pricing rules not found: {rules_path}")
     return json.loads(rules_path.read_text(encoding="utf-8"))
 
 
 # -------------------------
-# Main pricing entrypoint
+# Main pricing logic
 # -------------------------
-def price_from_vision(vision_surface: Dict[str, Any]) -> Dict[str, Any]:
-    rules = load_us_rules()
+def price_from_vision(
+    vision_surface: Dict[str, Any],
+    rules: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    rules = rules or load_us_rules()
 
     # -------------------------
-    # Gates (4.7 pricing_ready)
+    # Gates (pricing_ready)
     # -------------------------
     gates = rules.get("gates", {})
     pricing_ready = bool(vision_surface.get("pricing_ready", False))
 
-    # If pricing isn't ready: never output a hard price, only a range + needs_review
     if gates.get("require_pricing_ready", True) and not pricing_ready:
         rng_cfg = rules.get("estimate_range", {})
         low_factor = float(rng_cfg.get("low_factor", 0.85))
@@ -61,23 +68,19 @@ def price_from_vision(vision_surface: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "status": "needs_review",
             "reason": "pricing_not_ready",
-            "currency": "USD",
+            "currency": rules.get("currency", "USD"),
             "needs_review": True,
-            # never return a hard price
             "total_usd": None,
-            # UI-friendly range
             "estimate_range": {
                 "low_usd": low,
                 "high_usd": high,
                 "basis": "base_rates_only",
                 "factors": {"low": low_factor, "high": high_factor},
             },
-            # helpful context
             "surface_type": surface_type,
             "confidence": float(vision_surface.get("confidence", 0.0) or 0.0),
         }
 
-    # Confidence gate (existing behavior)
     min_conf = float(gates.get("min_confidence", 0.0))
     conf = float(vision_surface.get("confidence", 0.0) or 0.0)
     if conf < min_conf:
@@ -88,7 +91,7 @@ def price_from_vision(vision_surface: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     # -------------------------
-    # Base rates (4.1)
+    # Base rates
     # -------------------------
     base_rates = rules.get("base_rates", {})
     if not base_rates:
@@ -147,21 +150,18 @@ def price_from_vision(vision_surface: Dict[str, Any]) -> Dict[str, Any]:
         )
 
     # -------------------------
-    # Multipliers (4.2–4.4) — LABOR ONLY
+    # Multipliers
     # -------------------------
     multipliers_cfg = rules.get("multipliers", {})
 
-    # Prep
     prep_multipliers = multipliers_cfg.get("prep_level", {})
     prep_level = vision_surface.get("prep_level")
     prep_multiplier = float(prep_multipliers.get(prep_level, 1.0))
 
-    # Access
     access_multipliers = multipliers_cfg.get("access_risk", {})
     access_risk = vision_surface.get("access_risk")
     access_multiplier = float(access_multipliers.get(access_risk, 1.0))
 
-    # Complexity
     complexity_cfg = multipliers_cfg.get("complexity", {})
     raw_complexity = float(vision_surface.get("estimated_complexity", 1.0) or 1.0)
     complexity_level = complexity_bucket(raw_complexity)
@@ -171,7 +171,7 @@ def price_from_vision(vision_surface: Dict[str, Any]) -> Dict[str, Any]:
     labor_cost = base_total * labor_multiplier
 
     # -------------------------
-    # Cost split (4.5)
+    # Cost split
     # -------------------------
     split_cfg = rules.get("cost_split", {})
     labor_ratio = float(split_cfg.get("labor_ratio", 1.0))
@@ -180,11 +180,11 @@ def price_from_vision(vision_surface: Dict[str, Any]) -> Dict[str, Any]:
     labor_usd = labor_cost * labor_ratio
     materials_usd = base_total * materials_ratio
 
-    # -------------------------
-    # Margin (4.6)
-    # -------------------------
     cost_usd = labor_usd + materials_usd
 
+    # -------------------------
+    # Margin
+    # -------------------------
     margin_cfg = rules.get("margin", {})
     target_margin = float(margin_cfg.get("target", 0.0))
     min_margin = float(margin_cfg.get("minimum", 0.0))
@@ -193,9 +193,6 @@ def price_from_vision(vision_surface: Dict[str, Any]) -> Dict[str, Any]:
     margin_usd = cost_usd * margin_rate
     total_usd = cost_usd + margin_usd
 
-    # -------------------------
-    # Annotate line item
-    # -------------------------
     item = line_items[-1]
     item.update(
         {
@@ -217,7 +214,7 @@ def price_from_vision(vision_surface: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "status": "priced_with_margin",
-        "currency": "USD",
+        "currency": rules.get("currency", "USD"),
         "base_total_usd": round(base_total, 2),
         "labor_usd": round(labor_usd, 2),
         "materials_usd": round(materials_usd, 2),
@@ -231,3 +228,21 @@ def price_from_vision(vision_surface: Dict[str, Any]) -> Dict[str, Any]:
         },
         "line_items": line_items,
     }
+
+
+# -------------------------
+# Pipeline compatibility wrapper
+# -------------------------
+def run_pricing_engine(
+    lead: Any,
+    vision: Union[Dict[str, Any], list],
+    rules: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Entry point used by engine step.
+    """
+    if isinstance(vision, list):
+        vision_surface = vision[0] if vision else {}
+        return price_from_vision(vision_surface, rules=rules)
+
+    return price_from_vision(vision, rules=rules)

@@ -1,8 +1,9 @@
-import os
+from __future__ import annotations
+
+from app.verticals.registry import register
+from app.verticals.painters_us.adapter import PaintersUSAdapter
 
 
-def register_verticals(app):
-    if os.getenv("ENABLE_PAINTERS_US", "0") == "1":
-        from app.verticals.painters_us.adapter import PaintersUSAdapter
-
-        PaintersUSAdapter().register(app)
+def register_verticals(app=None) -> None:
+    # Paintly MVP
+    register(PaintersUSAdapter())

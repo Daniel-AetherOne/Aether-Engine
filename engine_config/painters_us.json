@@ -1,0 +1,40 @@
+{
+    "version": "1.0",
+    "vertical_id": "painters_us",
+    "assets": {
+        "rules": "app/verticals/painters_us/rules/pricing_rules_us.json",
+        "template": "app/verticals/painters_us/templates/estimate.html"
+    },
+    "pipeline": {
+        "steps": [
+            {
+                "id": "vision",
+                "use": "vision.v1"
+            },
+            {
+                "id": "aggregate",
+                "use": "aggregate.v1"
+            },
+            {
+                "id": "pricing",
+                "use": "pricing.v1"
+            },
+            {
+                "id": "output",
+                "use": "output.v1"
+            },
+            {
+                "id": "render_html",
+                "use": "render.v1"
+            },
+            {
+                "id": "store_html",
+                "use": "store_html.v1"
+            },
+            {
+                "id": "needs_review",
+                "use": "needs_review.v1"
+            }
+        ]
+    }
+}

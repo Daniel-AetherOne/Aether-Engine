@@ -1,0 +1,433 @@
+<!-- app/templates/quote_status.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Estimate status</title>
+    <style>
+      :root{
+        --bg:#f6f7fb;
+        --card:#ffffff;
+        --text:#0f172a;
+        --muted:#5b6474;
+        --line:#e7e9f1;
+
+        --brand:#2563eb;
+        --brand2:#16a34a;
+        --danger:#dc2626;
+        --warn:#f59e0b;
+
+        --shadow:0 18px 45px rgba(15,23,42,.10);
+        --radius:18px;
+      }
+
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        color:var(--text);
+        background:
+          radial-gradient(900px 520px at 18% 0%, rgba(37,99,235,.10), transparent 60%),
+          radial-gradient(900px 520px at 86% 12%, rgba(22,163,74,.08), transparent 60%),
+          linear-gradient(180deg, #fbfcff, var(--bg));
+        min-height:100vh;
+        padding:28px 16px;
+      }
+
+      .wrap{max-width:900px;margin:0 auto;display:grid;gap:14px}
+      .card{
+        background:var(--card);
+        border:1px solid var(--line);
+        border-radius:var(--radius);
+        box-shadow:var(--shadow);
+        overflow:hidden;
+      }
+
+      .header{
+        padding:20px 22px 16px 22px;
+        border-bottom:1px solid var(--line);
+        background:
+          radial-gradient(900px 240px at 0% 0%, rgba(37,99,235,.08), transparent 60%),
+          radial-gradient(900px 240px at 100% 0%, rgba(22,163,74,.06), transparent 60%);
+      }
+
+      .titleRow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .title{
+        font-size:22px;
+        font-weight:950;
+        letter-spacing:.2px;
+        line-height:1.2;
+      }
+      .subtitle{
+        margin-top:8px;
+        color:var(--muted);
+        line-height:1.5;
+        font-size:14px;
+        max-width: 70ch;
+      }
+
+      .pill{
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        padding:8px 10px;
+        border-radius:999px;
+        font-size:12px;
+        border:1px solid var(--line);
+        background: rgba(255,255,255,.75);
+        color:var(--muted);
+        font-weight:900;
+        white-space:nowrap;
+      }
+      .dot{width:9px;height:9px;border-radius:999px;background:rgba(37,99,235,.35);box-shadow:0 0 0 4px rgba(37,99,235,.10);}
+      .dot.ok{background: rgba(22,163,74,.55); box-shadow:0 0 0 4px rgba(22,163,74,.12);}
+      .dot.warn{background: rgba(245,158,11,.70); box-shadow:0 0 0 4px rgba(245,158,11,.14);}
+      .dot.err{background: rgba(220,38,38,.70); box-shadow:0 0 0 4px rgba(220,38,38,.14);}
+
+      .content{padding:18px 22px 22px 22px;display:grid;gap:14px}
+      .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+      .kv{display:flex;gap:8px;align-items:baseline}
+      .muted{color:var(--muted)}
+
+      .progress{
+        border:1px solid var(--line);
+        border-radius:16px;
+        background:#fff;
+        padding:14px;
+        display:grid;
+        gap:10px;
+      }
+      .steps{display:flex;gap:10px;flex-wrap:wrap}
+      .step{
+        display:flex;align-items:center;gap:8px;
+        padding:9px 10px;
+        border-radius:999px;
+        border:1px solid var(--line);
+        background:rgba(255,255,255,.85);
+        font-size:12px;
+        color:var(--muted);
+        font-weight:900;
+      }
+      .step.active{
+        border-color: rgba(37,99,235,.35);
+        box-shadow: 0 0 0 4px rgba(37,99,235,.10);
+        color: var(--text);
+      }
+      .bar{
+        height:10px;
+        border-radius:999px;
+        background: #eef2ff;
+        overflow:hidden;
+        border:1px solid rgba(37,99,235,.16);
+      }
+      .bar > div{
+        height:100%;
+        width:0%;
+        background: linear-gradient(90deg, rgba(37,99,235,.95), rgba(22,163,74,.90));
+        transition: width .25s ease;
+      }
+
+      .actions{display:flex;gap:10px;flex-wrap:wrap}
+      .btn{
+        appearance:none;
+        border:none;
+        border-radius:14px;
+        padding:12px 14px;
+        font-weight:950;
+        cursor:pointer;
+        text-decoration:none;
+        transition: transform .05s ease, opacity .15s ease, box-shadow .15s ease;
+        display:inline-flex;
+        align-items:center;
+        gap:10px;
+      }
+      .btn:active{transform: translateY(1px)}
+      .btnPrimary{
+        background: linear-gradient(135deg, rgba(37,99,235,.98), rgba(22,163,74,.92));
+        color:#ffffff;
+        box-shadow: 0 14px 30px rgba(37,99,235,.18);
+      }
+      .btnGhost{
+        background:#fff;
+        color:var(--text);
+        border:1px solid var(--line);
+      }
+
+      .msg{
+        border:1px solid var(--line);
+        border-radius:16px;
+        background:#fff;
+        padding:14px;
+        line-height:1.55;
+      }
+      .msg.ok{border-color: rgba(22,163,74,.30)}
+      .msg.warn{border-color: rgba(245,158,11,.35)}
+      .msg.err{border-color: rgba(220,38,38,.30)}
+      .msg h3{font-size:14px;margin-bottom:6px;font-weight:950}
+      pre{
+        margin-top:10px;
+        background:#0b1020;
+        color:#d1d5db;
+        padding:12px;
+        border-radius:12px;
+        overflow:auto;
+        font-size:12px;
+      }
+
+      .tiny{font-size:12px;color:var(--muted);line-height:1.4}
+
+      @media (max-width: 740px){
+        .title{font-size:20px}
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <div class="header">
+          <div class="titleRow">
+            <div class="title" id="headline">We’re processing your estimate…</div>
+            <div class="pill" title="Current status">
+              <span class="dot" id="statusDot"></span>
+              <span id="statusText">…</span>
+            </div>
+          </div>
+          <div class="subtitle" id="subhead">
+            This page updates automatically. You can keep it open.
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="row">
+            <div class="kv"><span class="muted">Lead</span><strong>#{{ lead_id }}</strong></div>
+            <div class="kv muted" id="updated"></div>
+          </div>
+
+          <div class="progress" id="progressBox">
+            <div class="steps">
+              <div class="step" id="step1">1 · Intake</div>
+              <div class="step" id="step2">2 · Photos</div>
+              <div class="step" id="step3">3 · Estimate</div>
+            </div>
+            <div class="bar"><div id="barFill"></div></div>
+            <div class="tiny" id="progressHint">Preparing…</div>
+          </div>
+
+          <div class="actions" id="actions"></div>
+          <div id="message"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ✅ Jinja safe
+      const leadId = Number({{ lead_id | tojson }});
+      const autostart = Number({{ (autostart or 0) | int | tojson }});
+
+      let publishStarted = false;
+      let pollTimer = null;
+
+      const elHeadline = document.getElementById("headline");
+      const elSubhead = document.getElementById("subhead");
+      const elStatusText = document.getElementById("statusText");
+      const elStatusDot = document.getElementById("statusDot");
+      const elUpdated = document.getElementById("updated");
+      const elActions = document.getElementById("actions");
+      const elMessage = document.getElementById("message");
+
+      const step1 = document.getElementById("step1");
+      const step2 = document.getElementById("step2");
+      const step3 = document.getElementById("step3");
+      const barFill = document.getElementById("barFill");
+      const progressHint = document.getElementById("progressHint");
+      const progressBox = document.getElementById("progressBox");
+
+      function setHeadline(text){ if (elHeadline) elHeadline.textContent = text || ""; }
+      function setSubhead(text){ if (elSubhead) elSubhead.textContent = text || ""; }
+
+      function setActions(html){ elActions.innerHTML = html || ""; }
+      function setMessage(html){ elMessage.innerHTML = html || ""; }
+
+      function stopPolling(){
+        if (pollTimer) {
+          clearTimeout(pollTimer);
+          pollTimer = null;
+        }
+      }
+
+      async function startPublishOnce(){
+        if (publishStarted) return;
+        publishStarted = true;
+        try{
+          await fetch(`/quotes/publish/${leadId}`, {
+            method: "POST",
+            headers: { "accept": "application/json" },
+            cache: "no-store",
+          });
+        }catch(e){
+          console.warn("publish failed to start:", e);
+        }
+      }
+
+      async function safeJson(res){
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (!ct.includes("application/json")) {
+          const text = await res.text();
+          throw new Error(`Expected JSON but got: ${ct || "unknown"} :: ${text.slice(0, 200)}`);
+        }
+        return await res.json();
+      }
+
+      function setStatusPill(status){
+        elStatusText.textContent = status;
+
+        elStatusDot.className = "dot"; // reset
+        if (status === "SUCCEEDED") elStatusDot.classList.add("ok");
+        else if (status === "NEEDS_REVIEW") elStatusDot.classList.add("warn");
+        else if (status === "FAILED") elStatusDot.classList.add("err");
+      }
+
+      function setProgress(stage){
+        // stage: 1..3
+        step1.classList.toggle("active", stage >= 1);
+        step2.classList.toggle("active", stage >= 2);
+        step3.classList.toggle("active", stage >= 3);
+
+        const pct = stage === 1 ? 25 : stage === 2 ? 60 : stage === 3 ? 90 : 10;
+        barFill.style.width = pct + "%";
+      }
+
+      function renderRunning(status){
+        setHeadline("We’re processing your estimate…");
+        setSubhead("This page updates automatically. You can keep it open.");
+        setActions(`<span class="tiny muted">Processing…</span>`);
+        setMessage("");
+        progressBox.style.display = "grid";
+
+        if (status === "NEW") {
+          setProgress(1);
+          progressHint.textContent = "Starting…";
+        } else if (status === "RUNNING") {
+          setProgress(3);
+          progressHint.textContent = "Generating estimate…";
+        } else {
+          setProgress(2);
+          progressHint.textContent = "Preparing…";
+        }
+      }
+
+      function renderSucceeded(){
+        setHeadline("Your estimate is ready ✅");
+        setSubhead("You can open the estimate now.");
+        progressBox.style.display = "none";
+
+        setActions(`
+          <a class="btn btnPrimary" href="/quotes/${leadId}/html">Open estimate</a>
+          <a class="btn btnGhost" href="/quotes/${leadId}/json" target="_blank" rel="noopener">Debug JSON</a>
+        `);
+
+        setMessage(`<div class="msg ok"><h3>Done</h3><div class="muted">Thanks — your estimate has been generated successfully.</div></div>`);
+      }
+
+      function renderNeedsReview(){
+        // FASE 4: customer-safe terminal state (no estimate link)
+        setHeadline("Thanks — we’ll review this and get back to you shortly.");
+        setSubhead("Your project needs a quick manual check to ensure accuracy.");
+        progressBox.style.display = "none";
+
+        setActions(`
+          <a class="btn btnGhost" href="/intake/painters-us">Start a new request</a>
+        `);
+
+        setMessage(`
+          <div class="msg warn">
+            <h3>Manual review</h3>
+            <div class="muted">
+              We’ll review your photos and scope details and follow up with the final estimate.
+              You don’t need to do anything right now.
+            </div>
+          </div>
+        `);
+      }
+
+      function renderFailed(msg){
+        setHeadline("Something went wrong");
+        setSubhead("Please retry, or start a new request.");
+        progressBox.style.display = "none";
+
+        setActions(`
+          <a class="btn btnGhost" href="/quotes/${leadId}/status?autostart=1">Retry</a>
+          <a class="btn btnGhost" href="/intake/painters-us">Start a new request</a>
+        `);
+
+        setMessage(`
+          <div class="msg err">
+            <h3>Error</h3>
+            <div class="muted">If this keeps happening, we’ll need to take a quick look internally.</div>
+            <pre>${(msg || "Unknown error").toString()}</pre>
+          </div>
+        `);
+      }
+
+      async function poll(){
+        try{
+          const res = await fetch(`/quotes/${leadId}/status.json`, {
+            headers: { "accept": "application/json" },
+            cache: "no-store",
+          });
+
+          const data = await safeJson(res);
+          const status = (data.status || "UNKNOWN").toString();
+
+          setStatusPill(status);
+
+          elUpdated.textContent = data.updated_at ? `Updated: ${data.updated_at}` : "";
+
+          // ✅ autostart: start publish once als niet-terminal
+          if (autostart === 1) {
+            const terminal = ["SUCCEEDED", "NEEDS_REVIEW", "FAILED"];
+            if (!terminal.includes(status)) {
+              await startPublishOnce();
+            }
+          }
+
+          if (status === "SUCCEEDED") {
+            stopPolling();
+            renderSucceeded();
+            return;
+          }
+
+          if (status === "NEEDS_REVIEW") {
+            stopPolling();
+            renderNeedsReview();
+            return;
+          }
+
+          if (status === "FAILED") {
+            stopPolling();
+            renderFailed(data.error_message);
+            return;
+          }
+
+          renderRunning(status);
+          pollTimer = setTimeout(poll, 1500);
+        }catch(err){
+          console.error(err);
+          setStatusPill("CONNECTING…");
+          setHeadline("Reconnecting…");
+          setSubhead("Trying again in a moment…");
+          setActions(`<span class="tiny muted">Reconnecting…</span>`);
+          setMessage("");
+          progressBox.style.display = "grid";
+          setProgress(2);
+          progressHint.textContent = "Reconnecting…";
+          pollTimer = setTimeout(poll, 2000);
+        }
+      }
+
+      // boot
+      poll();
+    </script>
+  </body>
+</html>

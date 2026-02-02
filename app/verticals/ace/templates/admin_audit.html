@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Audit log</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; }
+    h1 { margin: 0 0 12px; }
+    .muted { color: #666; margin-bottom: 16px; }
+    form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin: 12px 0 18px; }
+    label { display:block; font-size: 12px; color:#444; margin-bottom: 4px; }
+    input, select { padding: 8px; border: 1px solid #ccc; border-radius: 8px; min-width: 180px; }
+    button { padding: 9px 14px; border: 1px solid #111; background:#111; color:#fff; border-radius: 10px; cursor:pointer; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; vertical-align: top; }
+    th { text-align:left; font-size: 12px; color:#444; }
+    .pill { display:inline-block; padding: 2px 8px; border:1px solid #ddd; border-radius: 999px; font-size: 12px; }
+    .rowbtn { padding:6px 10px; border:1px solid #ccc; background:#fff; border-radius:10px; cursor:pointer; }
+    dialog { width: min(900px, 96vw); border: 1px solid #ddd; border-radius: 14px; padding: 16px; }
+    pre { background: #0b1020; color: #e6edf3; padding: 12px; border-radius: 12px; overflow:auto; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Audit log</h1>
+  <div class="muted">Read-only. Filters op actie en datum. Klik op een rij voor details (old/new JSON).</div>
+
+  <form method="get" action="/admin/audit/view">
+    <div>
+      <label>actionType</label>
+      <select name="action_type">
+        <option value="">(alles)</option>
+        {% for a in actions %}
+          <option value="{{a}}" {% if filters.action_type==a %}selected{% endif %}>{{a}}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label>datum (UTC)</label>
+      <input name="day" placeholder="YYYY-MM-DD" value="{{filters.day}}" />
+    </div>
+
+    <div>
+      <label>zoek</label>
+      <input name="q" placeholder="actor/target/id" value="{{filters.q}}" />
+    </div>
+
+    <div>
+      <label>limit</label>
+      <input name="limit" value="{{filters.limit}}" />
+    </div>
+
+    <input type="hidden" name="offset" value="0" />
+    <button type="submit">Filter</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>tijd</th>
+        <th>actor</th>
+        <th>actionType</th>
+        <th>target</th>
+        <th>reason</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td><span class="pill">{{it.created_at}}</span></td>
+        <td>{{it.actor or ""}}</td>
+        <td><span class="pill">{{it.action_type or it.action_type or ""}}</span></td>
+        <td>{{(it.target_type or "")}} {{("#" + it.target_id) if it.target_id else ""}}</td>
+        <td>{{it.reason or ""}}</td>
+        <td>
+          <button class="rowbtn" type="button"
+            onclick='openDetail({{ loop.index0 }})'>
+            detail
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div style="margin-top:14px; display:flex; gap:10px;">
+    {% if filters.offset > 0 %}
+      <a href="/admin/audit/view?action_type={{filters.action_type}}&day={{filters.day}}&q={{filters.q}}&limit={{filters.limit}}&offset={{filters.offset - filters.limit}}">← prev</a>
+    {% endif %}
+    <a href="/admin/audit/view?action_type={{filters.action_type}}&day={{filters.day}}&q={{filters.q}}&limit={{filters.limit}}&offset={{filters.offset + filters.limit}}">next →</a>
+  </div>
+
+  <dialog id="dlg">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <h3 style="margin:0;">Audit detail</h3>
+      <button class="rowbtn" onclick="document.getElementById('dlg').close()">sluiten</button>
+    </div>
+    <div id="meta" style="margin:10px 0 14px; color:#444;"></div>
+    <div class="grid">
+      <div>
+        <div style="font-weight:600; margin-bottom:6px;">Old</div>
+        <pre id="old"></pre>
+      </div>
+      <div>
+        <div style="font-weight:600; margin-bottom:6px;">New</div>
+        <pre id="new"></pre>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <div style="font-weight:600; margin-bottom:6px;">Meta</div>
+      <pre id="metaj"></pre>
+    </div>
+  </dialog>
+
+  <script>
+    const ITEMS = {{ items | tojson }};
+    function pretty(v) {
+      if (v === null || v === undefined) return "";
+      return JSON.stringify(v, null, 2);
+    }
+    function openDetail(i) {
+      const it = ITEMS[i];
+      document.getElementById("meta").innerText =
+        `${it.created_at} | ${it.actor || ""} | ${it.action_type || ""} | ${(it.target_type||"")} ${(it.target_id||"")}`;
+      document.getElementById("old").innerText = pretty(it.old_value);
+      document.getElementById("new").innerText = pretty(it.new_value);
+      document.getElementById("metaj").innerText = pretty(it.meta);
+      document.getElementById("dlg").showModal();
+    }
+  </script>
+</body>
+</html>

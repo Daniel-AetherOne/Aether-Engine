@@ -32,7 +32,7 @@ class AuditLog:
     """
     Immutable append-only audit log.
     - INSERT only
-    - No UPDATE / DELETE
+    - No UPDATE / DELETE (enforced via triggers)
     - event_id is PRIMARY KEY (idempotency hook)
 
     7.4 adds canonical fields:
@@ -94,12 +94,36 @@ class AuditLog:
         add("new_json", "TEXT")
         add("reason", "TEXT")
 
-        # Helpful index for canonical queries
+        # Helpful indexes for canonical queries
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_audit_action_time ON audit_events(action_type, created_at)"
         )
         con.execute(
             "CREATE INDEX IF NOT EXISTS idx_audit_target_time ON audit_events(target_type, target_id, created_at)"
+        )
+
+    def _enforce_append_only(self, con: sqlite3.Connection) -> None:
+        """
+        7.6: enforce immutable storage at DB level.
+        Any UPDATE/DELETE attempt aborts.
+        """
+        con.execute(
+            """
+            CREATE TRIGGER IF NOT EXISTS trg_audit_no_update
+            BEFORE UPDATE ON audit_events
+            BEGIN
+                SELECT RAISE(ABORT, 'audit_events is append-only: UPDATE is not allowed');
+            END;
+            """
+        )
+        con.execute(
+            """
+            CREATE TRIGGER IF NOT EXISTS trg_audit_no_delete
+            BEFORE DELETE ON audit_events
+            BEGIN
+                SELECT RAISE(ABORT, 'audit_events is append-only: DELETE is not allowed');
+            END;
+            """
         )
 
     def _init(self) -> None:
@@ -117,7 +141,10 @@ class AuditLog:
                 )
                 """
             )
+
+            # Ensure schema evolution + immutable behavior are applied to old DBs too
             self._ensure_columns(con)
+            self._enforce_append_only(con)
 
             # Legacy indexes (keep)
             con.execute(
@@ -150,19 +177,24 @@ class AuditLog:
         quote_id: Optional[str] = None,
         approval_id: Optional[str] = None,
         meta: Optional[Dict[str, Any]] = None,
-        created_at: Optional[str] = None,
+        created_at: Optional[str] = None,  # kept for backward-compat; ignored
     ) -> None:
         """
         Legacy strict append.
         Raises sqlite3.IntegrityError on duplicate event_id.
+
+        7.6: created_at is ALWAYS server-side. Incoming created_at is ignored.
         """
-        created_at = created_at or self._utc_now_iso()
+        _ = created_at  # explicitly ignored
+        created_at = self._utc_now_iso()
+
         meta_json = self._json_dumps(meta or {})
         actor_str = self._actor_to_str(actor)
 
         with self._conn() as con:
-            # Ensure 7.4 columns exist even if DB was created long ago
+            # Ensure 7.4 columns + triggers exist even if DB was created long ago
             self._ensure_columns(con)
+            self._enforce_append_only(con)
 
             con.execute(
                 """
@@ -190,7 +222,7 @@ class AuditLog:
         quote_id: Optional[str] = None,
         approval_id: Optional[str] = None,
         meta: Optional[Dict[str, Any]] = None,
-        created_at: Optional[str] = None,
+        created_at: Optional[str] = None,  # ignored
     ) -> None:
         """
         Legacy idempotent append.
@@ -225,16 +257,19 @@ class AuditLog:
         new_value: Optional[Dict[str, Any]] = None,
         reason: Optional[str] = None,
         meta: Optional[Dict[str, Any]] = None,
-        created_at: Optional[str] = None,
+        created_at: Optional[str] = None,  # kept for compat; ignored
     ) -> None:
         """
         Canonical 7.4 append.
         - action_type/target/old/new/reason are first-class columns
         - meta is still available for extras
-        """
-        created_at = created_at or self._utc_now_iso()
-        actor_str = self._actor_to_str(actor)
 
+        7.6: created_at is ALWAYS server-side. Incoming created_at is ignored.
+        """
+        _ = created_at  # explicitly ignored
+        created_at = self._utc_now_iso()
+
+        actor_str = self._actor_to_str(actor)
         self._require_reason_if_needed(action_type, reason)
 
         meta_json = self._json_dumps(meta or {})
@@ -246,6 +281,7 @@ class AuditLog:
 
         with self._conn() as con:
             self._ensure_columns(con)
+            self._enforce_append_only(con)
 
             con.execute(
                 """
@@ -285,7 +321,7 @@ class AuditLog:
         new_value: Optional[Dict[str, Any]] = None,
         reason: Optional[str] = None,
         meta: Optional[Dict[str, Any]] = None,
-        created_at: Optional[str] = None,
+        created_at: Optional[str] = None,  # ignored
     ) -> None:
         try:
             self.append_action(

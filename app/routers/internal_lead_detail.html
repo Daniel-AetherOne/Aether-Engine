@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lead #{{ lead.id }}</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px; }
+      .card { max-width: 980px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; }
+      .muted { color: #6b7280; }
+      .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+      .btn { display:inline-block; padding: 10px 12px; border-radius: 10px; border: 1px solid #111827; text-decoration:none; background:#fff; color:#111827; cursor:pointer; }
+      .btn.primary { background:#111827; color:#fff; }
+      .btn.danger { border-color:#dc2626; color:#dc2626; }
+      pre { background: #0b1020; color:#d1d5db; padding: 12px; border-radius: 10px; overflow:auto; }
+      .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; border:1px solid #e5e7eb; font-size:12px; }
+      input { padding: 10px 12px; border-radius: 10px; border: 1px solid #d1d5db; min-width: 320px; }
+      code { background:#f3f4f6; padding:2px 6px; border-radius:6px; }
+      .toast { display:none; margin-top:10px; padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; }
+      .toast.ok { border-color: rgba(22,163,74,.35); }
+      .hr { height:1px; background:#e5e7eb; margin: 14px 0; }
+    </style>
+  </head>
+  <body>
+    {% set share_path = "/quotes/" ~ lead.id ~ "/html" %}
+
+    <div class="card">
+      <div class="row">
+        <h1 style="margin:0;">Lead #{{ lead.id }}</h1>
+        <span class="pill">{{ lead.status }}</span>
+        <a class="btn" href="/internal/leads?status=NEEDS_REVIEW">Back</a>
+        <a class="btn" href="/quotes/{{ lead.id }}/status?autostart=0">Customer status page</a>
+        <a class="btn" href="/quotes/{{ lead.id }}/json" target="_blank" rel="noopener">JSON</a>
+        {% if lead.status in ["SUCCEEDED","NEEDS_REVIEW"] %}
+          <a class="btn" href="/quotes/{{ lead.id }}/html" target="_blank" rel="noopener">HTML</a>
+        {% endif %}
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div><b>Name:</b> {{ lead.name or "" }}</div>
+        <div><b>Email:</b> {{ lead.email or "" }}</div>
+        <div class="muted"><b>Updated:</b> {{ lead.updated_at or "" }}</div>
+      </div>
+
+      {% if lead.error_message %}
+        <div style="margin-top:12px;">
+          <h3 style="margin:0 0 6px 0;">Error message</h3>
+          <pre>{{ lead.error_message }}</pre>
+        </div>
+      {% endif %}
+
+      <div class="hr"></div>
+
+      <div style="margin-top:10px;">
+        <h3 style="margin:0 0 8px 0;">Delivery</h3>
+        <div class="row">
+          <button class="btn" type="button" id="copyBtn">Copy share link</button>
+          <a class="btn" href="{{ share_path }}" target="_blank" rel="noopener">Open estimate</a>
+          <span class="muted">Link: <code id="shareText">{{ share_path }}</code></span>
+        </div>
+        <div class="toast ok" id="toast">✅ Copied to clipboard</div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div style="margin-top:10px;">
+        <h3 style="margin:0 0 8px 0;">Actions</h3>
+
+        <!-- ✅ always available -->
+        <form method="post" action="/internal/leads/{{ lead.id }}/recompute" style="display:inline;">
+          <button class="btn" type="submit">Recompute quote</button>
+        </form>
+
+        {% if lead.status == "NEEDS_REVIEW" %}
+          <form method="post" action="/internal/leads/{{ lead.id }}/approve" style="display:inline; margin-left:8px;">
+            <button class="btn primary" type="submit">Approve → SUCCEEDED</button>
+          </form>
+
+          <form method="post" action="/internal/leads/{{ lead.id }}/fail" style="display:inline; margin-left:8px;">
+            <input name="reason" value="Manual review required" />
+            <button class="btn danger" type="submit">Fail → FAILED</button>
+          </form>
+        {% else %}
+          <span class="muted" style="margin-left:8px;">No approve/fail for status {{ lead.status }}.</span>
+        {% endif %}
+      </div>
+
+      <div class="hr"></div>
+
+      <div style="margin-top:10px;">
+        <h3 style="margin:0 0 8px 0;">Raw intake payload</h3>
+        <pre>{{ lead.intake_payload or "" }}</pre>
+      </div>
+    </div>
+
+    <script>
+      (function(){
+        const sharePath = {{ share_path | tojson }};
+        const fullUrl = window.location.origin + sharePath;
+
+        const btn = document.getElementById("copyBtn");
+        const toast = document.getElementById("toast");
+
+        async function copy() {
+          try {
+            await navigator.clipboard.writeText(fullUrl);
+            toast.style.display = "block";
+            setTimeout(() => { toast.style.display = "none"; }, 1400);
+          } catch (e) {
+            window.prompt("Copy this link:", fullUrl);
+          }
+        }
+
+        btn.addEventListener("click", copy);
+      })();
+    </script>
+  </body>
+</html>

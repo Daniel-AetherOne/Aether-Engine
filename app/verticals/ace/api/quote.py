@@ -18,6 +18,7 @@ from app.verticals.ace.approval_tokens import ApprovalTokenService
 from app.verticals.ace.schemas.quote_input_v1 import QuoteCalculateInputV1
 from app.verticals.ace.schemas.quote_output_v1 import QuoteOutputV1
 from app.verticals.ace.audit_log import AuditLog, audit_db_path
+from app.verticals.ace.audit.logger import audit_logger, AuditWrite
 
 # ----------------------------
 # Routers
@@ -41,7 +42,6 @@ PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")
 
 token_svc = ApprovalTokenService(APPROVAL_TOKEN_SECRET)
 store = ApprovalStore(APPROVAL_DB_PATH)
-audit = AuditLog(audit_db_path())
 
 
 # ----------------------------
@@ -345,18 +345,20 @@ def send_approval(
         )
 
     # 6.7 audit: override requested
-    audit.append(
-        event_id=uuid4().hex,
-        event_type="OVERRIDE_REQUESTED",
-        actor=requestedBy,
-        quote_id=str(engine_payload.get("quoteId") or "demo"),
-        approval_id=None,
-        meta={
-            "overridePct": float(overridePct),
-            "reason": reason.strip(),
-            "customerId": get_customer_id(payload),
-            "channel": getattr(payload, "channel", None),
-        },
+    audit_logger.log(
+        AuditWrite(
+            action_type=EVENT_TYPE_HIER,  # bv. "OVERRIDE_REQUESTED" of "APPROVAL_SENT"
+            actor=ACTOR_HIER,  # bv. admin / "system" / "manager_via_link"
+            target_type=TARGET_TYPE_HIER,  # bv. "QUOTE" / "APPROVAL"
+            target_id=TARGET_ID_HIER,  # bv. quote_id of approval_id
+            quote_id=quote_id if "quote_id" in locals() else None,
+            approval_id=approval_id if "approval_id" in locals() else None,
+            reason=REASON_HIER,  # verplicht voor OVERRIDE_REQUESTED
+            old_value=OLD_HIER,  # optioneel
+            new_value=NEW_HIER,  # optioneel
+            meta=META_HIER,  # dict
+            audit_id=EVENT_ID_HIER,  # jouw bestaande event_id string
+        )
     )
 
     approval_id = uuid4().hex
@@ -375,17 +377,20 @@ def send_approval(
     store.create(rec)
 
     # 6.7 audit: approval sent (record created)
-    audit.append(
-        event_id=uuid4().hex,
-        event_type="APPROVAL_SENT",
-        actor=requestedBy,
-        quote_id=quote_id,
-        approval_id=approval_id,
-        meta={
-            "overridePct": float(overridePct),
-            "reason": reason.strip(),
-            "customerId": get_customer_id(payload),
-        },
+    audit_logger.log(
+        AuditWrite(
+            action_type=EVENT_TYPE_HIER,  # bv. "OVERRIDE_REQUESTED" of "APPROVAL_SENT"
+            actor=ACTOR_HIER,  # bv. admin / "system" / "manager_via_link"
+            target_type=TARGET_TYPE_HIER,  # bv. "QUOTE" / "APPROVAL"
+            target_id=TARGET_ID_HIER,  # bv. quote_id of approval_id
+            quote_id=quote_id if "quote_id" in locals() else None,
+            approval_id=approval_id if "approval_id" in locals() else None,
+            reason=REASON_HIER,  # verplicht voor OVERRIDE_REQUESTED
+            old_value=OLD_HIER,  # optioneel
+            new_value=NEW_HIER,  # optioneel
+            meta=META_HIER,  # dict
+            audit_id=EVENT_ID_HIER,  # jouw bestaande event_id string
+        )
     )
 
     token = token_svc.make(approval_id=approval_id, quote_id=quote_id)
@@ -501,16 +506,21 @@ def approval_approve(token: str, request: Request) -> HTMLResponse:
         decision="APPROVED",
         token_hash=token_hash,
     )
-    audit.append_deduped(
-        event_id=eid,
-        event_type="APPROVAL_DECIDED",
-        actor="manager_via_link",
-        quote_id=rec.quote_id,
-        approval_id=rec.approval_id,
-        meta={
-            "decision": "APPROVED",
-            "tokenHash": token_hash,
-        },
+
+    audit_logger.log_deduped(
+        AuditWrite(
+            action_type=EVENT_TYPE_HIER,
+            actor=ACTOR_HIER,
+            target_type=TARGET_TYPE_HIER,
+            target_id=TARGET_ID_HIER,
+            quote_id=quote_id if "quote_id" in locals() else None,
+            approval_id=approval_id if "approval_id" in locals() else None,
+            reason=REASON_HIER,
+            old_value=OLD_HIER,
+            new_value=NEW_HIER,
+            meta=META_HIER,
+            audit_id=EVENT_ID_HIER,
+        )
     )
 
     # If already processed before this click, user still sees a friendly message
@@ -568,16 +578,21 @@ def approval_reject(token: str, request: Request) -> HTMLResponse:
         decision="REJECTED",
         token_hash=token_hash,
     )
-    audit.append_deduped(
-        event_id=eid,
-        event_type="APPROVAL_DECIDED",
-        actor="manager_via_link",
-        quote_id=rec.quote_id,
-        approval_id=rec.approval_id,
-        meta={
-            "decision": "REJECTED",
-            "tokenHash": token_hash,
-        },
+
+    audit_logger.log_deduped(
+        AuditWrite(
+            action_type=EVENT_TYPE_HIER,
+            actor=ACTOR_HIER,
+            target_type=TARGET_TYPE_HIER,
+            target_id=TARGET_ID_HIER,
+            quote_id=quote_id if "quote_id" in locals() else None,
+            approval_id=approval_id if "approval_id" in locals() else None,
+            reason=REASON_HIER,
+            old_value=OLD_HIER,
+            new_value=NEW_HIER,
+            meta=META_HIER,
+            audit_id=EVENT_ID_HIER,
+        )
     )
 
     if rec.status == "REJECTED":

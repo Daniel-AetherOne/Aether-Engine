@@ -2,7 +2,7 @@
 import os
 import uuid
 import datetime as dt
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import boto3
 from botocore.exceptions import BotoCoreError, NoCredentialsError
@@ -10,9 +10,40 @@ from botocore.exceptions import BotoCoreError, NoCredentialsError
 from app.core.settings import settings
 
 
+def _aws_region() -> str:
+    # Prefer settings, then env, then sane default
+    return (
+        getattr(settings, "AWS_REGION", None)
+        or os.getenv("AWS_REGION")
+        or os.getenv("AWS_DEFAULT_REGION")
+        or "eu-west-1"
+    )
+
+
+def _aws_profile() -> Optional[str]:
+    # Prefer settings, then env
+    return getattr(settings, "AWS_PROFILE", None) or os.getenv("AWS_PROFILE") or None
+
+
 def _get_s3_client():
-    region = os.getenv("AWS_REGION", "eu-west-1")
-    return boto3.client("s3", region_name=region)
+    region = _aws_region()
+    profile = _aws_profile()
+
+    # Use Session so AWS_PROFILE works reliably
+    if profile:
+        session = boto3.Session(profile_name=profile, region_name=region)
+    else:
+        session = boto3.Session(region_name=region)
+
+    # Fail-fast with a clear error if no creds are available
+    creds = session.get_credentials()
+    if creds is None:
+        raise RuntimeError(
+            "No AWS credentials found for S3 presign. "
+            "Fix: run `aws configure` or set AWS_PROFILE in .env (e.g. AWS_PROFILE=default)."
+        )
+
+    return session.client("s3")
 
 
 def _get_bucket_name() -> str:
@@ -22,7 +53,7 @@ def _get_bucket_name() -> str:
         or getattr(settings, "S3_BUCKET", None)
     )
     if not bucket:
-        raise RuntimeError("S3 bucket ontbreekt in settings (.env)")
+        raise RuntimeError("S3 bucket ontbreekt in settings (.env) (S3_BUCKET=...)")
     return bucket
 
 

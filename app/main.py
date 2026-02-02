@@ -1,6 +1,7 @@
 # app/main.py
 import os
 import time
+from typing import List
 
 from dotenv import load_dotenv
 
@@ -11,20 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from app.verticals.ace.api.audit_admin import router as ace_audit_admin_router
-from app.verticals.ace.api.datasets_admin import router as ace_datasets_admin_router
-from app.verticals.ace.api.admin_data import router as ace_admin_data_router
-from app.verticals.ace.api.quote import (
-    router as ace_quote_router,
-    public_router as ace_public_router,
-)
 
-from app.verticals.ace.api.sales_ui import router as sales_ui_router
 from app.security.basic_auth import BasicAuthMiddleware
 from app.security.rate_limit import SimpleRateLimitMiddleware
-from app.verticals.ace.api.kpi_overrides import router as ace_kpi_router
-from app.verticals.ace.api.profiles_admin import router as ace_profiles_admin_router
-
 from app.core.settings import settings
 from app.core.logging_config import setup_logging, logger
 from app.core.rate_limit import limiter
@@ -37,6 +27,7 @@ from app.routers.debug_aws import router as debug_aws_router
 from app.routers.vision_debug import router as vision_router
 from app.routers import uploads, intake, quotes, files
 from app.observability.metrics import router as metrics_router
+from app.routers import internal
 
 
 # --- AWS safety guard (geen static keys) ---
@@ -48,6 +39,55 @@ def assert_no_static_aws_keys_in_env():
             f"Static AWS keys found in env: {present}. "
             "Use AWS_PROFILE (local) or IAM Role / WIF (prod)."
         )
+
+
+def _env_truthy(name: str, default: str = "false") -> bool:
+    val = (os.getenv(name, default) or "").strip().lower()
+    return val in ("1", "true", "yes", "y", "on")
+
+
+def try_load_ace_routers() -> List[object]:
+    """
+    Lazy-load ACE routers so a broken ACE module can't prevent the app from starting.
+    Returns a list of router objects.
+    """
+    routers: List[object] = []
+    try:
+        from app.verticals.ace.api.audit_admin import router as ace_audit_admin_router
+        from app.verticals.ace.api.datasets_admin import (
+            router as ace_datasets_admin_router,
+        )
+        from app.verticals.ace.api.admin_data import router as ace_admin_data_router
+        from app.verticals.ace.api.quote import (
+            router as ace_quote_router,
+            public_router as ace_public_router,
+        )
+        from app.verticals.ace.api.sales_ui import router as sales_ui_router
+        from app.verticals.ace.api.kpi_overrides import router as ace_kpi_router
+        from app.verticals.ace.api.profiles_admin import (
+            router as ace_profiles_admin_router,
+        )
+        from app.verticals.ace.api.audit_view import router as ace_audit_view_router
+
+        routers.extend(
+            [
+                ace_datasets_admin_router,
+                ace_admin_data_router,
+                ace_quote_router,
+                sales_ui_router,
+                ace_public_router,
+                ace_kpi_router,
+                ace_audit_admin_router,
+                ace_profiles_admin_router,
+                ace_audit_view_router,
+            ]
+        )
+        return routers
+
+    except Exception as e:
+        # Never block Paintly MVP startup because ACE broke
+        logger.exception("ACE router load failed; continuing without ACE", error=str(e))
+        return []
 
 
 # ----------------------------------------------------
@@ -67,6 +107,7 @@ app.add_middleware(RequestIdMiddleware)
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 
+# Keep this middleware; if ACE is disabled it's harmless
 app.add_middleware(
     SimpleRateLimitMiddleware,
     path="/api/ace/quote/calculate",
@@ -81,7 +122,6 @@ app.add_middleware(
         "/api",
     ],
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -137,22 +177,23 @@ async def logging_middleware(request: Request, call_next):
 
 
 # ----------------------------------------------------
-# Routers
+# Routers (Paintly MVP core)
 # ----------------------------------------------------
 app.include_router(uploads.router)
 app.include_router(quotes.router)
 app.include_router(files.router)
 app.include_router(intake.router)
 app.include_router(metrics_router)  # /metrics
+app.include_router(internal.router)
 
-app.include_router(ace_datasets_admin_router)
-app.include_router(ace_admin_data_router)
-app.include_router(ace_quote_router)
-app.include_router(sales_ui_router)
-app.include_router(ace_public_router)
-app.include_router(ace_kpi_router)
-app.include_router(ace_audit_admin_router)
-app.include_router(ace_profiles_admin_router)
+# Optional ACE routers
+ACE_ENABLED = _env_truthy("ACE_ENABLED", "false")
+if ACE_ENABLED:
+    for r in try_load_ace_routers():
+        app.include_router(r)
+    logger.info("ACE_ENABLED=true (ACE routers attempted)")
+else:
+    logger.info("ACE_ENABLED=false (ACE routers skipped)")
 
 
 # DEV-only routes (hardening)
