@@ -8,6 +8,10 @@
     "pipeline": {
         "steps": [
             {
+                "id": "photo_quality",
+                "use": "photo_quality.v1"
+            },
+            {
                 "id": "vision",
                 "use": "vision.v1"
             },

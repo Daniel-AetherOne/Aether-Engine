@@ -1,4 +1,5 @@
 from .painters_us_steps import (
+    step_photo_quality_v1,
     step_vision_v1,
     step_aggregate_v1,
     step_pricing_v1,
@@ -10,6 +11,7 @@ from .painters_us_steps import (
 
 
 def register_all(registry):
+    registry.register("photo_quality.v1", step_photo_quality_v1)
     registry.register("vision.v1", step_vision_v1)
     registry.register("aggregate.v1", step_aggregate_v1)
     registry.register("pricing.v1", step_pricing_v1)

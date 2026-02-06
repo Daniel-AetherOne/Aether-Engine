@@ -11,6 +11,7 @@ from aether.engine.context import PipelineState, StepResult
 from aether.engine.config import StepConfig
 
 from app.models import Lead
+from app.models.upload_record import UploadRecord, UploadStatus
 from app.services.storage import get_storage
 from app.tasks.vision_task import run_vision_for_lead
 
@@ -20,6 +21,8 @@ from app.verticals.painters_us.vision_aggregate_us import (
 from app.verticals.painters_us.pricing_engine_us import run_pricing_engine
 from app.verticals.painters_us.pricing_output_builder import build_pricing_output
 from app.verticals.painters_us.needs_review import needs_review_from_output
+
+from app.services.photo_quality.inference import predict_photo_quality
 
 
 def _ensure_obj(x: Any) -> Any:
@@ -67,6 +70,91 @@ def _default_exclusions() -> List[str]:
         "Mold remediation",
         "Moving heavy furniture",
     ]
+
+
+# -------------------------
+# Step: photo quality (guardrail)
+# -------------------------
+def step_photo_quality_v1(
+    state: PipelineState, step: StepConfig, assets: dict
+) -> StepResult:
+    """
+    Photo quality guardrail.
+    IMPORTANT: For MVP we do NOT hard-stop the pipeline here.
+    We mark bad photos via step data + meta reasons, and let step_needs_review_v1
+    combine reasons into the final outcome.
+
+    This keeps the product deterministic and prevents false-SUCCESS while still
+    allowing the render step to produce a "TBD / needs review" estimate.
+    """
+    lead: Lead = assets["lead"]
+    db: Session = assets["db"]
+
+    # Pull uploaded images for this lead (tenant-scoped)
+    rows = (
+        db.query(UploadRecord)
+        .filter(UploadRecord.tenant_id == lead.tenant_id)
+        .filter(UploadRecord.lead_id == lead.id)
+        .filter(UploadRecord.status == UploadStatus.uploaded)
+        .all()
+    )
+
+    image_refs: List[str] = [
+        r.object_key
+        for r in rows
+        if isinstance(r.mime, str) and r.mime.startswith("image/")
+    ]
+
+    # Guardrail: no usable photos
+    if not image_refs:
+        reasons = ["no_photos"]
+        return StepResult(
+            status="OK",
+            data={
+                "photo_quality": {
+                    "quality": "bad",
+                    "score_bad": 1.0,
+                    "reasons": reasons,
+                    "bad": True,
+                }
+            },
+            meta={"reasons": reasons},
+        )
+
+    storage = get_storage()
+    tenant_id = str(getattr(lead, "tenant_id", ""))
+
+    # Optional per-step threshold (future: set via painters_us.json step params)
+    threshold_bad = 0.60
+    try:
+        params = getattr(step, "params", None) or {}
+        if isinstance(params, dict) and params.get("threshold_bad") is not None:
+            threshold_bad = float(params["threshold_bad"])
+    except Exception:
+        pass
+
+    res = predict_photo_quality(
+        image_refs=image_refs,
+        storage=storage,
+        tenant_id=tenant_id,
+    )
+
+    is_bad = (res.quality == "bad") or (float(res.score_bad or 0.0) >= threshold_bad)
+    reasons = res.reasons or (["photo_quality_bad"] if is_bad else [])
+
+    return StepResult(
+        status="OK",
+        data={
+            "photo_quality": {
+                "quality": res.quality,
+                "score_bad": float(res.score_bad or 0.0),
+                "reasons": reasons,
+                "bad": bool(is_bad),
+                "n_images": len(image_refs),
+            }
+        },
+        meta={"reasons": reasons},
+    )
 
 
 # -------------------------
@@ -247,22 +335,37 @@ def step_store_html_v1(
 def step_needs_review_v1(
     state: PipelineState, step: StepConfig, assets: dict
 ) -> StepResult:
+    # base reasons from pricing output
     estimate = (state.data.get("steps") or {}).get("output", {}).get(
         "estimate_json"
     ) or {}
     estimate = _ensure_obj(estimate)
 
-    reasons = needs_review_from_output(estimate)
-    needs_review = bool(reasons)
+    reasons = needs_review_from_output(estimate) or []
 
-    # also enrich estimate meta for debugging / dashboard
+    # merge in guardrail reasons from earlier steps (photo quality)
+    pq = (
+        (state.data.get("steps") or {})
+        .get("photo_quality", {})
+        .get("photo_quality", {})
+    )
+    prior_reasons = []
+    if isinstance(pq, dict):
+        prior_reasons = pq.get("reasons") or []
+        if pq.get("bad") and not prior_reasons:
+            prior_reasons = ["photo_quality_bad"]
+
+    merged_reasons = list(dict.fromkeys((prior_reasons or []) + (reasons or [])))
+    needs_review = bool(merged_reasons)
+
+    # enrich estimate meta for debugging / dashboard
     if isinstance(estimate, dict):
         meta = estimate.get("meta") if isinstance(estimate.get("meta"), dict) else {}
-        meta["needs_review_reasons"] = reasons
+        meta["needs_review_reasons"] = merged_reasons
         estimate["meta"] = meta
 
     return StepResult(
         status="NEEDS_REVIEW" if needs_review else "OK",
-        data={"needs_review": needs_review, "needs_review_reasons": reasons},
-        meta={"reasons": reasons},
+        data={"needs_review": needs_review, "needs_review_reasons": merged_reasons},
+        meta={"reasons": merged_reasons},
     )
