@@ -1,76 +1,113 @@
 # Aether Engine
 
-**Aether Engine** is a modular AI decision and automation engine designed to power vertical-specific AI applications.  
-It focuses on turning real-world inputs (images, text, forms, signals) into fast, explainable decisions through a combination of computer vision, LLMs, and rule-based logic.
+Aether Engine is a Python-based backend project exploring how AI-assisted decision logic can be structured in a modular, production-oriented way.
 
-The engine is built with production use in mind: extensible, API-first, and adaptable across multiple industries.
-
----
-
-## Core Idea
-
-Aether Engine acts as a **decision layer** between raw input and actionable output.
-
-Instead of building one-off AI scripts, the engine provides a structured approach to:
-- intake
-- AI reasoning
-- business logic
-- output generation
-
-This allows AI-driven products to scale beyond experiments and into real workflows.
+The focus of this project is **engineering applied AI systems**, not model research.
 
 ---
 
-## Example Vertical: Paintly
+## What this project demonstrates
 
-**Paintly** is a vertical built on top of Aether Engine for professional painters.
+- Structuring AI-related logic beyond notebooks and scripts
+- Combining rule-based logic with AI-derived signals
+- Designing a modular backend architecture using FastAPI
+- Handling real-world concerns such as validation, explainability, and extensibility
 
-### What it does
-- Customers submit photos and basic project information
-- Computer vision analyzes surfaces and context
-- Decision logic estimates scope and complexity
-- A price estimation is generated automatically
-
-### Impact
-- Quote turnaround reduced from hours or days to **2–5 minutes**
-- Consistent and explainable estimates
-- Lower manual workload for contractors
-
-Paintly demonstrates how Aether Engine can be used to turn unstructured input into reliable, production-ready decisions.
+This project was built as a learning and portfolio project, with an emphasis on clean structure and realistic system design.
 
 ---
 
-## Other Potential Verticals
+## Example vertical: pricing & intake automation
 
-The engine is designed to support multiple domains, such as:
-- construction and renovation estimating
-- inspection and damage assessment
-- service pricing and intake automation
-- document and image-based decision systems
+One example implementation in this repository explores automated pricing and intake flows.
 
-Each vertical can define its own rules, models, and outputs while reusing the same core engine.
+At a high level:
+- Structured input (forms / metadata) is ingested via an API
+- Domain-specific rules and heuristics are applied
+- Optional AI-derived signals (e.g. classification or scoring) influence the final decision
+- A structured output is returned
 
----
-
-## Architecture Overview
-
-- **Backend:** Python, FastAPI  
-- **AI components:** Computer Vision, LLM-based reasoning, rule-based decision logic  
-- **Design:** Modular, extensible, API-driven  
-- **Focus:** Reliability, explainability, and real-world applicability  
+This vertical is intended as a **technical example**, not a finished product.
 
 ---
 
-## Project Status
+## Project structure (simplified)
 
-This repository represents an actively developed engine and serves as a foundation for applied AI products.  
-It is not a research project, but a practical system aimed at production use.
+app/
+├── api/ # FastAPI routes
+├── core/ # configuration and shared utilities
+├── services/ # domain logic and orchestration
+├── ai/ # AI-related components (heuristics / models)
+├── auth/ # authentication and security utilities
+└── verticals/ # domain-specific implementations
+
 
 ---
 
-## Why This Project
+## How to run locally
 
-Aether Engine was built to explore how AI systems can:
-- move beyond notebooks and demos
-- deliver measurable business value
-- remain maintainable and explainable as they scale
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+Once running, the API will be available at:
+
+http://localhost:8000
+Swagger UI:
+
+http://localhost:8000/docs
+AI in this project
+AI is used as a supporting signal, not a black box:
+
+Heuristic models and scoring logic
+
+Optional ML/AI components influencing decisions
+
+Explicit separation between AI output and final business rules
+
+The goal is to keep decisions inspectable and explainable.
+
+Trade-offs and limitations
+Models are intentionally simple and lightweight
+
+No heavy training pipelines are included
+
+Focus is on system design rather than model accuracy
+
+Sample and synthetic data are used for demonstration purposes
+
+Why this project exists
+This repository was created to explore how applied AI systems can be:
+
+engineered cleanly
+
+reasoned about
+
+extended safely
+
+It is meant as a realistic learning project rather than a polished commercial product.
+
+
+---
+
+## Waarom deze versie beter is (heel belangrijk)
+- ❌ Geen marketing claims
+- ❌ Geen “production-ready” grootspraak
+- ✅ Alles wat je zegt is **verdedigbaar in een interview**
+- ✅ Sluit aan bij **Junior AI Engineer**, niet startup-CTO
+- ✅ Nodigt uit tot technische vragen i.p.v. sceptische vragen
+
+---
+
+## Mijn eerlijke eindbeoordeling nu
+- **Code hygiene:** goed
+- **Repo presentatie:** nu bijna goed
+- **README (oude):** werkte tegen je
+- **README (nieuwe):** werkt vóór je
+
+Als je dit commit + pusht, kun je het **met vertrouwen** naar HR sturen.
+
+Als je wilt, kan ik daarna nog:
+- 1 killer “AI demo endpoint” formuleren (curl → output)
+- of je helpen met **wat je hierover zegt in het HR-gesprek** (dat is minstens zo belangrijk)
