@@ -34,14 +34,12 @@ This use case is meant as a **technical example**, not a finished business produ
 
 ## Project structure (simplified)
 
-app/
-├── api/ # FastAPI routes
-├── core/ # configuration and shared utilities
-├── services/ # domain logic and orchestration
-├── ai/ # AI-related components (heuristics / models)
-├── auth/ # authentication and security utilities
-└── verticals/ # domain-specific implementations
-
+- `app/api` – FastAPI routes
+- `app/core` – configuration and shared utilities
+- `app/services` – domain logic and orchestration
+- `app/ai` – AI-related components (heuristics / models)
+- `app/auth` – authentication and security utilities
+- `app/verticals` – domain-specific implementations
 
 ---
 
