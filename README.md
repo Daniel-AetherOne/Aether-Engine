@@ -1,33 +1,34 @@
 # Aether Engine
 
-Aether Engine is a Python-based backend project exploring how AI-assisted decision logic can be structured in a modular, production-oriented way.
+Aether Engine is a Python-based backend project that demonstrates how **AI-assisted decision logic** can be integrated into a clean, production-style service.
 
-The focus of this project is **engineering applied AI systems**, not model research.
+The emphasis is on **applied AI engineering**: structuring decision pipelines, combining rules with AI-derived signals, and keeping outcomes inspectable and testable.
 
----
-
-## What this project demonstrates
-
-- Structuring AI-related logic beyond notebooks and scripts
-- Combining rule-based logic with AI-derived signals
-- Designing a modular backend architecture using FastAPI
-- Handling real-world concerns such as validation, explainability, and extensibility
-
-This project was built as a learning and portfolio project, with an emphasis on clean structure and realistic system design.
+> Status: work in progress — built as a learning and portfolio project.
 
 ---
 
-## Example vertical: pricing & intake automation
+## What this project shows
 
-One example implementation in this repository explores automated pricing and intake flows.
+- How to structure AI-related logic beyond notebooks and scripts
+- Combining deterministic business rules with AI-derived signals
+- Modular backend design using FastAPI
+- Clear separation between AI output and final decision logic
+- Engineering trade-offs around explainability, validation, and extensibility
 
-At a high level:
-- Structured input (forms / metadata) is ingested via an API
-- Domain-specific rules and heuristics are applied
-- Optional AI-derived signals (e.g. classification or scoring) influence the final decision
-- A structured output is returned
+---
 
-This vertical is intended as a **technical example**, not a finished product.
+## Example use case: pricing & intake automation
+
+One implemented vertical in this repository explores an automated pricing and intake flow.
+
+High-level flow:
+1. Structured input is received via an API
+2. Domain-specific rules and heuristics are applied
+3. Optional AI-derived signals (e.g. scoring or classification) influence the outcome
+4. A structured decision object is returned
+
+This use case is meant as a **technical example**, not a finished business product.
 
 ---
 
@@ -51,31 +52,31 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
-Once running, the API will be available at:
+Once running:
 
-http://localhost:8000
-Swagger UI:
+API: http://localhost:8000
 
-http://localhost:8000/docs
-AI in this project
-AI is used as a supporting signal, not a black box:
+Swagger UI: http://localhost:8000/docs
 
-Heuristic models and scoring logic
+How AI is used here
+AI components act as supporting signals, not opaque decision-makers:
 
-Optional ML/AI components influencing decisions
+Lightweight heuristic models and scoring logic
 
-Explicit separation between AI output and final business rules
+Optional ML/AI outputs influencing decisions
 
-The goal is to keep decisions inspectable and explainable.
+Final decisions remain rule-based and explainable
+
+The goal is to keep the system debuggable and inspectable.
 
 Trade-offs and limitations
-Models are intentionally simple and lightweight
+Models are intentionally simple
 
-No heavy training pipelines are included
+No heavy training pipelines included
 
-Focus is on system design rather than model accuracy
+Focus is on system design rather than model performance
 
-Sample and synthetic data are used for demonstration purposes
+Sample and synthetic data are used for demonstration
 
 Why this project exists
 This repository was created to explore how applied AI systems can be:
@@ -86,4 +87,4 @@ reasoned about
 
 extended safely
 
-It is meant as a realistic learning project rather than a polished commercial product.
+It is intended as a realistic engineering exercise rather than a polished commercial product.
