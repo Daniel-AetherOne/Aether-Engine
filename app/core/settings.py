@@ -3,8 +3,6 @@ from typing import Optional, List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-import os
-
 
 class Settings(BaseSettings):
     # --- Core app ---
@@ -15,11 +13,14 @@ class Settings(BaseSettings):
     SERVICE_NAME: str = "aether-api"
     ENABLE_DEV_ROUTES: bool = False
     ENABLE_LLM_PRICING: bool = False
+
+    # Security-critical (geen defaults)
     JWT_SECRET: str
+    SECRET_KEY: str
     JWT_EXP_HOURS: int = 24
 
-    DEBUG: bool = True
-    SECRET_KEY: str = "change-me"
+    # Debug default veilig uit
+    DEBUG: bool = False
 
     # --- Database & Redis ---
     DATABASE_URL: str = "sqlite:///./aether.db"
@@ -27,15 +28,14 @@ class Settings(BaseSettings):
 
     # --- Storage / S3 ---
     AWS_REGION: str = "eu-west-1"
-    S3_BUCKET: str = "aether-prod-files"
+    S3_BUCKET: Optional[str] = None
     AWS_S3_BUCKET_NAME: Optional[str] = None
 
-    USE_LOCAL_STORAGE: bool = False
+    USE_LOCAL_STORAGE: bool = True
     LOCAL_STORAGE_ROOT: str = "./.local_storage"
-
     S3_BASE_URL: Optional[str] = None
 
-    # Raw AWS creds (optioneel, vooral voor lokale/debug)
+    # Raw AWS creds (optioneel)
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
 
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     S3_UPLOAD_ALLOWED_TYPES: str = "image/jpeg,image/png,application/pdf"
     UPLOAD_DIR: str = "data/uploads"
     OFFERS_DIR: str = "data/offers"
-    UPLOAD_MAX_FILES: int = int(os.getenv("UPLOAD_MAX_FILES", "12"))
+    UPLOAD_MAX_FILES: int = 12
 
     S3_TEMP_PREFIX: str = "uploads/"
     S3_FINAL_PREFIX: str = "leads/"
@@ -59,9 +59,7 @@ class Settings(BaseSettings):
     STORAGE_BACKEND: str = "local"
     LOCAL_STORAGE_PATH: str = "data"
 
-    # --- CORS (als string in .env, we splitten zelf) ---
-    # Voorbeeld .env:
-    # ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+    # --- CORS ---
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
 
     # --- HubSpot ---
@@ -95,7 +93,6 @@ class Settings(BaseSettings):
     # --- Frontend ---
     VITE_API_URL: Optional[str] = None
 
-    # Pydantic settings-config
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -112,4 +109,4 @@ class Settings(BaseSettings):
         return [t.strip() for t in self.S3_UPLOAD_ALLOWED_TYPES.split(",") if t.strip()]
 
 
-settings = Settings()  # leest .env
+settings = Settings()
