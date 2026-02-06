@@ -19,6 +19,11 @@ painters_us_templates = Jinja2Templates(directory="app/verticals/painters_us/tem
 
 
 def _strip_tenant_prefix(tenant_id: str, key: str) -> str:
+    """
+    Sommige upload flows prefixen keys met '{tenant_id}/...'.
+    In DB slaan we tenant-loos op, dus strippen we dat hier.
+    Als er geen prefix is: no-op.
+    """
     key = (key or "").strip()
     if not key:
         return ""
@@ -29,14 +34,15 @@ def _strip_tenant_prefix(tenant_id: str, key: str) -> str:
 class PaintersUSAdapter:
     vertical_id = "painters_us"
 
-    def render_intake_form(self, request, lead_id: str):
+    def render_intake_form(self, request, lead_id: str, tenant_id: str = "public"):
+        # tenant_id meegeven is prima (bv hidden field), maar we vertrouwen hem niet server-side
         return painters_us_templates.TemplateResponse(
             "intake_form_us.html",
             {
                 "request": request,
                 "lead_id": lead_id,
-                "tenant_id": "painters_us",
-                "vertical": "painters_us",
+                "tenant_id": tenant_id,
+                "vertical": self.vertical_id,
             },
         )
 
@@ -123,19 +129,24 @@ class PaintersUSAdapter:
                 detail=f"compute_quote_failed:{type(e).__name__}:{e}",
             )
 
-    async def create_lead_from_form(self, request, db: Session) -> IntakeResult:
+    async def create_lead_from_form(
+        self,
+        request,
+        db: Session,
+        tenant_id: str,
+    ) -> IntakeResult:
         form = await request.form()
         form_dict = dict(form)
 
-        tenant_id = (
-            form_dict.get("tenant_id") or "painters_us"
-        ).strip() or "painters_us"
+        # ✅ Tenant komt van auth/router, NIET van form
+        tenant_id = (tenant_id or "").strip() or "public"
 
         # photo keys komen van hidden inputs (object_key uit presign)
         photo_keys = form.getlist("photo_keys") if hasattr(form, "getlist") else []
+
         # dedupe + normalize => tenant-loos opslaan in DB
-        object_keys = []
-        seen = set()
+        object_keys: list[str] = []
+        seen: set[str] = set()
         for k in photo_keys:
             k2 = _strip_tenant_prefix(tenant_id, str(k))
             if k2 and k2 not in seen:
@@ -180,14 +191,15 @@ class PaintersUSAdapter:
         # 1) Create Lead
         lead = Lead(
             tenant_id=tenant_id,
+            vertical=self.vertical_id,
             name=payload.name,
             email=payload.email,
             phone=payload.phone,
             status="NEW",
         )
-        lead.vertical = self.vertical_id
         lead.intake_payload = json.dumps(payload_data, ensure_ascii=False)
 
+        # optional: keep notes if model has it
         if hasattr(lead, "notes"):
             lead.notes = payload_data.get("project_description") or None
 

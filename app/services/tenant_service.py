@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Dict, Optional
-from app.models.tenant import TenantSettings
+from app.models.tenant_settings import TenantSettings
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

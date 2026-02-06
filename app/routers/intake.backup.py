@@ -16,7 +16,7 @@ def intake_upload(request: Request, lead_id: str):
 # >>> Laat ALLE andere (interne) imports voorlopig weg <<<
 # from app.models.lead import Lead
 # from app.models.intake import IntakeResponse
-# from app.models.tenant import TenantSettings
+# from app.models.tenant_settings import TenantSettings
 # from app.services.intake_service import IntakeService
 # from app.services.lead_store import lead_store
 # from app.services.s3 import S3Service

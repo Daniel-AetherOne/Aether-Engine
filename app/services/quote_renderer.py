@@ -6,7 +6,7 @@ from typing import Dict, Any, Tuple
 import jinja2
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
-from app.models.tenant import TenantSettings
+from app.models.tenant_settings import TenantSettings
 from app.services.storage import Storage, get_storage, LocalStorage
 
 class QuoteRenderer:

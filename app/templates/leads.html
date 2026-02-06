@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Paintly — Leads</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;}
+      .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+      table{width:100%;border-collapse:collapse;}
+      th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:14px;}
+      .badge{padding:4px 8px;border-radius:999px;background:#f3f4f6;display:inline-block;}
+      a.btn{padding:10px 12px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;}
+      a.link{text-decoration:none;color:#111827;}
+      .muted{color:#6b7280;font-size:13px;}
+    </style>
+  </head>
+  <body>
+    <div class="top">
+      <div>
+        <h2 style="margin:0;">Your estimates</h2>
+        <div class="muted">{{ user.email }} • tenant {{ user.tenant_id }}</div>
+      </div>
+      <a class="btn" href="/app/new">New estimate</a>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Customer</th>
+          <th>Status</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in leads %}
+        <tr>
+          <td><a class="link" href="/app/leads/{{ l.id }}">#{{ l.id }}</a></td>
+          <td>
+            <div>{{ l.name }}</div>
+            <div class="muted">{{ l.email }}</div>
+          </td>
+          <td><span class="badge">{{ l.status }}</span></td>
+          <td class="muted">{{ l.updated_at or l.created_at }}</td>
+        </tr>
+        {% endfor %}
+        {% if leads|length == 0 %}
+        <tr><td colspan="4" class="muted">No leads yet. Create your first estimate.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </body>
+</html>

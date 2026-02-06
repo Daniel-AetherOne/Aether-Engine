@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from app.routers.auth import router as auth_router
 
 from app.security.basic_auth import BasicAuthMiddleware
 from app.security.rate_limit import SimpleRateLimitMiddleware
@@ -22,6 +23,8 @@ from app.db import Base, engine
 from app import models  # noqa: F401  (registreert SQLAlchemy modellen)
 from app.middleware.request_id import RequestIdMiddleware
 from app.verticals import register_verticals
+from app.routers.app_me import router as app_me_router
+from app.routers.app_dashboard import router as app_dashboard_router
 
 from app.routers.debug_aws import router as debug_aws_router
 from app.routers.vision_debug import router as vision_router
@@ -185,6 +188,9 @@ app.include_router(files.router)
 app.include_router(intake.router)
 app.include_router(metrics_router)  # /metrics
 app.include_router(internal.router)
+app.include_router(auth_router)
+app.include_router(app_me_router)
+app.include_router(app_dashboard_router)
 
 # Optional ACE routers
 ACE_ENABLED = _env_truthy("ACE_ENABLED", "false")

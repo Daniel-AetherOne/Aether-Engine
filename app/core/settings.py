@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     SERVICE_NAME: str = "aether-api"
     ENABLE_DEV_ROUTES: bool = False
     ENABLE_LLM_PRICING: bool = False
+    JWT_SECRET: str
+    JWT_EXP_HOURS: int = 24
 
     DEBUG: bool = True
     SECRET_KEY: str = "change-me"

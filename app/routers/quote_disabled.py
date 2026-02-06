@@ -9,7 +9,7 @@ from app.services.pricing_engine import PricingEngine
 from app.services.predictor import SimplePredictor
 from app.services.hubspot_client import HubSpotClient
 from app.dependencies import resolve_tenant, get_tenant_settings, get_tenant_storage_path
-from app.models.tenant import TenantSettings
+from app.models.tenant_settings import TenantSettings
 from app.celery_app import create_job
 from app.celery_tasks import vision_predict_task, compute_price_task, generate_pdf_task, crm_push_task
 from app.rate_limiting import quote_create_rate_limit

@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Lead #{{ lead.id }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;max-width:900px;}
+      .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+      .badge{padding:4px 8px;border-radius:999px;background:#f3f4f6;display:inline-block;}
+      a.btn{padding:10px 12px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;margin-right:8px;}
+      a.btn2{padding:10px 12px;border-radius:10px;background:#e5e7eb;color:#111827;text-decoration:none;}
+      .card{border:1px solid #eee;border-radius:14px;padding:14px;margin-top:12px;}
+      .muted{color:#6b7280;font-size:13px;}
+      pre{white-space:pre-wrap;}
+    </style>
+  </head>
+  <body>
+    <div class="top">
+      <div>
+        <h2 style="margin:0;">Lead #{{ lead.id }}</h2>
+        <div class="muted">{{ lead.name }} • {{ lead.email }}</div>
+      </div>
+      <div>
+        <a class="btn2" href="/app/leads">Back</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div>Status: <span class="badge">{{ lead.status }}</span></div>
+      {% if lead.error_message %}
+        <div class="muted" style="margin-top:8px;">Error: {{ lead.error_message }}</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;">Actions</h3>
+
+      {% if lead.estimate_html_key %}
+        <!-- Pas dit aan als jouw bestaande endpoint anders heet -->
+        <a class="btn" href="/quotes/{{ lead.id }}/html" target="_blank">Open estimate</a>
+      {% endif %}
+
+      <a class="btn2" href="/app/new">New estimate</a>
+
+      {% if lead.status in ["FAILED","NEEDS_REVIEW"] %}
+        <div class="muted" style="margin-top:10px;">
+          This estimate may need manual review.
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;">Notes</h3>
+      <div class="muted">{{ lead.notes or "—" }}</div>
+    </div>
+  </body>
+</html>

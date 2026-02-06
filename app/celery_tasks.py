@@ -5,7 +5,7 @@ from app.services.quote_renderer import QuoteRenderer
 from app.services.pricing_engine import PricingEngine
 from app.services.hubspot_client import HubSpotClient
 from app.services.tenant_service import TenantService
-from app.models.tenant import TenantSettings
+from app.models.tenant_settings import TenantSettings
 from app.metrics import record_job_metrics
 from app.logging_config import set_context
 from typing import Dict, Any, List

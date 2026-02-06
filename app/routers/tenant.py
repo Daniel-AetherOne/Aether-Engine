@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from app.models.tenant import TenantSettings
+from app.models.tenant_settings import TenantSettings
 from app.services.tenant_service import TenantService
 from app.dependencies import resolve_tenant
 
