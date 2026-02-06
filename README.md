@@ -1,69 +1,85 @@
-# Aether Engine – Decision Infrastructure Platform
+Aether Engine
 
-Aether Engine is a modular, API-first decision engine that combines rule-based logic with AI reasoning to automate complex business decisions (pricing, classification, quotations) for B2B wholesalers and other verticals.
+Aether Engine is a modular AI decision and automation engine designed to power vertical-specific AI applications.
+It focuses on turning real-world inputs (images, text, forms, signals) into fast, explainable decisions through a combination of computer vision, LLMs and rule-based logic.
 
-> This repository contains documentation and a high-level overview only.  
-> Full source code is available under NDA during the hiring process – please ask for a read-only invite.
+The engine is built with production use in mind: extensible, API-first, and adaptable across multiple industries.
 
----
+Core Idea
 
-## 1. What it does
-- Ingests structured / unstructured data (API calls, files, text)  
-- Applies domain rules + LLM-based interpretation  
-- Returns a binding decision (price, outcome, document), suitable for downstream execution in ERP or CRM systems.  
-- Horizontal core – vertical-specific "engines" plug in on top
+Aether Engine acts as a decision layer between raw input and actionable output.
 
----
+Instead of building one-off AI scripts, the engine provides a structured approach to:
 
-## 2. Architecture (high-level)
-Data flow:
-1. External systems (ERP, CRM, portals) send JSON/REST calls to the API gateway.
-2. The Rule Engine validates business constraints; if interpretation is needed the request is forwarded to the AI Reasoning module (LLM).
-3. Both results converge in the Decision Core, which produces a binding outcome.
-4. The outcome is returned to the caller as JSON, PDF or UBL.
----
+intake
 
-## 3. Implemented vertical
-**Aether Commerce Engine (ACE)** – live MVP  
-- Scope: B2B wholesale pricing & quotation automation  
-- Handles customer-specific agreements, tier prices, margin rules, one-off quotes  
-- Integrated with Exact Online and SAP S/4 HANA sandboxes
+AI reasoning
 
----
+business logic
 
-## 4. Tech snapshot
-- Backend: Python 3.11, FastAPI (async), Pydantic  
-- AI: OpenAI LLMs (GPT-class) + in-house rule engine (ANTLR)
-- Task queue: Celery + Redis  
-- Observability: Prometheus, Grafana, Loki  
-- Infra: Docker, AWS (S3, IAM, RDS), Terraform  
-- Testing: pytest (unit 92 %), Postman (contract), Locust (load)
+output generation
 
----
+This allows AI-driven products to scale beyond experiments and into real workflows.
 
-## 5. Key metrics (ACE MVP)
-- 500 price requests/min P95 < 220 ms  
-- 99.8 % uptime last 3 months (Grafana)  
-- 40 % reduction in quotation turnaround time (pilot customer, n=1 200 quotes)
+Example Vertical: Paintly
 
----
+Paintly is a vertical built on top of Aether Engine for professional painters.
 
-## 6. Repository content
-- `docs/`          – architecture diagrams (PNG/Markdown)  
-- `demos/`         – Postman collections & sample payloads  
-- `README.md`      – this overview  
-- `LICENSE`        – proprietary (not open source)
----
+What it does
 
-## 7. Collaboration & code access
-The platform is proprietary.  
-For recruitment purposes I can provide:
-- time-boxed, read-only GitHub invite, or  
-- anonymised ZIP + architecture walkthrough (video call)  
-Both under mutual NDA. Please contact me via the e-mail in my CV.
+Customers submit photos and basic project information
 
----
+Computer vision analyzes surfaces and context
 
-## 8. Links
-- Product site: https://aetherone.tech  
-- Vertical page: https://aetherone.tech/b2b-groothandels  
+Decision logic estimates scope and complexity
+
+A price estimation is generated automatically
+
+Impact
+
+Quote turnaround reduced from hours or days to 2–5 minutes
+
+Consistent and explainable estimates
+
+Lower manual workload for contractors
+
+Paintly demonstrates how Aether Engine can be used to turn unstructured input into reliable, production-ready decisions.
+
+Other Potential Verticals
+
+The engine is designed to support multiple domains, such as:
+
+construction and renovation estimating
+
+inspection and damage assessment
+
+service pricing and intake automation
+
+document and image-based decision systems
+
+Each vertical can define its own rules, models and outputs while reusing the same core engine.
+
+Architecture Overview
+
+Backend: Python, FastAPI
+
+AI components: Computer Vision, LLM-based reasoning, rule-based decision logic
+
+Design: Modular, extensible, API-driven
+
+Focus: Reliability, explainability, and real-world applicability
+
+Project Status
+
+This repository represents an actively developed engine and serves as a foundation for applied AI products.
+It is not a research project, but a practical system aimed at production use.
+
+Why This Project
+
+Aether Engine was built to explore how AI systems can:
+
+move beyond notebooks and demos
+
+deliver measurable business value
+
+remain maintainable and explainable as they scale
