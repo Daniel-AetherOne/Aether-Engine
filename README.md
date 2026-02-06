@@ -87,27 +87,3 @@ reasoned about
 extended safely
 
 It is meant as a realistic learning project rather than a polished commercial product.
-
-
----
-
-## Waarom deze versie beter is (heel belangrijk)
-- ❌ Geen marketing claims
-- ❌ Geen “production-ready” grootspraak
-- ✅ Alles wat je zegt is **verdedigbaar in een interview**
-- ✅ Sluit aan bij **Junior AI Engineer**, niet startup-CTO
-- ✅ Nodigt uit tot technische vragen i.p.v. sceptische vragen
-
----
-
-## Mijn eerlijke eindbeoordeling nu
-- **Code hygiene:** goed
-- **Repo presentatie:** nu bijna goed
-- **README (oude):** werkte tegen je
-- **README (nieuwe):** werkt vóór je
-
-Als je dit commit + pusht, kun je het **met vertrouwen** naar HR sturen.
-
-Als je wilt, kan ik daarna nog:
-- 1 killer “AI demo endpoint” formuleren (curl → output)
-- of je helpen met **wat je hierover zegt in het HR-gesprek** (dat is minstens zo belangrijk)
