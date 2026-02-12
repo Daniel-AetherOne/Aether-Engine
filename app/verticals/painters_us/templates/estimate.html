@@ -8,14 +8,49 @@
 
   <link rel="stylesheet" href="https://offers.getpaintly.com/static/v1/app.css">
   <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
+
+  <style>
+    /* Light polish without fighting app.css */
+    .pill { white-space: nowrap; }
+    .badgeNote { margin-top: 8px; font-size: 12px; line-height: 1.5; }
+    .mutedSmall { font-size: 12px; line-height: 1.5; }
+    .kv .item span { max-width: 360px; overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kv .item span.multiline { white-space: normal; overflow: visible; text-overflow: clip; max-width: none; }
+    .divider { height:1px; background: rgba(0,0,0,.08); margin: 12px 0; }
+
+    .chip {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px; border-radius:999px;
+      border:1px solid rgba(0,0,0,.08);
+      background: rgba(255,255,255,.75);
+      font-size:12px; font-weight:800;
+    }
+    .chip i { width:8px; height:8px; border-radius:999px; display:inline-block; background: rgba(0,0,0,.25); }
+    .chip.good i { background: rgba(46,204,113,.95); }
+    .chip.warn i { background: rgba(243,156,18,.95); }
+    .chip.neutral i { background: rgba(0,0,0,.25); }
+
+    /* Optional: remove after testing */
+    .templateTest { color:#c00; font-weight:900; margin-bottom: 6px; }
+  </style>
 </head>
 
 <body>
 <div class="wrap">
 
-<div style="color:red;font-weight:bold;">
-  TEMPLATE TEST – {{ company.name }}
-</div>
+  {# ---------- pricing flags ---------- #}
+  {% set reasons = (pricing.meta.needs_review_reasons if pricing and pricing.meta and pricing.meta.needs_review_reasons else []) %}
+  {% set is_provisional = 'provisional_total' in reasons %}
+  {% set show_prices = pricing_ready or is_provisional %}
+
+  {# ---------- lead/customer helpers ---------- #}
+  {% set lead_name = (customer.name if customer and customer.name else (lead.name if lead and lead.name else '')) %}
+  {% set lead_email = (customer.email if customer and customer.email else (lead.email if lead and lead.email else '')) %}
+  {% set lead_phone = (customer.phone if customer and customer.phone else (lead.phone if lead and lead.phone else '')) %}
+
+  <div class="templateTest">
+    TEMPLATE TEST – {{ company.name if company and company.name else "Paintly" }}
+  </div>
 
   <div class="topbar">
     <div class="brand">
@@ -30,6 +65,8 @@
     <div class="badges">
       {% if pricing_ready %}
         <div class="statusBadge good"><i></i> Pricing ready</div>
+      {% elif is_provisional %}
+        <div class="statusBadge warn"><i></i> Provisional estimate</div>
       {% else %}
         <div class="statusBadge warn"><i></i> Needs review</div>
       {% endif %}
@@ -65,6 +102,13 @@
           {{ copy.opener_pricing_ready if copy and copy.opener_pricing_ready else
             "This estimate is based on submitted photos and standard assumptions. Final price may adjust after on-site verification." }}
         </div>
+      {% elif is_provisional %}
+        <div class="noteBox">
+          <div style="font-weight:950;">Provisional estimate shown</div>
+          <div class="badgeNote muted">
+            This number helps you plan. We’ll confirm surfaces, prep level, and access and then send a finalized price.
+          </div>
+        </div>
       {% else %}
         <div class="noteBox">
           {{ needs_review.intro if needs_review and needs_review.intro else
@@ -75,6 +119,20 @@
           </div>
         </div>
       {% endif %}
+
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+        {% if pricing_ready %}
+          <span class="chip good"><i></i> Final pricing</span>
+        {% elif is_provisional %}
+          <span class="chip warn"><i></i> Provisional pricing</span>
+        {% else %}
+          <span class="chip neutral"><i></i> Review required</span>
+        {% endif %}
+
+        {% if reasons and (reasons|length) > 0 %}
+          <span class="chip neutral"><i></i> Reasons: {{ reasons | join(", ") }}</span>
+        {% endif %}
+      </div>
     </div>
   </div>
 
@@ -101,48 +159,71 @@
           </thead>
 
           <tbody>
-            {% for item in pricing.line_items %}
+            {% if pricing and pricing.line_items and (pricing.line_items | length) > 0 %}
+              {% for item in pricing.line_items %}
+                {% set code = (item.code if item and item.code else '') %}
+                {% set unit = (item.unit if item and item.unit else '') %}
+                {% set qty = (item.quantity if item and item.quantity is defined else None) %}
+                {% set is_row_provisional = is_provisional and (code in ['provisional_estimate','interior_painting_est','provisional_total','provisional']) %}
+                {% set is_meaningless_job_qty = (unit == 'job' and (qty == 1 or qty == 1.0 or qty == '1' or qty == '1.0')) %}
+
+                <tr>
+                  <td>
+                    <div style="font-weight:950;">{{ item.label }}</div>
+                    {% if item.description %}
+                      <div class="muted">{{ item.description }}</div>
+                    {% endif %}
+                    {% if is_row_provisional %}
+                      <div class="mutedSmall muted">Shown to help you plan — final price after review.</div>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if is_row_provisional or is_meaningless_job_qty %}
+                      —
+                    {% else %}
+                      {{ fmt_qty(item.quantity, item.unit) }} {{ item.unit }}
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if item.assumptions and item.assumptions.prep_level %}
+                      {{ item.assumptions.prep_level }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if item.assumptions and item.assumptions.access %}
+                      {{ item.assumptions.access }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </td>
+
+                  <td class="right">
+                    {% if show_prices and item.total %}
+                      <span style="font-weight:950;">{{ fmt_usd(item.total) }}</span>
+                    {% else %}
+                      <span class="muted">TBD</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
               <tr>
-                <td>
-                  <div style="font-weight:950;">{{ item.label }}</div>
-                  {% if item.description %}
-                    <div class="muted">{{ item.description }}</div>
-                  {% endif %}
-                </td>
-
-                <td>
-                  {{ fmt_qty(item.quantity, item.unit) }} {{ item.unit }}
-                </td>
-
-                <td>
-                  {% if item.assumptions and item.assumptions.prep_level %}
-                    {{ item.assumptions.prep_level }}
-                  {% else %}
-                    —
-                  {% endif %}
-                </td>
-
-                <td>
-                  {% if item.assumptions and item.assumptions.access %}
-                    {{ item.assumptions.access }}
-                  {% else %}
-                    —
-                  {% endif %}
-                </td>
-
-                <td class="right">
-                  {% if pricing_ready and item.total %}
-                    <span style="font-weight:950;">{{ fmt_usd(item.total) }}</span>
-                  {% else %}
-                    <span class="muted">TBD</span>
-                  {% endif %}
+                <td colspan="5" class="muted" style="padding:14px;">
+                  No line items yet — we’ll finalize scope during review.
                 </td>
               </tr>
-            {% endfor %}
+            {% endif %}
           </tbody>
         </table>
 
-        <div style="margin-top:14px;">
+        <div class="divider"></div>
+
+        <div>
           <div class="sectionTitle">{{ copy.scope_label if copy and copy.scope_label else "Scope" }}</div>
           <ul>
             {% for b in scope_bullets %}
@@ -164,7 +245,6 @@
             {% endfor %}
           </ul>
         </div>
-
       </div>
     </div>
 
@@ -175,11 +255,29 @@
       </div>
 
       <div class="cardBody">
+        <div class="sectionTitle">Customer</div>
+        <div class="kv" style="margin-bottom:12px;">
+          <div class="item">
+            <b>Name</b>
+            <span>{{ lead_name if lead_name else "—" }}</span>
+          </div>
+          <div class="item">
+            <b>Email</b>
+            <span>{{ lead_email if lead_email else "—" }}</span>
+          </div>
+          <div class="item">
+            <b>Phone</b>
+            <span>{{ lead_phone if lead_phone else "—" }}</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
         <div class="sectionTitle">Project</div>
         <div class="kv" style="margin-bottom:12px;">
           <div class="item">
             <b>Location</b>
-            <span>{{ project.location if project and project.location else "—" }}</span>
+            <span class="multiline">{{ project.location if project and project.location else "—" }}</span>
           </div>
           <div class="item">
             <b>Estimate ID</b>
@@ -191,14 +289,36 @@
           </div>
           <div class="item">
             <b>Status</b>
-            <span>{% if pricing_ready %}Pricing ready{% else %}Needs review{% endif %}</span>
+            <span>
+              {% if pricing_ready %}Pricing ready
+              {% elif is_provisional %}Provisional estimate
+              {% else %}Needs review
+              {% endif %}
+            </span>
           </div>
+
+          {# US market: show square feet (expects project.square_feet from step_render_v1) #}
+          {% if project and project.square_feet %}
+            <div class="item">
+              <b>Area</b>
+              <span>{{ project.square_feet }} ft²</span>
+            </div>
+          {% endif %}
         </div>
 
-        <div class="sectionTitle">{{ (copy.labor_label if copy else "Labor") }} & {{ (copy.materials_label if copy else "Materials") }}</div>
+        {# Show cleaned description from step_render_v1 (project.description) #}
+        {% if project and project.description %}
+          <div class="sectionTitle">Description</div>
+          <div class="mutedSmall" style="margin-bottom:12px; white-space: normal;">
+            {{ project.description }}
+          </div>
+        {% endif %}
 
+        <div class="divider"></div>
+
+        <div class="sectionTitle">{{ (copy.labor_label if copy else "Labor") }} & {{ (copy.materials_label if copy else "Materials") }}</div>
         <div class="totals">
-          {% if pricing_ready %}
+          {% if show_prices %}
             <div class="totalRow">
               <b>{{ copy.labor_label if copy and copy.labor_label else "Labor" }}</b>
               <strong>{{ fmt_usd(pricing.subtotals.labor) }}</strong>
@@ -209,48 +329,51 @@
               <strong>{{ fmt_usd(pricing.subtotals.materials) }}</strong>
             </div>
 
-{% if show_tax %}
-  <div class="totalRow">
-    <b>Sales tax (if applicable)</b>
-    <strong>
-      {% if pricing.tax and pricing.tax.tax_amount is not none %}
-        {{ fmt_usd(pricing.tax.tax_amount) }}
-      {% else %}
-        —
-      {% endif %}
-    </strong>
-  </div>
-{% endif %}
-
+            {% if show_tax %}
+              <div class="totalRow">
+                <b>Sales tax (if applicable)</b>
+                <strong>
+                  {% if pricing.tax and pricing.tax.tax_amount is not none %}
+                    {{ fmt_usd(pricing.tax.tax_amount) }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </strong>
+              </div>
+            {% endif %}
 
             <div class="totalRow grand">
-  <b>Total</b>
-  <strong>{{ fmt_usd(pricing.totals.grand_total) }}</strong>
-</div>
+              <b>Total</b>
+              <strong>{{ fmt_usd(pricing.totals.grand_total) }}</strong>
+            </div>
 
-{% if subject_to_verification_copy %}
-  <div class="muted" style="font-size:12px;line-height:1.5;margin-top:6px;">
-    {{ subject_to_verification_copy }}
-  </div>
-{% endif %}
+            {% if is_provisional %}
+              <div class="mutedSmall muted" style="margin-top:6px;">
+                Provisional total — final price after quick review.
+              </div>
+            {% endif %}
 
-{% if validity_copy %}
-  <div class="muted" style="font-size:12px;line-height:1.5;margin-top:4px;">
-    {{ validity_copy }}
-  </div>
-{% endif %}
+            {% if subject_to_verification_copy %}
+              <div class="mutedSmall muted" style="margin-top:6px;">
+                {{ subject_to_verification_copy }}
+              </div>
+            {% endif %}
 
-<div class="muted" style="font-size:12px;line-height:1.5;margin-top:6px;">
-  Materials include paint & consumables unless noted.
-</div>
+            {% if validity_copy %}
+              <div class="mutedSmall muted" style="margin-top:4px;">
+                {{ validity_copy }}
+              </div>
+            {% endif %}
 
-			
+            <div class="mutedSmall muted" style="margin-top:6px;">
+              Materials include paint & consumables unless noted.
+            </div>
           {% else %}
             <div class="totalRow">
               <b>Pricing</b>
               <strong class="muted">TBD</strong>
             </div>
-            <div class="muted" style="font-size:12px;line-height:1.5;margin-top:6px;">
+            <div class="mutedSmall muted" style="margin-top:6px;">
               We’ll finalize after a quick review of surfaces & prep/access.
             </div>
           {% endif %}
@@ -266,25 +389,23 @@
   </div>
 
   <div class="footer">
-
-  {% if pricing_ready and copy and copy.disclaimer_pricing_ready %}
-    <div class="muted" style="font-size:11px;line-height:1.5;margin-bottom:10px;">
-      {{ copy.disclaimer_pricing_ready }}
-    </div>
-  {% elif (not pricing_ready) and copy and copy.disclaimer_needs_review %}
-    <div class="muted" style="font-size:11px;line-height:1.5;margin-bottom:10px;">
-      {{ copy.disclaimer_needs_review }}
-    </div>
-  {% endif %}
-
-  <div class="muted" style="font-size:11px;line-height:1.5;">
-    Generated by Paintly
-    {% if project and project.lead_id %}
-      • Lead #{{ project.lead_id }}
+    {% if pricing_ready and copy and copy.disclaimer_pricing_ready %}
+      <div class="muted" style="font-size:11px;line-height:1.5;margin-bottom:10px;">
+        {{ copy.disclaimer_pricing_ready }}
+      </div>
+    {% elif (is_provisional or (not pricing_ready)) and copy and copy.disclaimer_needs_review %}
+      <div class="muted" style="font-size:11px;line-height:1.5;margin-bottom:10px;">
+        {{ copy.disclaimer_needs_review }}
+      </div>
     {% endif %}
-  </div>
 
-</div>
+    <div class="muted" style="font-size:11px;line-height:1.5;">
+      Generated by Paintly
+      {% if project and project.lead_id %}
+        • Lead #{{ project.lead_id }}
+      {% endif %}
+    </div>
+  </div>
 
 </div>
 </body>

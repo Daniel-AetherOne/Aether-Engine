@@ -1,0 +1,38 @@
+{% extends "app/layout.html" %}
+{% block content %}
+
+<a class="btn" href="/app/leads">← Back</a>
+
+<div style="margin-top:12px;">
+  <div style="display:flex; gap:12px; align-items:center;">
+    <h2 style="margin:0;">Lead {{ lead.id }}</h2>
+    <span class="badge {{ lead.status }}">{{ lead.status }}</span>
+  </div>
+
+  <div style="margin-top:10px;">
+    <div><strong>Customer:</strong> {{ lead.customer_name or "—" }}</div>
+    <div><strong>Address:</strong> {{ lead.address or "—" }}</div>
+  </div>
+
+  <div style="margin-top:10px;">
+    <div><strong>Description:</strong></div>
+    <div class="muted">{{ lead.project_description or "—" }}</div>
+  </div>
+
+  <div style="margin-top:10px;">
+    <div class="muted"><strong>estimate_html_key:</strong> {{ lead.estimate_html_key or "—" }}</div>
+  </div>
+  
+  {% if lead.estimate_html_key %}
+  <a class="btn" href="/app/leads/{{ lead.id }}/estimate" target="_blank">Open estimate</a>
+	{% endif %}
+
+  {% if lead.needs_review_reasons %}
+  <div style="margin-top:14px;">
+    <strong>Needs review reasons</strong>
+    <pre style="background:#f8f8f8; padding:12px; border-radius:12px; overflow:auto;">{{ lead.needs_review_reasons }}</pre>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

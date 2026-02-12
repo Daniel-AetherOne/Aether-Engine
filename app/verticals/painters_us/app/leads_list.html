@@ -1,0 +1,31 @@
+{% extends "app/layout.html" %}
+{% block content %}
+<h2 style="margin:0 0 12px 0;">Leads</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Customer</th>
+      <th>Status</th>
+      <th>Estimate</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for lead in leads %}
+    <tr>
+      <td>
+        <div style="font-weight:600;">{{ lead.customer_name or "—" }}</div>
+        <div class="muted">{{ lead.address or "" }}</div>
+      </td>
+      <td><span class="badge {{ lead.status }}">{{ lead.status }}</span></td>
+      <td class="muted">
+        {% if lead.estimate_html_key %}HTML ✓{% else %}—{% endif %}
+        {% if lead.total is not none %}<div>${{ "%.2f"|format(lead.total) }}</div>{% endif %}
+      </td>
+      <td><a class="btn" href="/app/leads/{{ lead.id }}">Open</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -32,89 +32,161 @@
   <div id="status"></div>
 
   <script>
-    const tenantId = "default";
-    const fileInput = document.getElementById('fileInput');
-    const fileList  = document.getElementById('fileList');
-    const form      = document.getElementById('intakeForm');
-    const statusBox = document.getElementById('status');
-    const uploadedKeys = new Set();
+  const fileInput = document.getElementById('fileInput');
+  const fileList  = document.getElementById('fileList');
+  const form      = document.getElementById('intakeForm');
+  const statusBox = document.getElementById('status');
 
-    async function presign(filename) {
-      const resp = await fetch('/uploads/presign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename, tenant_id: tenantId })
-      });
-      const txt = await resp.text(); // zodat we eventuele fouttekst zien
-      if (!resp.ok) throw new Error(`presign ${resp.status}: ${txt}`);
-      return JSON.parse(txt);
-    }
+  const uploadedKeys = new Set();
+  let leadId = null; // Optie A: eerst lead aanmaken, dan uploaden
 
-    async function uploadOne(file) {
-      const { key, post } = await presign(file.name);
-      const fd = new FormData();
-      Object.entries(post.fields).forEach(([k,v]) => fd.append(k, v));
-      fd.append('file', file);
+  async function createDraftLead() {
+    // Maak een minimale lead aan zodat we lead_id hebben voor uploads/presign.
+    // Backend moet dit accepteren en lead_id teruggeven.
+    const payload = {
+      name: document.getElementById('name').value || "Draft",
+      email: document.getElementById('email').value || "draft@example.com",
+      phone: document.getElementById('phone').value || "",
+      project_description: document.getElementById('project_description').value || "",
+      object_keys: [], // nog leeg, komt later
+      draft: true
+    };
 
-      const res = await fetch(post.url, { method: 'POST', body: fd });
-      const body = await res.text();
-      if (!res.ok) throw new Error(`upload ${res.status}: ${body}`);
-      return key; // tenant-LOZE key voor /intake/lead
-    }
-
-    fileInput.addEventListener('change', async (e) => {
-      fileList.innerHTML = '';
-      uploadedKeys.clear();
-      const files = Array.from(e.target.files || []);
-      for (const f of files) {
-        const li = document.createElement('li');
-        li.textContent = `${f.name} — uploaden...`;
-        fileList.appendChild(li);
-        try {
-          const key = await uploadOne(f);
-          uploadedKeys.add(key);
-          li.textContent = `${f.name} — ✅ klaar`;
-        } catch (err) {
-          console.error(err);
-          li.textContent = `${f.name} — ❌ fout (${err.message})`;
-        }
-      }
+    const resp = await fetch('/intake/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (uploadedKeys.size === 0) {
-        statusBox.textContent = 'Upload eerst minstens één bestand.';
-        statusBox.style.color = 'crimson';
-        return;
-      }
-      statusBox.textContent = 'Versturen...';
-      statusBox.style.color = 'inherit';
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      throw new Error(`create lead ${resp.status}: ${JSON.stringify(data.detail ?? data)}`);
+    }
+    return data.lead_id;
+  }
 
-      const payload = {
-        name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        project_description: document.getElementById('project_description').value,
-        object_keys: Array.from(uploadedKeys),
-      };
+  async function ensureLeadId() {
+    if (leadId) return leadId;
 
-      const resp = await fetch('/intake/lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) {
-        statusBox.textContent = `Fout: ${JSON.stringify(data.detail ?? data)}`;
-        statusBox.style.color = 'crimson';
-        return;
-      }
-      statusBox.textContent = `✅ Lead aangemaakt (#${data.lead_id}) met ${data.files.length} bestanden.`;
-      form.reset();
-      fileList.innerHTML = '';
-      uploadedKeys.clear();
+    // Zorg dat naam/email ingevuld zijn (minimaal).
+    // (Je kan dit later relaxen door backend draft-lead zonder email toe te staan.)
+    const email = document.getElementById('email').value;
+    const name = document.getElementById('name').value;
+    if (!email || !name) {
+      throw new Error("Vul eerst naam + email in (nodig om lead aan te maken).");
+    }
+
+    statusBox.textContent = "Lead aanmaken voor upload…";
+    statusBox.style.color = "inherit";
+
+    leadId = await createDraftLead();
+    statusBox.textContent = `Lead draft aangemaakt (#${leadId}). Uploaden kan nu.`;
+    return leadId;
+  }
+
+  async function presign(file) {
+    const id = await ensureLeadId();
+
+    const resp = await fetch('/uploads/presign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: file.name,
+        content_type: file.type || undefined,
+        size: file.size,
+        lead_id: String(id),
+      })
     });
-  </script>
+
+    const txt = await resp.text();
+    if (!resp.ok) throw new Error(`presign ${resp.status}: ${txt}`);
+    return JSON.parse(txt);
+  }
+
+  async function uploadOne(file) {
+    const { key, post } = await presign(file);
+
+    const fd = new FormData();
+    Object.entries(post.fields).forEach(([k,v]) => fd.append(k, v));
+    fd.append('file', file);
+
+    const res = await fetch(post.url, { method: 'POST', body: fd });
+    const body = await res.text();
+    if (!res.ok) throw new Error(`upload ${res.status}: ${body}`);
+
+    return key; // tenant-loze key voor finalize
+  }
+
+  fileInput.addEventListener('change', async (e) => {
+    fileList.innerHTML = '';
+    uploadedKeys.clear();
+
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    for (const f of files) {
+      const li = document.createElement('li');
+      li.textContent = `${f.name} — uploaden...`;
+      fileList.appendChild(li);
+
+      try {
+        const key = await uploadOne(f);
+        uploadedKeys.add(key);
+        li.textContent = `${f.name} — ✅ klaar`;
+      } catch (err) {
+        console.error(err);
+        li.textContent = `${f.name} — ❌ fout (${err.message})`;
+      }
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!leadId) {
+      statusBox.textContent = 'Maak eerst een lead aan (vul naam + email, upload daarna).';
+      statusBox.style.color = 'crimson';
+      return;
+    }
+    if (uploadedKeys.size === 0) {
+      statusBox.textContent = 'Upload eerst minstens één bestand.';
+      statusBox.style.color = 'crimson';
+      return;
+    }
+
+    statusBox.textContent = 'Finaliseren...';
+    statusBox.style.color = 'inherit';
+
+    const payload = {
+      lead_id: leadId,
+      name: document.getElementById('name').value,
+      email: document.getElementById('email').value,
+      phone: document.getElementById('phone').value,
+      project_description: document.getElementById('project_description').value,
+      object_keys: Array.from(uploadedKeys),
+      draft: false
+    };
+
+    // Backend: maak /intake/lead zo dat hij update doet als lead_id is meegegeven.
+    const resp = await fetch('/intake/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      statusBox.textContent = `Fout: ${JSON.stringify(data.detail ?? data)}`;
+      statusBox.style.color = 'crimson';
+      return;
+    }
+
+    statusBox.textContent = `✅ Lead gefinalized (#${data.lead_id}) met ${data.files?.length ?? uploadedKeys.size} bestanden.`;
+    form.reset();
+    fileList.innerHTML = '';
+    uploadedKeys.clear();
+    leadId = null;
+  });
+</script>
 </body>
 </html>

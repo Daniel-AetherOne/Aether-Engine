@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+import logging
+from typing import Any, Dict, List, Set
 
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
@@ -16,6 +17,7 @@ from app.tasks.vision_task import run_vision_for_lead
 from aether.engine.facade import compute_quote_for_lead_v15
 
 painters_us_templates = Jinja2Templates(directory="app/verticals/painters_us/templates")
+logger = logging.getLogger(__name__)
 
 
 def _strip_tenant_prefix(tenant_id: str, key: str) -> str:
@@ -29,6 +31,33 @@ def _strip_tenant_prefix(tenant_id: str, key: str) -> str:
         return ""
     prefix = f"{tenant_id}/"
     return key[len(prefix) :] if key.startswith(prefix) else key
+
+
+def _extract_object_keys_from_form(form: Any, tenant_id: str) -> List[str]:
+    """
+    - Leest photo_keys[] uit form
+    - Dedupe
+    - Stript eventueel tenant prefix
+    - Retourneert tenant-loze object_keys
+    """
+    photo_keys = form.getlist("photo_keys") if hasattr(form, "getlist") else []
+    object_keys: List[str] = []
+    seen: Set[str] = set()
+
+    for k in photo_keys:
+        k2 = _strip_tenant_prefix(tenant_id, str(k))
+        if k2 and k2 not in seen:
+            seen.add(k2)
+            object_keys.append(k2)
+
+    # FASE 3 safety: max uploads
+    if len(object_keys) > settings.UPLOAD_MAX_FILES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"too_many_files:max={settings.UPLOAD_MAX_FILES}",
+        )
+
+    return object_keys
 
 
 class PaintersUSAdapter:
@@ -73,6 +102,65 @@ class PaintersUSAdapter:
         try:
             # ✅ Run engine facade (config-driven)
             result = compute_quote_for_lead_v15(db, lead, vertical_id=self.vertical_id)
+
+            # ==============
+            # DEV DEBUG BLOCK
+            # ==============
+            # Deze logs geven je exact:
+            # - of pricing step in de pipeline zit
+            # - wat engine_status/failure_step is
+            # - waarom estimate_json totals 0 blijven
+            try:
+                # We loggen naar "aether" logger omdat jouw infra die al toont
+                dbg_logger = logging.getLogger("aether")
+
+                if isinstance(result, dict):
+                    dbg_logger.warning(
+                        "DEBUG facade result keys=%s",
+                        sorted(list(result.keys())),
+                    )
+                    dbg_logger.warning(
+                        "DEBUG facade engine_status=%s failure_step=%s needs_review=%s",
+                        result.get("engine_status"),
+                        result.get("failure_step"),
+                        result.get("needs_review"),
+                    )
+                    dbg_logger.warning(
+                        "DEBUG facade available_steps=%s",
+                        result.get("available_steps"),
+                    )
+                    dbg_logger.warning(
+                        "DEBUG facade logs_tail=%s",
+                        result.get("logs_tail"),
+                    )
+
+                    est = result.get("estimate_json")
+                    if isinstance(est, dict):
+                        totals = est.get("totals") or {}
+                        dbg_logger.warning("DEBUG estimate_json.totals=%s", totals)
+                        dbg_logger.warning(
+                            "DEBUG estimate_json.line_items_len=%s",
+                            len(est.get("line_items") or []),
+                        )
+                        dbg_logger.warning(
+                            "DEBUG estimate_json.needs_review_reasons=%s",
+                            (est.get("meta") or {}).get("needs_review_reasons"),
+                        )
+                    else:
+                        dbg_logger.warning("DEBUG estimate_json type=%s", type(est))
+
+                    # Als je later in de facade `debug_pricing_raw` toevoegt, zie je ’m hier meteen
+                    if "debug_pricing_raw" in result:
+                        dbg_logger.warning(
+                            "DEBUG debug_pricing_raw=%s",
+                            result.get("debug_pricing_raw"),
+                        )
+            except Exception:
+                # debug mag nooit de flow breken
+                pass
+            # ==============
+            # END DEBUG BLOCK
+            # ==============
 
             html_key = result.get("estimate_html_key")
             if not html_key:
@@ -129,6 +217,134 @@ class PaintersUSAdapter:
                 detail=f"compute_quote_failed:{type(e).__name__}:{e}",
             )
 
+    async def upsert_lead_from_form(
+        self,
+        request,
+        db: Session,
+        tenant_id: str,
+    ) -> IntakeResult:
+        """
+        Optie B:
+        - Als form een lead_id bevat: update bestaande lead + sync uploads (LeadFile) -> GEEN nieuwe lead.
+        - Als geen lead_id: fallback naar create_lead_from_form (legacy create).
+        """
+        form = await request.form()
+        form_dict = dict(form)
+
+        # ✅ Tenant komt van auth/router, NIET van form
+        tenant_id = (tenant_id or "").strip() or "public"
+
+        raw_lead_id = (form_dict.get("lead_id") or "").strip()
+        lead_id_int: int | None = None
+        if raw_lead_id:
+            try:
+                lead_id_int = int(raw_lead_id)
+            except Exception:
+                raise HTTPException(status_code=400, detail="invalid_lead_id")
+
+        # object_keys uit form (tenant-loos)
+        object_keys = _extract_object_keys_from_form(form, tenant_id=tenant_id)
+
+        # Units support: sqft → m²
+        area_unit = (form_dict.get("area_unit") or "m2").strip()
+        raw_area = form_dict.get("square_meters")
+
+        square_meters = None
+        if raw_area:
+            try:
+                val = float(raw_area)
+                square_meters = val * 0.092903 if area_unit == "sqft" else val
+            except ValueError:
+                square_meters = None
+
+        payload_data = {
+            "tenant_id": tenant_id,
+            "name": form_dict.get("name"),
+            "email": form_dict.get("email"),
+            "phone": form_dict.get("phone"),
+            "project_description": form_dict.get("project_description")
+            or form_dict.get("address"),
+            "object_keys": object_keys,  # ✅ tenant-loos
+            "square_meters": square_meters,
+        }
+
+        try:
+            payload = IntakePayload(**payload_data)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid intake payload: {e}")
+
+        # CASE A: geen lead_id => create
+        if lead_id_int is None:
+            return await self.create_lead_from_form(request, db, tenant_id=tenant_id)
+
+        # CASE B: lead_id => update bestaande lead (tenant-scoped!)
+        lead = (
+            db.query(Lead)
+            .filter(Lead.id == lead_id_int)
+            .filter(Lead.tenant_id == tenant_id)
+            .first()
+        )
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead not found")
+
+        # Ensure vertical correct
+        if not lead.vertical:
+            lead.vertical = self.vertical_id
+
+        if lead.vertical != self.vertical_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Lead vertical mismatch: {lead.vertical} (expected {self.vertical_id})",
+            )
+
+        # Update lead fields
+        lead.name = payload.name
+        lead.email = payload.email
+        lead.phone = payload.phone
+        lead.intake_payload = json.dumps(payload_data, ensure_ascii=False)
+
+        if hasattr(lead, "notes"):
+            lead.notes = payload_data.get("project_description") or None
+
+        # Keep status unless empty
+        if not getattr(lead, "status", None):
+            lead.status = "NEW"
+
+        db.add(lead)
+        db.commit()
+        db.refresh(lead)
+
+        # Sync LeadFile rows to match object_keys (idempotent)
+        existing = db.query(LeadFile).filter(LeadFile.lead_id == lead.id).all()
+        existing_keys = {lf.s3_key for lf in existing if isinstance(lf.s3_key, str)}
+
+        # Add missing
+        for key in object_keys:
+            if key not in existing_keys:
+                db.add(
+                    LeadFile(
+                        lead_id=lead.id,
+                        s3_key=key,
+                        size_bytes=0,
+                        content_type="image/*",
+                    )
+                )
+
+        # Optional: remove extras not present anymore (keep DB clean)
+        desired = set(object_keys)
+        for lf in existing:
+            if lf.s3_key and lf.s3_key not in desired:
+                db.delete(lf)
+
+        db.commit()
+
+        return IntakeResult(
+            lead_id=str(lead.id),
+            tenant_id=lead.tenant_id,
+            vertical=lead.vertical,
+            files=object_keys,
+        )
+
     async def create_lead_from_form(
         self,
         request,
@@ -141,24 +357,8 @@ class PaintersUSAdapter:
         # ✅ Tenant komt van auth/router, NIET van form
         tenant_id = (tenant_id or "").strip() or "public"
 
-        # photo keys komen van hidden inputs (object_key uit presign)
-        photo_keys = form.getlist("photo_keys") if hasattr(form, "getlist") else []
-
-        # dedupe + normalize => tenant-loos opslaan in DB
-        object_keys: list[str] = []
-        seen: set[str] = set()
-        for k in photo_keys:
-            k2 = _strip_tenant_prefix(tenant_id, str(k))
-            if k2 and k2 not in seen:
-                seen.add(k2)
-                object_keys.append(k2)
-
-        # FASE 3 safety: max uploads
-        if len(object_keys) > settings.UPLOAD_MAX_FILES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"too_many_files:max={settings.UPLOAD_MAX_FILES}",
-            )
+        # object_keys uit form (tenant-loos)
+        object_keys = _extract_object_keys_from_form(form, tenant_id=tenant_id)
 
         # Units support: sqft → m²
         area_unit = (form_dict.get("area_unit") or "m2").strip()
@@ -208,7 +408,7 @@ class PaintersUSAdapter:
         db.refresh(lead)
 
         # 2) Save uploads
-        saved_keys: list[str] = []
+        saved_keys: List[str] = []
         for key in object_keys:
             db.add(
                 LeadFile(

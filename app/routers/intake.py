@@ -66,8 +66,20 @@ async def _create_lead_impl(
 
     tenant_id = user.tenant_id if user else "public"
 
-    # BELANGRIJK: tenant_id meegeven aan adapter
-    result = await v.create_lead_from_form(request, db, tenant_id=tenant_id)
+    # ✅ Upsert: als lead_id in form zit → update existing lead
+
+    if hasattr(v, "upsert_lead_from_form"):
+        result = await v.upsert_lead_from_form(
+            request,
+            db,
+            tenant_id=tenant_id,
+        )
+    else:
+        result = await v.create_lead_from_form(
+            request,
+            db,
+            tenant_id=tenant_id,
+        )
 
     logger.info(
         "INTAKE created lead=%s vertical=%s tenant=%s",

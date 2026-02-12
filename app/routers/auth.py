@@ -15,25 +15,26 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
+def login_page(request: Request, next: str = "/app/leads"):
     return HTMLResponse(
-        """
+        f"""
         <!doctype html>
         <html><head><meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Login</title>
         <style>
-          body{font-family:system-ui;margin:40px;max-width:420px}
-          input{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:10px}
-          button{width:100%;padding:10px;border-radius:10px;border:0;background:#111827;color:white}
-          a{color:#111827}
-          .muted{color:#6b7280;font-size:13px}
-          .card{border:1px solid #eee;border-radius:16px;padding:16px}
+          body{{font-family:system-ui;margin:40px;max-width:420px}}
+          input{{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:10px}}
+          button{{width:100%;padding:10px;border-radius:10px;border:0;background:#111827;color:white}}
+          a{{color:#111827}}
+          .muted{{color:#6b7280;font-size:13px}}
+          .card{{border:1px solid #eee;border-radius:16px;padding:16px}}
         </style></head>
         <body>
           <div class="card">
             <h2 style="margin-top:0;">Paintly login</h2>
             <form method="post" action="/auth/login">
+              <input type="hidden" name="next" value="{next}" />
               <label>Email</label>
               <input name="email" type="email" required />
               <label>Password</label>
@@ -96,26 +97,29 @@ def register_page(request: Request):
 def login_form(
     email: str = Form(...),
     password: str = Form(...),
+    next: str = Form("/app/leads"),
     db: Session = Depends(get_db),
 ):
     email_norm = email.lower().strip()
     user = db.query(User).filter(User.email == email_norm).first()
     if not user or not verify_password(password, user.password_hash):
-        # MVP: simpele redirect terug
-        return RedirectResponse(url="/auth/login", status_code=302)
+        return RedirectResponse(url=f"/auth/login?next={next}", status_code=302)
 
     token = create_access_token(
         user_id=user.id, tenant_id=user.tenant_id, email=user.email
     )
 
-    resp = RedirectResponse(url="/app/leads", status_code=302)
-    # HttpOnly cookie: browser kan hem niet via JS lezen (veilig)
+    # open-redirect bescherming (alleen relative paths toestaan)
+    if not next.startswith("/"):
+        next = "/app/leads"
+
+    resp = RedirectResponse(url=next, status_code=302)
     resp.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         samesite="lax",
-        secure=False,  # zet True in prod (https)
+        secure=False,  # True in prod
         max_age=60 * 60 * 24,
         path="/",
     )

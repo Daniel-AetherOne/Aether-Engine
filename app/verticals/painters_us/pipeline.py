@@ -45,6 +45,15 @@ def compute_quote_for_lead(db: Session, lead: Lead) -> dict:
     pricing = run_pricing_engine(lead, vision)
     pricing = _ensure_obj(pricing)
 
+    print("DEBUG pricing passed to builder:", pricing)
+
+    print("DEBUG type:", type(pricing))
+
+    if isinstance(pricing, dict):
+        print("DEBUG pricing keys:", pricing.keys())
+    elif hasattr(pricing, "data"):
+        print("DEBUG pricing.data keys:", pricing.data.keys())
+
     # 3) Output builder (should return a dict / JSON-serializable object)
     estimate = build_pricing_output(lead, vision, pricing)
     estimate = _ensure_obj(estimate)

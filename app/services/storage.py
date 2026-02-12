@@ -453,6 +453,22 @@ def put_text(
     )
 
 
+def get_text(storage: Storage, tenant_id: str, key: str) -> str:
+    """
+    Lees een tekstbestand (html/json/txt) uit storage.
+    Werkt voor S3 én Local via download_to_temp_path.
+    """
+    tmp_path = storage.download_to_temp_path(tenant_id, key)
+    p = Path(tmp_path)
+    try:
+        return p.read_text(encoding="utf-8")
+    finally:
+        try:
+            p.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
 # =========================
 # Verify + finalize helpers
 # =========================

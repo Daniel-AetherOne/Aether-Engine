@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
@@ -179,7 +181,6 @@ def price_from_vision(
 
     labor_usd = labor_cost * labor_ratio
     materials_usd = base_total * materials_ratio
-
     cost_usd = labor_usd + materials_usd
 
     # -------------------------
@@ -222,10 +223,7 @@ def price_from_vision(
         "margin_rate": margin_rate,
         "margin_usd": round(margin_usd, 2),
         "total_usd": round(total_usd, 2),
-        "ratios": {
-            "labor": labor_ratio,
-            "materials": materials_ratio,
-        },
+        "ratios": {"labor": labor_ratio, "materials": materials_ratio},
         "line_items": line_items,
     }
 
@@ -245,4 +243,7 @@ def run_pricing_engine(
         vision_surface = vision[0] if vision else {}
         return price_from_vision(vision_surface, rules=rules)
 
-    return price_from_vision(vision, rules=rules)
+    return price_from_vision(vision if isinstance(vision, dict) else {}, rules=rules)
+
+
+__all__ = ["run_pricing_engine", "price_from_vision", "load_us_rules"]

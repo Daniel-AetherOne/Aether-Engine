@@ -1,12 +1,13 @@
+# app/services/photo_quality/inference.py
 from __future__ import annotations
 
-import math
-import os
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 from PIL import Image
+
+from app.services.storage import Storage
 
 
 @dataclass
@@ -16,156 +17,122 @@ class PhotoQualityResult:
     reasons: List[str]
 
 
-# -------------------------
-# Heuristics thresholds (MVP)
-# -------------------------
-MIN_LONG_EDGE_PX = 900  # too small => bad
-DARK_MEAN_LUMA = 45.0  # too dark => bad (0-255)
-BRIGHT_MEAN_LUMA = 245.0  # too bright => bad
-LOW_CONTRAST_STD = 18.0  # low contrast => bad
-BLUR_LAPLACIAN_VAR = 60.0  # lower => blurrier => bad
-
-# Aggregate decision threshold
-THRESHOLD_BAD = 0.60
-
-
-def _image_to_gray_np(img: Image.Image, max_side: int = 1024) -> np.ndarray:
-    """Convert to grayscale numpy array, downscale for speed."""
-    img = img.convert("RGB")
-    w, h = img.size
-    scale = min(1.0, float(max_side) / float(max(w, h)))
-    if scale < 1.0:
-        img = img.resize((int(w * scale), int(h * scale)))
-    gray = img.convert("L")
-    return np.asarray(gray, dtype=np.float32)
-
-
-def _laplacian_var(gray: np.ndarray) -> float:
+def _maybe_strip_tenant(object_key: str, tenant_id: str) -> str:
     """
-    Approx Laplacian variance without OpenCV.
-    Uses a simple Laplacian kernel convolution.
+    Our DB stores object_key as tenant-prefixed:
+      "<tenant_id>/uploads/....jpg"
+
+    Storage helpers typically want:
+      tenant_id + key_without_tenant
+
+    So: if object_key starts with "<tenant_id>/", strip it.
     """
-    # 2D convolution with Laplacian kernel:
-    # [ 0,  1, 0]
-    # [ 1, -4, 1]
-    # [ 0,  1, 0]
-    g = gray
-    # pad edges
-    gp = np.pad(g, 1, mode="edge")
-    lap = (
-        gp[0:-2, 1:-1]
-        + gp[2:, 1:-1]
-        + gp[1:-1, 0:-2]
-        + gp[1:-1, 2:]
-        - 4.0 * gp[1:-1, 1:-1]
-    )
-    return float(np.var(lap))
+    if not object_key:
+        return object_key
+    prefix = f"{tenant_id}/"
+    if tenant_id and object_key.startswith(prefix):
+        return object_key[len(prefix) :]
+    return object_key
 
 
-def _score_from_reasons(reasons: List[str]) -> float:
-    """
-    Simple weighted mapping: reasons -> bad score.
-    You can tune these later.
-    """
-    if not reasons:
-        return 0.0
+def _laplacian_variance(gray: np.ndarray) -> float:
+    g = gray.astype(np.float32)
 
-    weights = {
-        "low_resolution": 0.55,
-        "too_dark": 0.75,
-        "too_bright": 0.75,
-        "low_contrast": 0.60,
-        "blurry": 0.75,
-        "unreadable": 0.90,
-    }
-    # Combine weights into a score (1 - product(1-w))
-    p = 1.0
-    for r in reasons:
-        w = float(weights.get(r, 0.50))
-        p *= 1.0 - max(0.0, min(1.0, w))
-    return float(1.0 - p)
+    up = np.roll(g, -1, axis=0)
+    down = np.roll(g, 1, axis=0)
+    left = np.roll(g, -1, axis=1)
+    right = np.roll(g, 1, axis=1)
+
+    lap = (4.0 * g) - up - down - left - right
+    return float(lap.var())
 
 
-def _analyze_one_image(path: str) -> Tuple[float, List[str]]:
-    """
-    Returns (score_bad, reasons) for one image.
-    """
+def _analyze_image(local_path: str) -> Tuple[float, List[str]]:
     reasons: List[str] = []
+
     try:
-        with Image.open(path) as img:
-            w, h = img.size
-            long_edge = max(w, h)
-            if long_edge < MIN_LONG_EDGE_PX:
-                reasons.append("low_resolution")
-
-            gray = _image_to_gray_np(img)
-
-        mean = float(np.mean(gray))
-        std = float(np.std(gray))
-        if mean <= DARK_MEAN_LUMA:
-            reasons.append("too_dark")
-        if mean >= BRIGHT_MEAN_LUMA:
-            reasons.append("too_bright")
-        if std <= LOW_CONTRAST_STD:
-            reasons.append("low_contrast")
-
-        lv = _laplacian_var(gray)
-        if lv <= BLUR_LAPLACIAN_VAR:
-            reasons.append("blurry")
-
-        score_bad = _score_from_reasons(reasons)
-        return score_bad, reasons
-
+        img = Image.open(local_path).convert("RGB")
     except Exception:
-        # cannot open/parse
-        reasons = ["unreadable"]
-        return _score_from_reasons(reasons), reasons
+        return 0.0, ["photo_unreadable"]
+
+    w, h = img.size
+    if w < 640 or h < 480:
+        reasons.append("resolution_too_low")
+
+    # downscale for speed
+    img_small = img.copy()
+    img_small.thumbnail((1024, 1024))
+
+    arr = np.asarray(img_small, dtype=np.uint8)
+    gray = (
+        0.2126 * arr[:, :, 0] + 0.7152 * arr[:, :, 1] + 0.0722 * arr[:, :, 2]
+    ).astype(np.float32)
+
+    sharp = _laplacian_variance(gray)
+
+    if sharp < 30:
+        reasons.append("too_blurry")
+
+    return sharp, reasons
 
 
 def predict_photo_quality(
-    image_refs: list[str],
-    storage,
+    image_refs: List[str],
+    storage: Storage,
     tenant_id: str,
 ) -> PhotoQualityResult:
     """
-    image_refs: storage object_keys (S3 keys or local keys)
-    storage: app.services.storage.get_storage() instance
-    tenant_id: scope for storage reads
+    image_refs are UploadRecord.object_key values (often tenant-prefixed).
+    storage must support download_to_temp_path(tenant_id, key) (your S3Storage/LocalStorage does).
     """
     if not image_refs:
-        return PhotoQualityResult(
-            quality="bad",
-            score_bad=1.0,
-            reasons=["no_photos"],
-        )
+        return PhotoQualityResult("bad", 0.99, ["no_photos"])
 
-    worst_score = 0.0
-    merged_reasons: List[str] = []
+    sharps: List[float] = []
+    reasons_all: List[str] = []
 
-    # Analyze each image; if any is bad, we bias toward NEEDS_REVIEW
-    for key in image_refs:
-        tmp_path = storage.download_to_temp_path(tenant_id, key)
+    for obj in image_refs[:5]:
+        key_wo_tenant = _maybe_strip_tenant(obj, tenant_id)
+        if not key_wo_tenant:
+            reasons_all.append("bad_object_key")
+            continue
+
         try:
-            score_bad, reasons = _analyze_one_image(tmp_path)
+            tmp_path = storage.download_to_temp_path(tenant_id, key_wo_tenant)
+        except Exception:
+            reasons_all.append("download_failed")
+            continue
 
-            if score_bad > worst_score:
-                worst_score = score_bad
+        sharp, rs = _analyze_image(tmp_path)
+        sharps.append(sharp)
+        reasons_all.extend(rs)
 
-            # keep unique reasons across images
-            for r in reasons:
-                if r not in merged_reasons:
-                    merged_reasons.append(r)
-        finally:
-            # best-effort cleanup temp files (S3Storage creates temp files)
-            try:
-                if tmp_path and os.path.exists(tmp_path):
-                    os.remove(tmp_path)
-            except Exception:
-                pass
+        # cleanup (best effort)
+        try:
+            import os
 
-    quality = "bad" if worst_score >= THRESHOLD_BAD else "good"
-    return PhotoQualityResult(
-        quality=quality,
-        score_bad=float(worst_score),
-        reasons=merged_reasons,
-    )
+            os.remove(tmp_path)
+        except Exception:
+            pass
+
+    if not sharps:
+        # nothing analyzable
+        reasons = list(dict.fromkeys(reasons_all)) or ["no_readable_photos"]
+        return PhotoQualityResult("bad", 0.99, reasons)
+
+    best = max(sharps)
+
+    # Map best sharpness to bad probability in [0.05..0.95]
+    # best >= 80 => ~0.05 bad
+    # best <= 20 => ~0.95 bad
+    score = float(np.clip((80.0 - best) / 60.0, 0.0, 1.0))
+    score_bad = 0.05 + 0.90 * score
+
+    # Decision: if at least one photo is sharp enough, we call it good
+    quality = "good" if best >= 80 else "bad"
+
+    reasons = list(dict.fromkeys(reasons_all))
+    if quality == "good":
+        reasons = [r for r in reasons if r != "too_blurry"]
+
+    return PhotoQualityResult(quality, score_bad, reasons)

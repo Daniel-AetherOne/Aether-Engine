@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title or "Paintly App" }}</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 24px; }
+    header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 18px; }
+    a { color: inherit; }
+    .badge { padding: 4px 10px; border-radius: 999px; font-size: 12px; border: 1px solid #ddd; }
+    .RUNNING { background: #f4f4f4; }
+    .NEEDS_REVIEW { background: #fff3cd; border-color:#ffe69c; }
+    .SUCCEEDED { background: #d1e7dd; border-color:#a3cfbb; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { text-align:left; padding: 10px; border-bottom: 1px solid #eee; vertical-align: top;}
+    .muted { color:#666; font-size: 12px; }
+    .btn { display:inline-block; padding: 8px 12px; border: 1px solid #ddd; border-radius: 10px; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div style="font-weight:700;">Paintly App</div>
+      <div class="muted">painters_us</div>
+    </div>
+    <div>
+      <form method="post" action="/auth/logout" style="display:inline;">
+        <button class="btn" type="submit">Logout</button>
+      </form>
+    </div>
+  </header>
+
+  {% block content %}{% endblock %}
+</body>
+</html>

@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -37,6 +37,45 @@ def get_current_user(
         payload = decode_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+
+    return user
+
+
+def require_user_html(
+    request: Request,
+    creds: HTTPAuthorizationCredentials | None = Depends(security),
+    db: Session = Depends(get_db),
+) -> User:
+    token = _extract_token(request, creds)
+    if not token:
+        path = request.url.path
+        qs = request.url.query
+        next_url = path + (("?" + qs) if qs else "")
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail="Not authenticated",
+            headers={"Location": f"/auth/login?next={next_url}"},
+        )
+
+    try:
+        payload = decode_token(token)
+    except Exception:
+        path = request.url.path
+        qs = request.url.query
+        next_url = path + (("?" + qs) if qs else "")
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail="Invalid token",
+            headers={"Location": f"/auth/login?next={next_url}"},
+        )
 
     user_id = payload.get("sub")
     if not user_id:
