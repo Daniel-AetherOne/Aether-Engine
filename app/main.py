@@ -14,6 +14,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.routers.auth import router as auth_router
 from app.verticals.painters_us.router_app import router as painters_us_app_router
+from app.routers.public_estimate import router as public_estimate_router
+from app.models.job import Job
 
 from app.security.basic_auth import BasicAuthMiddleware
 from app.security.rate_limit import SimpleRateLimitMiddleware
@@ -194,6 +196,7 @@ app.include_router(auth_router)
 app.include_router(app_me_router)
 # app.include_router(app_dashboard_router)
 app.include_router(painters_us_app_router)
+app.include_router(public_estimate_router)
 
 # Optional ACE routers
 ACE_ENABLED = _env_truthy("ACE_ENABLED", "false")

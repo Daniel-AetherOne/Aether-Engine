@@ -22,10 +22,36 @@
   <div style="margin-top:10px;">
     <div class="muted"><strong>estimate_html_key:</strong> {{ lead.estimate_html_key or "—" }}</div>
   </div>
-  
+
   {% if lead.estimate_html_key %}
   <a class="btn" href="/app/leads/{{ lead.id }}/estimate" target="_blank">Open estimate</a>
-	{% endif %}
+{% endif %}
+
+{% if lead.estimate_html_key %}
+  <form method="post" action="/app/leads/{{ lead.id }}/send" style="display:inline;">
+    <button class="btn" type="submit">Send estimate</button>
+  </form>
+{% endif %}
+
+{% if lead.job_id %}
+  <div style="margin-top:14px;">
+    <strong>Job</strong>
+    <div>Job ID: {{ lead.job_id }}</div>
+    <div>Status: {{ lead.job_status }}</div>
+  </div>
+{% endif %}
+
+{% if lead.public_token %}
+  <div style="margin-top:12px;">
+    <div class="muted"><strong>Public URL</strong></div>
+    <div>
+      <a class="btn" href="/e/{{ lead.public_token }}" target="_blank">
+        Open public estimate
+      </a>
+      <span class="muted" style="margin-left:10px;">/e/{{ lead.public_token }}</span>
+    </div>
+  </div>
+{% endif %}
 
   {% if lead.needs_review_reasons %}
   <div style="margin-top:14px;">
