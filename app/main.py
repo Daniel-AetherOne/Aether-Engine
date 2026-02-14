@@ -28,6 +28,8 @@ from app.middleware.request_id import RequestIdMiddleware
 from app.verticals import register_verticals
 from app.routers.app_me import router as app_me_router
 
+from fastapi.staticfiles import StaticFiles
+
 # from app.routers.app_dashboard import router as app_dashboard_router
 
 from app.routers.debug_aws import router as debug_aws_router
@@ -104,6 +106,9 @@ setup_logging()
 
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION)
 register_verticals(app)
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 logger.info("startup", service=getattr(settings, "SERVICE_NAME", "aether-api"))
 
 

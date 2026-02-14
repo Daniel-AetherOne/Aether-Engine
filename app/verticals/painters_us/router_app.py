@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from app.services.storage import get_storage, get_text
@@ -166,3 +166,29 @@ def app_lead_detail(request: Request, lead_id: str, db: Session = Depends(get_db
             "lead": vm,
         },
     )
+
+
+ALLOWED_JOB_STATUSES = {"NEW", "SCHEDULED", "IN_PROGRESS", "DONE", "CANCELLED"}
+
+
+@router.post("/jobs/{job_id}/status")
+def app_job_set_status(
+    request: Request,
+    job_id: int,
+    status: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    s = (status or "").upper().strip()
+    if s not in ALLOWED_JOB_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    job.status = s
+    db.add(job)
+    db.commit()
+
+    # terug naar lead detail
+    return RedirectResponse(url=f"/app/leads/{job.lead_id}", status_code=303)

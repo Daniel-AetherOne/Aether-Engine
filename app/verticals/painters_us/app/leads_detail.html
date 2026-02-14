@@ -29,6 +29,23 @@
     <pre style="background:#f8f8f8; padding:12px; border-radius:12px; overflow:auto;">{{ lead.needs_review_reasons }}</pre>
   </div>
   {% endif %}
+  
+  {% if job %}
+  <div style="margin-top:14px;">
+    <div><strong>Job</strong></div>
+    <div>Job ID: {{ job.id }}</div>
+    <div>Status: <span class="badge {{ job.status }}">{{ job.status }}</span></div>
+
+    <form method="post" action="/app/jobs/{{ job.id }}/status" style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+      <select name="status" style="padding:8px;border-radius:10px;border:1px solid #ddd;">
+        {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
+          <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">Update</button>
+    </form>
+  </div>
+{% endif %}
 </div>
 
 {% endblock %}
