@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import secrets
 from fastapi.responses import JSONResponse
 from app.models.job import Job
+from sqlalchemy import func
 
 from app.auth.deps import require_user_html
 
@@ -21,6 +22,60 @@ router = APIRouter(
     dependencies=[Depends(require_user_html)],
 )
 templates = Jinja2Templates(directory="app/verticals/painters_us/templates")
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
+def app_dashboard(request: Request, db: Session = Depends(get_db)):
+    # Job KPI's
+    job_counts = dict(
+        db.query(Job.status, func.count(Job.id)).group_by(Job.status).all()
+    )
+
+    # default 0s
+    kpis = {
+        "NEW": job_counts.get("NEW", 0),
+        "SCHEDULED": job_counts.get("SCHEDULED", 0),
+        "IN_PROGRESS": job_counts.get("IN_PROGRESS", 0),
+        "DONE": job_counts.get("DONE", 0),
+        "CANCELLED": job_counts.get("CANCELLED", 0),
+    }
+
+    # Recente jobs (laatste 25)
+    jobs = db.query(Job).order_by(desc(Job.created_at)).limit(25).all()
+
+    # Recente leads (laatste 25)
+    leads = db.query(Lead).order_by(desc(Lead.created_at)).limit(25).all()
+
+    # simpele viewmodels
+    jobs_vm = [
+        {
+            "id": j.id,
+            "status": j.status,
+            "lead_id": j.lead_id,
+            "updated_at": j.updated_at,
+            "created_at": j.created_at,
+        }
+        for j in jobs
+    ]
+    leads_vm = [
+        {
+            "id": l.id,
+            "name": getattr(l, "name", ""),
+            "status": derive_status(l),
+            "created_at": l.created_at,
+        }
+        for l in leads
+    ]
+
+    return templates.TemplateResponse(
+        "app/dashboard.html",
+        {
+            "request": request,
+            "kpis": kpis,
+            "jobs": jobs_vm,
+            "leads": leads_vm,
+        },
+    )
 
 
 def derive_status(lead: Lead) -> str:
@@ -136,24 +191,21 @@ def send_estimate(
 
 @router.get("/leads/{lead_id}", response_class=HTMLResponse)
 def app_lead_detail(request: Request, lead_id: str, db: Session = Depends(get_db)):
-
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
-    job = db.query(Job).filter(Job.lead_id == lead.id).first()
-
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
+
+    job = db.query(Job).filter(Job.lead_id == lead.id).first()
 
     vm = {
         "id": str(lead.id),
         "status": derive_status(lead),
-        "customer_name": getattr(lead, "customer_name", "") or "",
-        "address": "",  # later uit intake_payload
+        "customer_name": getattr(lead, "name", "")
+        or "",  # <— jouw Lead model gebruikt 'name'
+        "address": "",
         "project_description": getattr(lead, "notes", "") or "",
         "email": getattr(lead, "email", "") or "",
-        "email": getattr(lead, "email", "") or "",
         "phone": getattr(lead, "phone", "") or "",
-        "job_id": getattr(job, "id", None),
-        "job_status": getattr(job, "status", None),
         "estimate_html_key": getattr(lead, "estimate_html_key", None),
         "needs_review_reasons": getattr(lead, "needs_review_reasons", None),
         "public_token": getattr(lead, "public_token", None),
@@ -164,6 +216,7 @@ def app_lead_detail(request: Request, lead_id: str, db: Session = Depends(get_db
         {
             "request": request,
             "lead": vm,
+            "job": job,  # <— belangrijk
         },
     )
 

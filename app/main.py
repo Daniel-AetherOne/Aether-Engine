@@ -16,6 +16,7 @@ from app.routers.auth import router as auth_router
 from app.verticals.painters_us.router_app import router as painters_us_app_router
 from app.routers.public_estimate import router as public_estimate_router
 from app.models.job import Job
+from app.jobs.runner import start_worker
 
 from app.security.basic_auth import BasicAuthMiddleware
 from app.security.rate_limit import SimpleRateLimitMiddleware
@@ -224,6 +225,8 @@ if settings.ENABLE_DEV_ROUTES:
 # ----------------------------------------------------
 @app.on_event("startup")
 def on_startup():
-    # Runs at app startup (not import time)
     assert_no_static_aws_keys_in_env()
     Base.metadata.create_all(bind=engine)
+
+    # start background worker (dev)
+    start_worker()

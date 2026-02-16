@@ -33,11 +33,23 @@
   </form>
 {% endif %}
 
-{% if lead.job_id %}
+{% if job %}
   <div style="margin-top:14px;">
     <strong>Job</strong>
-    <div>Job ID: {{ lead.job_id }}</div>
-    <div>Status: {{ lead.job_status }}</div>
+    <div>Job ID: {{ job.id }}</div>
+
+    <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
+      <div>Status: <span class="badge JOB_{{ job.status }}">{{ job.status }}</span></div>
+
+      <form method="post" action="/app/jobs/{{ job.id }}/status" style="display:inline;">
+        <select name="status" style="padding:6px 10px;border-radius:10px;border:1px solid #e5e7eb;">
+          {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
+            <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn" type="submit" style="margin-left:8px;">Update</button>
+      </form>
+    </div>
   </div>
 {% endif %}
 
@@ -60,5 +72,11 @@
   </div>
   {% endif %}
 </div>
+
+{% if job and job.status not in ["DONE","CANCELLED"] %}
+<script>
+  setInterval(() => window.location.reload(), 4000);
+</script>
+{% endif %}
 
 {% endblock %}

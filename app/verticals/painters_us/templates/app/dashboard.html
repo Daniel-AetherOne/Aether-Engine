@@ -1,0 +1,89 @@
+{% extends "app/layout.html" %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+  <div>
+    <h2 style="margin:0;">Dashboard</h2>
+    <div class="muted">Jobs & Leads overview</div>
+  </div>
+  <a class="btn" href="/app/leads">Leads</a>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(5, minmax(120px, 1fr)); gap:12px; margin-top:16px;">
+  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
+    <div class="muted">NEW</div>
+    <div style="font-size:22px; font-weight:700;">{{ kpis.NEW }}</div>
+  </div>
+  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
+    <div class="muted">SCHEDULED</div>
+    <div style="font-size:22px; font-weight:700;">{{ kpis.SCHEDULED }}</div>
+  </div>
+  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
+    <div class="muted">IN_PROGRESS</div>
+    <div style="font-size:22px; font-weight:700;">{{ kpis.IN_PROGRESS }}</div>
+  </div>
+  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
+    <div class="muted">DONE</div>
+    <div style="font-size:22px; font-weight:700;">{{ kpis.DONE }}</div>
+  </div>
+  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
+    <div class="muted">CANCELLED</div>
+    <div style="font-size:22px; font-weight:700;">{{ kpis.CANCELLED }}</div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:18px;">
+  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
+    <h3 style="margin:0 0 10px 0;">Recent jobs</h3>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:8px 0;">Job</th>
+          <th style="text-align:left; padding:8px 0;">Status</th>
+          <th style="text-align:left; padding:8px 0;">Lead</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for j in jobs %}
+        <tr style="border-top:1px solid #f1f1f1;">
+          <td style="padding:10px 0;">#{{ j.id }}</td>
+          <td style="padding:10px 0;">
+            <span class="badge JOB_{{ j.status }}">{{ j.status }}</span>
+          </td>
+          <td style="padding:10px 0;">
+            <a href="/app/leads/{{ j.lead_id }}">Lead {{ j.lead_id }}</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
+    <h3 style="margin:0 0 10px 0;">Recent leads</h3>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:8px 0;">Lead</th>
+          <th style="text-align:left; padding:8px 0;">Customer</th>
+          <th style="text-align:left; padding:8px 0;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in leads %}
+        <tr style="border-top:1px solid #f1f1f1;">
+          <td style="padding:10px 0;">
+            <a href="/app/leads/{{ l.id }}">#{{ l.id }}</a>
+          </td>
+          <td style="padding:10px 0;">{{ l.name }}</td>
+          <td style="padding:10px 0;">
+            <span class="badge {{ l.status }}">{{ l.status }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

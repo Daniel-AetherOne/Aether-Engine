@@ -48,4 +48,11 @@
 {% endif %}
 </div>
 
+{% if job and job.status not in ["DONE", "FAILED"] %}
+<script>
+  // MVP: auto refresh zolang job nog loopt
+  setInterval(() => window.location.reload(), 4000);
+</script>
+{% endif %}
+
 {% endblock %}
