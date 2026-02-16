@@ -30,11 +30,11 @@
   </div>
   {% endif %}
   
-  {% if job %}
+{% if job %}
   <div style="margin-top:14px;">
     <div><strong>Job</strong></div>
     <div>Job ID: {{ job.id }}</div>
-    <div>Status: <span class="badge {{ job.status }}">{{ job.status }}</span></div>
+    <div>Status: <span class="badge JOB_{{ job.status }}">{{ job.status }}</span></div>
 
     <form method="post" action="/app/jobs/{{ job.id }}/status" style="margin-top:10px;display:flex;gap:8px;align-items:center;">
       <select name="status" style="padding:8px;border-radius:10px;border:1px solid #ddd;">
@@ -46,11 +46,9 @@
     </form>
   </div>
 {% endif %}
-</div>
 
-{% if job and job.status not in ["DONE", "FAILED"] %}
+{% if job and job.status not in ["DONE", "CANCELLED"] %}
 <script>
-  // MVP: auto refresh zolang job nog loopt
   setInterval(() => window.location.reload(), 4000);
 </script>
 {% endif %}

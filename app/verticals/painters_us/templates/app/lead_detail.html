@@ -24,52 +24,71 @@
   </div>
 
   {% if lead.estimate_html_key %}
-  <a class="btn" href="/app/leads/{{ lead.id }}/estimate" target="_blank">Open estimate</a>
-{% endif %}
+    <a class="btn" href="/app/leads/{{ lead.id }}/estimate" target="_blank">Open estimate</a>
 
-{% if lead.estimate_html_key %}
-  <form method="post" action="/app/leads/{{ lead.id }}/send" style="display:inline;">
-    <button class="btn" type="submit">Send estimate</button>
-  </form>
-{% endif %}
+    <form method="post" action="/app/leads/{{ lead.id }}/send" style="display:inline;">
+      <button class="btn" type="submit">Send estimate</button>
+    </form>
+  {% endif %}
 
-{% if job %}
-  <div style="margin-top:14px;">
-    <strong>Job</strong>
-    <div>Job ID: {{ job.id }}</div>
+  {% if job %}
+    <div id="job" style="margin-top:14px;">
+      <strong>Job</strong>
+      <div>Job ID: {{ job.id }}</div>
+	  
+	  {% if job.scheduled_at %}<div class="muted">Scheduled: {{ job.scheduled_at }}</div>{% endif %}
+{% if job.started_at %}<div class="muted">Started: {{ job.started_at }}</div>{% endif %}
+{% if job.done_at %}<div class="muted">Done: {{ job.done_at }}</div>{% endif %}
 
-    <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
-      <div>Status: <span class="badge JOB_{{ job.status }}">{{ job.status }}</span></div>
+      <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
+        <div>Status: <span class="badge JOB_{{ job.status }}">{{ job.status }}</span></div>
 
-      <form method="post" action="/app/jobs/{{ job.id }}/status" style="display:inline;">
-        <select name="status" style="padding:6px 10px;border-radius:10px;border:1px solid #e5e7eb;">
-          {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
-            <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
-          {% endfor %}
-        </select>
-        <button class="btn" type="submit" style="margin-left:8px;">Update</button>
-      </form>
+        <form method="post" action="/app/jobs/{{ job.id }}/status" style="display:inline;">
+          <select name="status" style="padding:6px 10px;border-radius:10px;border:1px solid #e5e7eb;">
+            {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
+              <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn" type="submit" style="margin-left:8px;">Update</button>
+        </form>
+      </div>
+
+      <!-- SCHEDULING -->
+      <div style="margin-top:10px;">
+        <div class="muted" style="margin-bottom:6px;">
+          Scheduled: {{ job.scheduled_at or "—" }}
+        </div>
+
+        <form method="post" action="/app/jobs/{{ job.id }}/schedule" style="display:flex; gap:10px; align-items:center;">
+          <input
+            type="datetime-local"
+            name="scheduled_at"
+            style="padding:6px 10px;border-radius:10px;border:1px solid #e5e7eb;"
+            required
+          />
+          <button class="btn" type="submit">Schedule</button>
+        </form>
+      </div>
     </div>
-  </div>
-{% endif %}
+  {% endif %}
 
-{% if lead.public_token %}
-  <div style="margin-top:12px;">
-    <div class="muted"><strong>Public URL</strong></div>
-    <div>
-      <a class="btn" href="/e/{{ lead.public_token }}" target="_blank">
-        Open public estimate
-      </a>
-      <span class="muted" style="margin-left:10px;">/e/{{ lead.public_token }}</span>
+  {% if lead.public_token %}
+    <div style="margin-top:12px;">
+      <div class="muted"><strong>Public URL</strong></div>
+      <div>
+        <a class="btn" href="/e/{{ lead.public_token }}" target="_blank">
+          Open public estimate
+        </a>
+        <span class="muted" style="margin-left:10px;">/e/{{ lead.public_token }}</span>
+      </div>
     </div>
-  </div>
-{% endif %}
+  {% endif %}
 
   {% if lead.needs_review_reasons %}
-  <div style="margin-top:14px;">
-    <strong>Needs review reasons</strong>
-    <pre style="background:#f8f8f8; padding:12px; border-radius:12px; overflow:auto;">{{ lead.needs_review_reasons }}</pre>
-  </div>
+    <div style="margin-top:14px;">
+      <strong>Needs review reasons</strong>
+      <pre style="background:#f8f8f8; padding:12px; border-radius:12px; overflow:auto;">{{ lead.needs_review_reasons }}</pre>
+    </div>
   {% endif %}
 </div>
 

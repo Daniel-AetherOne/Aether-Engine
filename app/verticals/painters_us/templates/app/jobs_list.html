@@ -1,0 +1,69 @@
+{% extends "app/layout.html" %}
+{% block content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+  <h2 style="margin:0;">Jobs</h2>
+  <a class="btn" href="/app/leads">Leads</a>
+</div>
+
+<!-- Filters -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+  <a class="btn" href="/app/jobs" style="{% if not active_status %}opacity:1{% else %}opacity:.7{% endif %}">
+    All ({{ counts["CANCELLED"] + counts["DONE"] + counts["IN_PROGRESS"] + counts["NEW"] + counts["SCHEDULED"] }})
+  </a>
+
+  {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
+    <a class="btn"
+       href="/app/jobs?status={{ s }}"
+       style="{% if active_status == s %}opacity:1{% else %}opacity:.7{% endif %}">
+      {{ s }} ({{ counts[s] }})
+    </a>
+  {% endfor %}
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Job</th>
+      <th>Status</th>
+      <th>Customer</th>
+      <th>When</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for j in jobs %}
+    <tr>
+      <td class="muted">#{{ j.id }}</td>
+
+      <td>
+        <span class="badge JOB_{{ j.status }}">{{ j.status }}</span>
+      </td>
+
+      <td>
+        <div style="font-weight:600;">{{ j.customer or "—" }}</div>
+        {% if j.email %}<div class="muted">{{ j.email }}</div>{% endif %}
+        <div class="muted">Lead {{ j.lead_id }}</div>
+      </td>
+
+      <td class="muted">
+        {% if j.scheduled_at %}
+          Scheduled: {{ j.scheduled_at }}
+        {% else %}
+          —
+        {% endif %}
+      </td>
+
+      <td>
+        <a class="btn" href="/app/leads/{{ j.lead_id }}">Open lead</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if jobs|length == 0 %}
+  <div class="muted" style="margin-top:12px;">No jobs found.</div>
+{% endif %}
+
+{% endblock %}

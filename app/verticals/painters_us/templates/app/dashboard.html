@@ -6,7 +6,7 @@
     <h2 style="margin:0;">Dashboard</h2>
     <div class="muted">Jobs & Leads overview</div>
   </div>
-  <a class="btn" href="/app/leads">Leads</a>
+ 
 </div>
 
 <div style="display:grid; grid-template-columns:repeat(5, minmax(120px, 1fr)); gap:12px; margin-top:16px;">
@@ -51,7 +51,7 @@
             <span class="badge JOB_{{ j.status }}">{{ j.status }}</span>
           </td>
           <td style="padding:10px 0;">
-            <a href="/app/leads/{{ j.lead_id }}">Lead {{ j.lead_id }}</a>
+           
           </td>
         </tr>
         {% endfor %}

@@ -23,9 +23,36 @@
         {% if lead.estimate_html_key %}HTML ✓{% else %}—{% endif %}
         {% if lead.total is not none %}<div>${{ "%.2f"|format(lead.total) }}</div>{% endif %}
       </td>
-      <td><a class="btn" href="/app/leads/{{ lead.id }}">Open</a></td>
+      <td>
+        {% set a = lead.next_action %}
+        {% if a and a.method == "POST" %}
+          <form method="post" action="{{ a.href }}" style="display:inline;">
+            <button class="btn" type="submit">{{ a.label }}</button>
+          </form>
+        {% elif a %}
+          <a class="btn" href="{{ a.href }}">{{ a.label }}</a>
+        {% else %}
+          <a class="btn" href="/app/leads/{{ lead.id }}">Open</a>
+        {% endif %}
+
+        {% if lead.public_url %}
+          <button class="btn" type="button"
+            style="margin-left:8px;"
+            onclick="copyText('{{ lead.public_url }}')">Copy link</button>
+        {% endif %}
+      </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+
+<script>
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("Copied!");
+    }).catch(() => {
+      prompt("Copy this:", text);
+    });
+  }
+</script>
 {% endblock %}
