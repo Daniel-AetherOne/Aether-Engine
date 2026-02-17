@@ -83,6 +83,34 @@ class Storage(ABC):
         """
         raise NotImplementedError
 
+    def put_text(
+        self,
+        tenant_id: str,
+        key: str,
+        text: str,
+        content_type: str = "text/html; charset=utf-8",
+    ) -> str:
+        """
+        Upload plain text (HTML) to S3 at {tenant_id}/{key}.
+        Returns the full S3 key that was written.
+        """
+        tenant_id = str(tenant_id)
+        key = str(key).lstrip("/")
+        s3_key = f"{tenant_id}/{key}"
+
+        try:
+            self.s3.put_object(
+                Bucket=self.bucket_name,  # <— gebruik jouw veldnaam (zie hieronder)
+                Key=s3_key,
+                Body=text.encode("utf-8"),
+                ContentType=content_type,
+                CacheControl="no-store",
+            )
+        except Exception as e:
+            raise RuntimeError(f"s3_upload_failed:{s3_key}:{e}")
+
+        return s3_key
+
 
 # =========================
 # Local Storage

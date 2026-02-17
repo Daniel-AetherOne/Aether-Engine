@@ -1,13 +1,14 @@
 # app/workflow/status.py
 from __future__ import annotations
+
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app.models.lead import Lead
 from app.models.job import Job
+from app.services.workflow import ensure_job_for_lead
 
 LEAD_TERMINAL = {"ACCEPTED"}  # later ook DECLINED etc.
 JOB_TERMINAL = {"DONE", "CANCELLED"}
@@ -20,24 +21,10 @@ class WorkflowResult:
     created_job: bool = False
 
 
-def ensure_job(db: Session, lead: Lead) -> tuple[Job, bool]:
-    job = db.query(Job).filter(Job.lead_id == lead.id).first()
-    if job:
-        return job, False
-
-    job = Job(
-        tenant_id=str(lead.tenant_id),
-        lead_id=lead.id,
-        status="NEW",
-    )
-    db.add(job)
-    return job, True
-
-
 def sync_lead_from_job(lead: Lead, job: Optional[Job]) -> bool:
     """
-    Optioneel: als job DONE => lead blijft ACCEPTED (of wordt COMPLETED als je dat wil).
-    Voor nu laten we lead.status vooral door 'SENT/VIEWED/ACCEPTED' lopen.
+    Optioneel: als job DONE => lead wordt COMPLETED (later).
+    Voor Fase 9 houden we lead.status voor sales funnel: SENT/VIEWED/ACCEPTED.
     """
     return False
 
@@ -45,14 +32,13 @@ def sync_lead_from_job(lead: Lead, job: Optional[Job]) -> bool:
 def sync_job_from_lead(lead: Lead, job: Optional[Job]) -> bool:
     """
     Regels:
-    - lead ACCEPTED => job minimaal NEW (als job nog niet terminal is)
+    - lead ACCEPTED => job bestaat (minstens NEW), maar we overrulen status niet.
     """
     if not job:
         return False
 
     ls = (lead.status or "").upper()
     if ls == "ACCEPTED" and (job.status or "").upper() not in JOB_TERMINAL:
-        # job mag NEW blijven of later SCHEDULED etc.
         return False
 
     return False
@@ -66,12 +52,18 @@ def apply_workflow(db: Session, lead: Lead) -> WorkflowResult:
 
     ls = (lead.status or "").upper()
 
-    job = None
+    job: Job | None = None
     if ls == "ACCEPTED":
-        job, created = ensure_job(db, lead)
-        res.created_job = created
+        # ✅ single source of truth (tenant-safe)
+        before = (
+            db.query(Job)
+            .filter(Job.lead_id == lead.id, Job.tenant_id == str(lead.tenant_id))
+            .first()
+        )
+        job = ensure_job_for_lead(db, lead)
+        res.created_job = before is None
 
-    # sync rules
+    # sync rules (nu nog no-ops)
     if job:
         if sync_job_from_lead(lead, job):
             res.job_changed = True

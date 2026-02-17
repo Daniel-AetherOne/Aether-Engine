@@ -8,7 +8,8 @@
 
 <!-- Filters -->
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-  <a class="btn" href="/app/jobs" style="{% if not active_status %}opacity:1{% else %}opacity:.7{% endif %}">
+  <a class="btn" href="/app/jobs"
+     style="{% if not active_status %}opacity:1{% else %}opacity:.7{% endif %}">
     All ({{ counts["CANCELLED"] + counts["DONE"] + counts["IN_PROGRESS"] + counts["NEW"] + counts["SCHEDULED"] }})
   </a>
 
@@ -31,6 +32,7 @@
       <th>Action</th>
     </tr>
   </thead>
+
   <tbody>
     {% for j in jobs %}
     <tr>
@@ -42,13 +44,43 @@
 
       <td>
         <div style="font-weight:600;">{{ j.customer or "—" }}</div>
-        {% if j.email %}<div class="muted">{{ j.email }}</div>{% endif %}
+        {% if j.email %}
+          <div class="muted">{{ j.email }}</div>
+        {% endif %}
         <div class="muted">Lead {{ j.lead_id }}</div>
       </td>
 
       <td class="muted">
-        {% if j.scheduled_at %}
-          Scheduled: {{ j.scheduled_at }}
+        {% if j.status == "NEW" and not j.scheduled_at %}
+          Not scheduled
+
+        {% elif j.status == "SCHEDULED" and j.scheduled_at %}
+  {% if j.when_label %}
+    <div style="font-weight:600;">{{ j.when_label }}</div>
+  {% endif %}
+  <div>Scheduled: {{ j.scheduled_at_local }}</div>
+  {% if j.scheduled_tz %}
+    <div style="font-size:12px;">{{ j.scheduled_tz }}</div>
+  {% endif %}
+          {% if j.scheduled_tz %}
+            <div style="font-size:12px;">{{ j.scheduled_tz }}</div>
+          {% endif %}
+
+        {% elif j.status == "IN_PROGRESS" %}
+          In progress
+
+        {% elif j.status == "DONE" %}
+          Completed
+
+        {% elif j.status == "CANCELLED" %}
+          Cancelled
+
+        {% elif j.scheduled_at %}
+          <div>{{ j.scheduled_at_local }}</div>
+          {% if j.scheduled_tz %}
+            <div style="font-size:12px;">{{ j.scheduled_tz }}</div>
+          {% endif %}
+
         {% else %}
           —
         {% endif %}

@@ -29,6 +29,8 @@ class Job(Base):
     scheduled_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    scheduled_tz: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
     started_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

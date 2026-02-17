@@ -1,0 +1,152 @@
+{% extends "app/layout.html" %}
+{% block content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+  <div>
+    <h2 style="margin:0;">Week Calendar</h2>
+    <div class="muted" style="margin-top:4px;">
+      {{ week_label }} · Timezone: {{ tz_name }}
+      <span style="margin-left:8px; padding:2px 8px; border:1px solid #eee; border-radius:999px; background:#fafafa;">
+        Today · {{ now_chip }}
+      </span>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a class="btn" href="/app/calendar?week={{ prev_week }}">← Prev</a>
+    <a class="btn" href="/app/calendar">This week</a>
+    <a class="btn" href="/app/calendar?week={{ next_week }}">Next →</a>
+    <a class="btn" href="/app/jobs">Jobs</a>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns: 320px 1fr; gap:12px; align-items:start;">
+
+  <!-- Sidebar: Unscheduled -->
+  <div style="border:1px solid #eee; border-radius:14px; background:#fff; overflow:hidden;">
+    <div style="padding:10px; border-bottom:1px solid #eee; background:#fafafa;">
+      <div style="font-weight:800;">Unscheduled</div>
+      <div class="muted" style="font-size:12px;">NEW jobs (not planned yet)</div>
+    </div>
+
+    <div style="padding:10px;">
+      {% if unscheduled|length == 0 %}
+        <div class="muted">No unscheduled jobs 🎉</div>
+      {% else %}
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          {% for u in unscheduled %}
+            <a href="/app/leads/{{ u.lead_id }}#job" style="text-decoration:none; color:inherit;">
+              <div style="border:1px solid #eee;border-radius:12px;padding:10px;">
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                  <div style="font-weight:800;">{{ u.customer }}</div>
+                  <span class="badge JOB_NEW">NEW</span>
+                </div>
+                {% if u.notes %}
+                  <div class="muted" style="margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    {{ u.notes }}
+                  </div>
+                {% endif %}
+                <div class="muted" style="margin-top:6px; font-size:12px;">
+                  Job #{{ u.job_id }}
+                </div>
+				
+				<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+  <form method="post" action="/app/jobs/{{ u.job_id }}/quick_schedule" style="display:inline;">
+    <input type="hidden" name="day_offset" value="0">
+    <input type="hidden" name="hhmm" value="09:00">
+    <input type="hidden" name="return_to" value="/app/calendar">
+    <button class="btn" type="submit">Today 9</button>
+  </form>
+
+  <form method="post" action="/app/jobs/{{ u.job_id }}/quick_schedule" style="display:inline;">
+    <input type="hidden" name="day_offset" value="0">
+    <input type="hidden" name="hhmm" value="13:00">
+    <input type="hidden" name="return_to" value="/app/calendar">
+    <button class="btn" type="submit">Today 1</button>
+  </form>
+
+  <form method="post" action="/app/jobs/{{ u.job_id }}/quick_schedule" style="display:inline;">
+    <input type="hidden" name="day_offset" value="1">
+    <input type="hidden" name="hhmm" value="09:00">
+    <input type="hidden" name="return_to" value="/app/calendar">
+    <button class="btn" type="submit">Tomorrow 9</button>
+  </form>
+
+  <form method="post" action="/app/jobs/{{ u.job_id }}/quick_schedule" style="display:inline;">
+    <input type="hidden" name="day_offset" value="1">
+    <input type="hidden" name="hhmm" value="13:00">
+    <input type="hidden" name="return_to" value="/app/calendar">
+    <button class="btn" type="submit">Tomorrow 1</button>
+  </form>
+</div>
+
+
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Week grid -->
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;">
+    {% for day in days %}
+      <div style="
+        border:1px solid #eee;
+        border-radius:14px;
+        background:#fff;
+        overflow:hidden;
+        {% if day.is_today %} box-shadow: 0 0 0 2px rgba(0,0,0,0.08); {% endif %}
+      ">
+        <div style="
+          padding:10px;
+          border-bottom:1px solid #eee;
+          background:#fafafa;
+          {% if day.is_today %} background:#f0f7ff; {% endif %}
+        ">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:800;">{{ day.title }}</div>
+            {% if day.is_today %}
+              <span style="font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid #d6e7ff; background:#eaf3ff;">
+                Today
+              </span>
+            {% endif %}
+          </div>
+          <div class="muted" style="font-size:12px;">{{ day.date }}</div>
+        </div>
+
+        <div style="padding:10px; max-height: 70vh; overflow:auto;">
+          {% if day["items"]|length == 0 %}
+            <div class="muted">No jobs</div>
+          {% else %}
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              {% for it in day["items"] %}
+                <a href="/app/leads/{{ it.lead_id }}#job" style="text-decoration:none;color:inherit;">
+                  <div style="border:1px solid #eee;border-radius:12px;padding:10px;">
+                    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+                      <div style="font-weight:800;">{{ it.time }}</div>
+                      <span class="badge JOB_{{ it.status }}">{{ it.status }}</span>
+                    </div>
+                    <div style="margin-top:6px;font-weight:700;">{{ it.customer }}</div>
+                    {% if it.notes %}
+                      <div class="muted" style="margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        {{ it.notes }}
+                      </div>
+                    {% endif %}
+                    <div class="muted" style="margin-top:4px;font-size:12px;">
+                      Job #{{ it.job_id }}
+                    </div>
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}

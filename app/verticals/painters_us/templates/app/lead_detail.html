@@ -24,62 +24,21 @@
   </div>
 
   {% if lead.estimate_html_key %}
-    <a class="btn" href="/app/leads/{{ lead.id }}/estimate" target="_blank">Open estimate</a>
+    <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn" href="/app/leads/{{ lead.id }}/estimate" target="_blank">Open estimate</a>
 
-    <form method="post" action="/app/leads/{{ lead.id }}/send" style="display:inline;">
-      <button class="btn" type="submit">Send estimate</button>
-    </form>
-  {% endif %}
-
-  {% if job %}
-    <div id="job" style="margin-top:14px;">
-      <strong>Job</strong>
-      <div>Job ID: {{ job.id }}</div>
-	  
-	  {% if job.scheduled_at %}<div class="muted">Scheduled: {{ job.scheduled_at }}</div>{% endif %}
-{% if job.started_at %}<div class="muted">Started: {{ job.started_at }}</div>{% endif %}
-{% if job.done_at %}<div class="muted">Done: {{ job.done_at }}</div>{% endif %}
-
-      <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
-        <div>Status: <span class="badge JOB_{{ job.status }}">{{ job.status }}</span></div>
-
-        <form method="post" action="/app/jobs/{{ job.id }}/status" style="display:inline;">
-          <select name="status" style="padding:6px 10px;border-radius:10px;border:1px solid #e5e7eb;">
-            {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
-              <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-          </select>
-          <button class="btn" type="submit" style="margin-left:8px;">Update</button>
-        </form>
-      </div>
-
-      <!-- SCHEDULING -->
-      <div style="margin-top:10px;">
-        <div class="muted" style="margin-bottom:6px;">
-          Scheduled: {{ job.scheduled_at or "—" }}
-        </div>
-
-        <form method="post" action="/app/jobs/{{ job.id }}/schedule" style="display:flex; gap:10px; align-items:center;">
-          <input
-            type="datetime-local"
-            name="scheduled_at"
-            style="padding:6px 10px;border-radius:10px;border:1px solid #e5e7eb;"
-            required
-          />
-          <button class="btn" type="submit">Schedule</button>
-        </form>
-      </div>
+      <form method="post" action="/app/leads/{{ lead.id }}/send" style="display:inline;">
+        <button class="btn" type="submit">Send estimate</button>
+      </form>
     </div>
   {% endif %}
 
   {% if lead.public_token %}
     <div style="margin-top:12px;">
       <div class="muted"><strong>Public URL</strong></div>
-      <div>
-        <a class="btn" href="/e/{{ lead.public_token }}" target="_blank">
-          Open public estimate
-        </a>
-        <span class="muted" style="margin-left:10px;">/e/{{ lead.public_token }}</span>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <a class="btn" href="/e/{{ lead.public_token }}" target="_blank">Open public estimate</a>
+        <span class="muted">/e/{{ lead.public_token }}</span>
       </div>
     </div>
   {% endif %}
@@ -88,6 +47,192 @@
     <div style="margin-top:14px;">
       <strong>Needs review reasons</strong>
       <pre style="background:#f8f8f8; padding:12px; border-radius:12px; overflow:auto;">{{ lead.needs_review_reasons }}</pre>
+    </div>
+  {% endif %}
+
+  {% if job %}
+    <div id="job" style="margin-top:14px;">
+      <div><strong>Job</strong></div>
+      <div>Job ID: {{ job.id }}</div>
+
+      <div style="margin-top:6px;">
+        Status: <span class="badge JOB_{{ job.status }}">{{ job.status }}</span>
+      </div>
+
+      <!-- Timeline -->
+      <div class="muted" style="margin-top:6px;">
+        {% if job.scheduled_at %}
+          Scheduled: {{ scheduled_display }} <span class="muted">({{ tz_name }})</span><br>
+        {% else %}
+          Scheduled: —<br>
+        {% endif %}
+
+        {% if job.started_at %}
+          Started: {{ started_display }} <span class="muted">({{ tz_name }})</span><br>
+        {% endif %}
+
+        {% if job.done_at %}
+          Done: {{ done_display }} <span class="muted">({{ tz_name }})</span>
+        {% endif %}
+      </div>
+
+      <!-- Hidden unschedule form (NO nested forms anymore) -->
+      <form id="unscheduleForm" method="post" action="/app/jobs/{{ job.id }}/unschedule" style="display:none;"></form>
+
+      <!-- Unschedule button (visible whenever scheduled_at exists) -->
+      {% if job.scheduled_at and job.status not in ["CANCELLED"] %}
+        <div style="margin-top:10px;">
+          <button class="btn" type="button" onclick="document.getElementById('unscheduleForm').submit();">
+            Unschedule
+          </button>
+        </div>
+      {% endif %}
+
+      <!-- Scheduling UX Upgrade (only for NEW/SCHEDULED) -->
+      {% if job.status in ["NEW","SCHEDULED"] %}
+        <div style="margin-top:12px; padding:12px; border:1px solid #eee; border-radius:14px; background:#fafafa;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:700;">Scheduling</div>
+              <div class="muted" style="margin-top:4px;">Timezone: {{ tz_name }}</div>
+            </div>
+
+            {% if job.scheduled_at %}
+              <div style="text-align:right;">
+                <div style="font-weight:700;">{{ scheduled_display }}</div>
+                <div class="muted" style="font-size:12px;">Currently scheduled</div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div style="margin-top:10px;">
+            <!-- scheduleForm -->
+            <form id="scheduleForm" method="post" action="/app/jobs/{{ job.id }}/schedule" style="display:inline;">
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <input
+                  id="dtInput"
+                  type="datetime-local"
+                  name="scheduled_at_local"
+                  value="{{ scheduled_input_value }}"
+                  required
+                  style="padding:8px;border-radius:10px;border:1px solid #ddd;"
+                />
+
+                <button class="btn" type="submit">
+                  {% if job.scheduled_at %}Update{% else %}Schedule{% endif %}
+                </button>
+
+                {% if job.scheduled_at %}
+                  <button class="btn" type="button" onclick="document.getElementById('unscheduleForm').submit();">
+                    Clear
+                  </button>
+                {% endif %}
+              </div>
+
+              <!-- Day chips -->
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                <button type="button" class="btn" onclick="setDayOffset(0)">Today</button>
+                <button type="button" class="btn" onclick="setDayOffset(1)">Tomorrow</button>
+                <button type="button" class="btn" onclick="setDayOffset(2)">+2 days</button>
+              </div>
+
+              <!-- Time slots -->
+              <div class="muted" style="margin-top:10px; font-size:12px;">Quick times</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                <button type="button" class="btn" onclick="setTime('09:00')">9:00</button>
+                <button type="button" class="btn" onclick="setTime('11:00')">11:00</button>
+                <button type="button" class="btn" onclick="setTime('13:00')">1:00 PM</button>
+                <button type="button" class="btn" onclick="setTime('15:00')">3:00 PM</button>
+              </div>
+
+              <!-- One-click schedule -->
+              <div class="muted" style="margin-top:10px; font-size:12px;">One-click schedule</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                <button type="button" class="btn" onclick="quickSchedule(0,'09:00')">Today 9</button>
+                <button type="button" class="btn" onclick="quickSchedule(0,'13:00')">Today 1</button>
+                <button type="button" class="btn" onclick="quickSchedule(1,'09:00')">Tomorrow 9</button>
+                <button type="button" class="btn" onclick="quickSchedule(1,'13:00')">Tomorrow 1</button>
+              </div>
+            </form>
+          </div>
+
+          <script>
+            function pad(n){ return String(n).padStart(2,'0'); }
+
+            // datetime-local expects "YYYY-MM-DDTHH:MM"
+            function setDayOffset(offsetDays){
+              const input = document.getElementById("dtInput");
+              if(!input) return;
+
+              // Use current value if present; else now.
+              const current = input.value ? new Date(input.value) : new Date();
+              const d = new Date(current.getTime());
+              d.setDate(d.getDate() + offsetDays);
+
+              const yyyy = d.getFullYear();
+              const mm = pad(d.getMonth()+1);
+              const dd = pad(d.getDate());
+
+              // keep time if already set, else default 09:00
+              let time = "09:00";
+              if (input.value && input.value.includes("T")) {
+                const t = input.value.split("T")[1];
+                time = (t && t.length >= 5) ? t.slice(0,5) : "09:00";
+              }
+              input.value = `${yyyy}-${mm}-${dd}T${time}`;
+            }
+
+            function setTime(hhmm){
+              const input = document.getElementById("dtInput");
+              if(!input) return;
+
+              // If date empty, set today
+              if(!input.value){
+                const d = new Date();
+                const yyyy = d.getFullYear();
+                const mm = pad(d.getMonth()+1);
+                const dd = pad(d.getDate());
+                input.value = `${yyyy}-${mm}-${dd}T${hhmm}`;
+                return;
+              }
+
+              const parts = input.value.split("T");
+              const datePart = parts[0];
+              input.value = `${datePart}T${hhmm}`;
+            }
+
+            function quickSchedule(dayOffset, hhmm){
+              setDayOffset(dayOffset);
+              setTime(hhmm);
+              document.getElementById("scheduleForm").submit();
+            }
+          </script>
+        </div>
+      {% endif %}
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+        {% if job.status == "SCHEDULED" %}
+          <form method="post" action="/app/jobs/{{ job.id }}/start" style="display:inline;">
+            <button class="btn" type="submit">Start</button>
+          </form>
+        {% endif %}
+
+        {% if job.status == "IN_PROGRESS" %}
+          <form method="post" action="/app/jobs/{{ job.id }}/done" style="display:inline;">
+            <button class="btn" type="submit">Mark done</button>
+          </form>
+        {% endif %}
+
+        <form method="post" action="/app/jobs/{{ job.id }}/status" style="display:inline;">
+          <select name="status" style="padding:8px;border-radius:10px;border:1px solid #ddd;">
+            {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
+              <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn" type="submit" style="margin-left:8px;">Update</button>
+        </form>
+      </div>
     </div>
   {% endif %}
 </div>

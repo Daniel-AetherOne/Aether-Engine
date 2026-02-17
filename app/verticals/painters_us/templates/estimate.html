@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{{ copy.doc_title if copy and copy.doc_title else "Painting Estimate" }}</title>
 
+  {# Keep app.css so we don't break existing styling #}
   <link rel="stylesheet" href="https://offers.getpaintly.com/static/v1/app.css">
   <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
 
@@ -18,6 +19,7 @@
     .kv .item span.multiline { white-space: normal; overflow: visible; text-overflow: clip; max-width: none; }
     .divider { height:1px; background: rgba(0,0,0,.08); margin: 12px 0; }
 
+    /* Trust chips */
     .chip {
       display:inline-flex; align-items:center; gap:8px;
       padding:8px 12px; border-radius:999px;
@@ -30,8 +32,46 @@
     .chip.warn i { background: rgba(243,156,18,.95); }
     .chip.neutral i { background: rgba(0,0,0,.25); }
 
-    /* Optional: remove after testing */
-    .templateTest { color:#c00; font-weight:900; margin-bottom: 6px; }
+    /* Conversion hero */
+    .heroGrid{
+      display:flex; gap:14px; flex-wrap:wrap;
+      align-items:stretch; justify-content:space-between;
+    }
+    .heroLeft{ min-width: 280px; flex: 1; }
+    .heroRight{ min-width: 280px; flex: 0 0 340px; }
+    .totalBig{
+      font-size: 36px;
+      font-weight: 950;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+    }
+    .nextBox{
+      border:1px solid rgba(0,0,0,.08);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,.65);
+    }
+
+    /* Buttons (only if app.css doesn't style .btn well) */
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(0,0,0,.10);
+      background:#fff;
+      font-weight:900; font-size:13px;
+      text-decoration:none;
+    }
+    .btn.primary{
+      background:#111827; color:#fff; border-color:#111827;
+    }
+    .btn:active{ transform: translateY(1px); }
+
+    /* Print */
+    @media print{
+      a{ text-decoration:none; color:inherit; }
+      .btn{ display:none !important; }
+      .badges{ display:none !important; }
+    }
   </style>
 </head>
 
@@ -48,10 +88,6 @@
   {% set lead_email = (customer.email if customer and customer.email else (lead.email if lead and lead.email else '')) %}
   {% set lead_phone = (customer.phone if customer and customer.phone else (lead.phone if lead and lead.phone else '')) %}
 
-  <div class="templateTest">
-    TEMPLATE TEST – {{ company.name if company and company.name else "Paintly" }}
-  </div>
-
   <div class="topbar">
     <div class="brand">
       <h1>{{ company.name if company and company.name else "Paintly" }}</h1>
@@ -63,17 +99,18 @@
     </div>
 
     <div class="badges">
-      {% if pricing_ready %}
-        <div class="statusBadge good"><i></i> Pricing ready</div>
+      {# Keep logic, but make it customer-friendly #}
+      {% if not pricing_ready and not is_provisional %}
+        <div class="statusBadge warn"><i></i> Review needed</div>
       {% elif is_provisional %}
-        <div class="statusBadge warn"><i></i> Provisional estimate</div>
+        <div class="statusBadge warn"><i></i> Rough estimate</div>
       {% else %}
-        <div class="statusBadge warn"><i></i> Needs review</div>
+        <div class="statusBadge good"><i></i> Fixed-price estimate</div>
       {% endif %}
     </div>
   </div>
 
-  <!-- HERO -->
+  <!-- DOCUMENT HERO -->
   <div class="card" style="margin-bottom:14px;">
     <div class="cardHeader">
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end;">
@@ -104,7 +141,7 @@
         </div>
       {% elif is_provisional %}
         <div class="noteBox">
-          <div style="font-weight:950;">Provisional estimate shown</div>
+          <div style="font-weight:950;">Rough estimate shown</div>
           <div class="badgeNote muted">
             This number helps you plan. We’ll confirm surfaces, prep level, and access and then send a finalized price.
           </div>
@@ -122,16 +159,107 @@
 
       <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
         {% if pricing_ready %}
-          <span class="chip good"><i></i> Final pricing</span>
+          <span class="chip good"><i></i> Detailed estimate</span>
         {% elif is_provisional %}
-          <span class="chip warn"><i></i> Provisional pricing</span>
+          <span class="chip warn"><i></i> Rough estimate</span>
         {% else %}
-          <span class="chip neutral"><i></i> Review required</span>
+          <span class="chip neutral"><i></i> Quick review required</span>
         {% endif %}
 
-        {% if reasons and (reasons|length) > 0 %}
-          <span class="chip neutral"><i></i> Reasons: {{ reasons | join(", ") }}</span>
+        {# Avoid exposing internal reason codes to customers #}
+        {% if (not pricing_ready) or is_provisional %}
+          <span class="chip neutral"><i></i> Based on photos — final verified on site</span>
         {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- CONVERSION HERO (TOTAL + CTA) -->
+  <div class="card" style="margin-bottom:14px;">
+    <div class="cardBody">
+      <div class="heroGrid">
+        <div class="heroLeft">
+          <div class="sectionTitle" style="margin-bottom:6px;">Total estimate</div>
+
+          {% if show_prices %}
+            <div class="totalBig">{{ fmt_usd(pricing.totals.grand_total) }}</div>
+
+            <div class="mutedSmall muted" style="margin-top:8px;">
+              {% if show_tax %}
+                Sales tax may apply depending on your location.
+              {% else %}
+                Sales tax not included unless required.
+              {% endif %}
+              {% if project.valid_until %}
+                <span> Valid until <strong style="color:var(--text);font-weight:950;">{{ project.valid_until }}</strong>.</span>
+              {% endif %}
+            </div>
+
+            {% if is_provisional %}
+              <div class="noteBox" style="margin-top:10px;">
+                <div style="font-weight:950;">Rough estimate</div>
+                <div class="mutedSmall muted">
+                  Final price after a quick review / walkthrough to confirm prep level, surfaces, and access.
+                </div>
+              </div>
+            {% endif %}
+          {% else %}
+            <div style="font-size:26px;font-weight:950;">Pricing: TBD</div>
+            <div class="mutedSmall muted" style="margin-top:8px;">
+              We’ll finalize after a quick review of surfaces & prep/access.
+            </div>
+          {% endif %}
+
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+            <span class="chip good"><i></i> Protect floors & furniture</span>
+            <span class="chip good"><i></i> Daily cleanup</span>
+            <span class="chip good"><i></i> Workmanship warranty</span>
+          </div>
+        </div>
+
+        <div class="heroRight">
+          <div class="nextBox">
+            <div class="sectionTitle" style="margin-bottom:8px;">Next step</div>
+
+            {% if show_prices %}
+              <div class="mutedSmall muted" style="margin-bottom:10px;line-height:1.5;">
+                Accept this estimate to reserve a spot on our schedule. We’ll confirm the start date by text/email.
+              </div>
+
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                {# Prefer public.accept_url if provided. If not, you can pass token and use /e/{{ token }}/accept. #}
+                {% if public and public.accept_url %}
+                  <a class="btn primary" href="{{ public.accept_url }}">Accept estimate</a>
+                {% elif token %}
+                  <a class="btn primary" href="/e/{{ token }}/accept">Accept estimate</a>
+                {% else %}
+                  <a class="btn primary" href="#" style="opacity:.6;pointer-events:none;">Accept estimate</a>
+                {% endif %}
+
+                {% if company and company.phone %}
+                  <a class="btn" href="tel:{{ company.phone }}">Call</a>
+                {% endif %}
+              </div>
+
+              <div class="mutedSmall muted" style="margin-top:10px;line-height:1.5;">
+                Questions? Call <strong style="color:var(--text);font-weight:950;">{{ company.phone if company and company.phone else "—" }}</strong>
+                {% if company and company.email %} or email <strong style="color:var(--text);font-weight:950;">{{ company.email }}</strong>{% endif %}.
+              </div>
+            {% else %}
+              <div class="mutedSmall muted" style="line-height:1.5;">
+                Want a faster finalized price? Call us for a 5-minute walkthrough.
+              </div>
+              <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+                {% if company and company.phone %}
+                  <a class="btn primary" href="tel:{{ company.phone }}">Call now</a>
+                {% endif %}
+                {% if company and company.email %}
+                  <a class="btn" href="mailto:{{ company.email }}">Email</a>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -235,6 +363,10 @@
               {{ copy.exclusions_label if copy and copy.exclusions_label else "Exclusions" }}
             </strong> below.
           </div>
+
+          <div class="mutedSmall muted" style="margin-top:10px;">
+            Includes protection of floors/furniture and daily cleanup unless noted otherwise.
+          </div>
         </div>
 
         <div style="margin-top:14px;">
@@ -244,6 +376,13 @@
               <li>{{ x }}</li>
             {% endfor %}
           </ul>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div class="sectionTitle">Change orders</div>
+          <div class="mutedSmall muted">
+            If additional work is requested or discovered, we’ll provide a clear price for approval before proceeding.
+          </div>
         </div>
       </div>
     </div>
@@ -290,9 +429,9 @@
           <div class="item">
             <b>Status</b>
             <span>
-              {% if pricing_ready %}Pricing ready
-              {% elif is_provisional %}Provisional estimate
-              {% else %}Needs review
+              {% if pricing_ready %}Fixed-price estimate
+              {% elif is_provisional %}Rough estimate
+              {% else %}Review needed
               {% endif %}
             </span>
           </div>
@@ -349,7 +488,7 @@
 
             {% if is_provisional %}
               <div class="mutedSmall muted" style="margin-top:6px;">
-                Provisional total — final price after quick review.
+                Rough estimate — final price after quick review.
               </div>
             {% endif %}
 
@@ -379,10 +518,32 @@
           {% endif %}
         </div>
 
-        <div class="cta">
-          <strong style="font-weight:950;">Next step:</strong>
-          If you’d like to schedule a quick call/walkthrough, reply to this estimate email
-          or contact us at <span style="font-weight:950;">{{ company.phone if company and company.phone else "—" }}</span>.
+        <div class="divider"></div>
+
+        <div class="sectionTitle">What happens after you accept?</div>
+        <div class="mutedSmall muted" style="line-height:1.6;">
+          We’ll confirm the start date, materials/colors, and access details. You’ll receive a simple schedule confirmation by text/email.
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+          {% if show_prices %}
+            {% if public and public.accept_url %}
+              <a class="btn primary" href="{{ public.accept_url }}">Accept estimate</a>
+            {% elif token %}
+              <a class="btn primary" href="/e/{{ token }}/accept">Accept estimate</a>
+            {% endif %}
+          {% endif %}
+
+          {% if company and company.phone %}
+            <a class="btn" href="tel:{{ company.phone }}">Call</a>
+          {% endif %}
+          {% if company and company.email %}
+            <a class="btn" href="mailto:{{ company.email }}">Email</a>
+          {% endif %}
+        </div>
+
+        <div class="mutedSmall muted" style="margin-top:10px;line-height:1.5;">
+          By accepting, you agree to the scope and assumptions above. Any changes will be priced and approved before we proceed.
         </div>
       </div>
     </div>

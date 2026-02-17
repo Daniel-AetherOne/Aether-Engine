@@ -1,4 +1,4 @@
-# scripts/seed_dev.py
+# scripts/seed_reset.py
 from __future__ import annotations
 
 import secrets
@@ -26,6 +26,26 @@ def main():
     try:
         tenant_id = get_tenant_id(db)
 
+        # 1) delete jobs for this tenant
+        deleted_jobs = (
+            db.query(Job)
+            .filter(Job.tenant_id == tenant_id)
+            .delete(synchronize_session=False)
+        )
+
+        # 2) delete leads for this tenant
+        deleted_leads = (
+            db.query(Lead)
+            .filter(Lead.tenant_id == tenant_id)
+            .delete(synchronize_session=False)
+        )
+
+        db.commit()
+        print(
+            f"🧹 Reset tenant={tenant_id}: deleted jobs={deleted_jobs}, leads={deleted_leads}"
+        )
+
+        # 3) seed leads
         lead_sent = Lead(
             tenant_id=tenant_id,
             name="John Doe",
@@ -65,6 +85,7 @@ def main():
         db.add_all([lead_sent, lead_viewed, lead_accepted])
         db.commit()
 
+        # 4) seed job for accepted lead
         job = Job(
             tenant_id=tenant_id,
             lead_id=lead_accepted.id,

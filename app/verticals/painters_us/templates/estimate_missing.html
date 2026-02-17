@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Estimate unavailable</title>
+  <link rel="stylesheet" href="https://offers.getpaintly.com/static/v1/app.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="cardHeader">
+        <div class="heroTitle">Estimate not available</div>
+        <div class="muted">This estimate file is missing or still processing.</div>
+      </div>
+      <div class="cardBody">
+        <div class="noteBox">
+          Please contact support or regenerate the estimate from the lead page.
+        </div>
+        <div class="mutedSmall muted" style="margin-top:10px;">
+          Lead #{{ lead_id }} • {{ tenant_id }} • {{ missing_key }}
+        </div>
+        <div style="margin-top:12px;">
+          <a class="btn" href="/app/leads/{{ lead_id }}">Back to lead</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
