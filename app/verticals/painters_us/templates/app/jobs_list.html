@@ -1,101 +1,176 @@
 {% extends "app/layout.html" %}
 {% block content %}
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-  <h2 style="margin:0;">Jobs</h2>
-  <a class="btn" href="/app/leads">Leads</a>
-</div>
+<div class="space-y-6">
 
-<!-- Filters -->
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-  <a class="btn" href="/app/jobs"
-     style="{% if not active_status %}opacity:1{% else %}opacity:.7{% endif %}">
-    All ({{ counts["CANCELLED"] + counts["DONE"] + counts["IN_PROGRESS"] + counts["NEW"] + counts["SCHEDULED"] }})
-  </a>
+  <!-- Header -->
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 class="text-2xl font-semibold tracking-tight">Jobs</h2>
+      <div class="mt-1 text-sm text-slate-600">Scheduling and job status overview.</div>
+    </div>
 
-  {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
-    <a class="btn"
-       href="/app/jobs?status={{ s }}"
-       style="{% if active_status == s %}opacity:1{% else %}opacity:.7{% endif %}">
-      {{ s }} ({{ counts[s] }})
+    <a
+      class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+      href="/app/leads"
+    >
+      Leads
     </a>
-  {% endfor %}
-</div>
+  </div>
 
-<table>
-  <thead>
-    <tr>
-      <th>Job</th>
-      <th>Status</th>
-      <th>Customer</th>
-      <th>When</th>
-      <th>Action</th>
-    </tr>
-  </thead>
+  <!-- Filters -->
+  <div class="flex flex-wrap gap-2">
+    {% set total_count = counts["CANCELLED"] + counts["DONE"] + counts["IN_PROGRESS"] + counts["NEW"] + counts["SCHEDULED"] %}
 
-  <tbody>
-    {% for j in jobs %}
-    <tr>
-      <td class="muted">#{{ j.id }}</td>
-
-      <td>
-        <span class="badge JOB_{{ j.status }}">{{ j.status }}</span>
-      </td>
-
-      <td>
-        <div style="font-weight:600;">{{ j.customer or "—" }}</div>
-        {% if j.email %}
-          <div class="muted">{{ j.email }}</div>
-        {% endif %}
-        <div class="muted">Lead {{ j.lead_id }}</div>
-      </td>
-
-      <td class="muted">
-        {% if j.status == "NEW" and not j.scheduled_at %}
-          Not scheduled
-
-        {% elif j.status == "SCHEDULED" and j.scheduled_at %}
-  {% if j.when_label %}
-    <div style="font-weight:600;">{{ j.when_label }}</div>
-  {% endif %}
-  <div>Scheduled: {{ j.scheduled_at_local }}</div>
-  {% if j.scheduled_tz %}
-    <div style="font-size:12px;">{{ j.scheduled_tz }}</div>
-  {% endif %}
-          {% if j.scheduled_tz %}
-            <div style="font-size:12px;">{{ j.scheduled_tz }}</div>
-          {% endif %}
-
-        {% elif j.status == "IN_PROGRESS" %}
-          In progress
-
-        {% elif j.status == "DONE" %}
-          Completed
-
-        {% elif j.status == "CANCELLED" %}
-          Cancelled
-
-        {% elif j.scheduled_at %}
-          <div>{{ j.scheduled_at_local }}</div>
-          {% if j.scheduled_tz %}
-            <div style="font-size:12px;">{{ j.scheduled_tz }}</div>
-          {% endif %}
-
+    <a
+      href="/app/jobs"
+      class="inline-flex items-center rounded-full border px-3 py-2 text-sm font-semibold transition
+        {% if not active_status %}
+          bg-slate-900 text-white border-slate-900
         {% else %}
-          —
-        {% endif %}
-      </td>
+          bg-white text-slate-900 border-slate-200 hover:bg-slate-50
+        {% endif %}"
+    >
+      All
+      <span class="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs {% if not active_status %}text-white{% else %}text-slate-600 bg-slate-100{% endif %}">
+        {{ total_count }}
+      </span>
+    </a>
 
-      <td>
-        <a class="btn" href="/app/leads/{{ j.lead_id }}">Open lead</a>
-      </td>
-    </tr>
+    {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
+      <a
+        href="/app/jobs?status={{ s }}"
+        class="inline-flex items-center rounded-full border px-3 py-2 text-sm font-semibold transition
+          {% if active_status == s %}
+            bg-slate-900 text-white border-slate-900
+          {% else %}
+            bg-white text-slate-900 border-slate-200 hover:bg-slate-50
+          {% endif %}"
+      >
+        {{ s }}
+        <span class="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs {% if active_status == s %}text-white{% else %}text-slate-600 bg-slate-100{% endif %}">
+          {{ counts[s] }}
+        </span>
+      </a>
     {% endfor %}
-  </tbody>
-</table>
+  </div>
 
-{% if jobs|length == 0 %}
-  <div class="muted" style="margin-top:12px;">No jobs found.</div>
-{% endif %}
+  <!-- Table card -->
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <div class="text-sm font-semibold text-slate-900">Jobs</div>
+      <div class="mt-1 text-xs text-slate-600">Filter by status using the chips above.</div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Job</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Customer</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">When</th>
+            <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Action</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-200 bg-white">
+          {% for j in jobs %}
+            {% set st = (j.status or '').upper() %}
+            {% if st == 'DONE' %}
+              {% set badge = 'bg-emerald-100 text-emerald-800 border-emerald-200' %}
+            {% elif st == 'IN_PROGRESS' %}
+              {% set badge = 'bg-indigo-100 text-indigo-800 border-indigo-200' %}
+            {% elif st == 'SCHEDULED' %}
+              {% set badge = 'bg-sky-100 text-sky-800 border-sky-200' %}
+            {% elif st == 'CANCELLED' %}
+              {% set badge = 'bg-rose-100 text-rose-800 border-rose-200' %}
+            {% else %}
+              {% set badge = 'bg-slate-100 text-slate-800 border-slate-200' %}
+            {% endif %}
+
+            <tr class="hover:bg-slate-50">
+              <!-- Job -->
+              <td class="px-5 py-4 align-top">
+                <div class="text-sm font-semibold text-slate-900">#{{ j.id }}</div>
+                <div class="mt-1 text-xs text-slate-600">Lead {{ j.lead_id }}</div>
+              </td>
+
+              <!-- Status -->
+              <td class="px-5 py-4 align-top">
+                <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ badge }}">
+                  {{ st or '—' }}
+                </span>
+              </td>
+
+              <!-- Customer -->
+              <td class="px-5 py-4 align-top">
+                <div class="text-sm font-semibold text-slate-900">{{ j.customer or "—" }}</div>
+                {% if j.email %}
+                  <div class="mt-1 text-xs text-slate-600">{{ j.email }}</div>
+                {% endif %}
+              </td>
+
+              <!-- When -->
+              <td class="px-5 py-4 align-top">
+                <div class="text-sm text-slate-700">
+                  {% if j.status == "NEW" and not j.scheduled_at %}
+                    <span class="text-slate-600">Not scheduled</span>
+
+                  {% elif j.status == "SCHEDULED" and j.scheduled_at %}
+                    {% if j.when_label %}
+                      <div class="font-semibold text-slate-900">{{ j.when_label }}</div>
+                    {% endif %}
+                    <div class="mt-1">Scheduled: <span class="font-semibold text-slate-900">{{ j.scheduled_at_local }}</span></div>
+                    {% if j.scheduled_tz %}
+                      <div class="mt-1 text-xs text-slate-500">{{ j.scheduled_tz }}</div>
+                    {% endif %}
+
+                  {% elif j.status == "IN_PROGRESS" %}
+                    <span class="text-slate-600">In progress</span>
+
+                  {% elif j.status == "DONE" %}
+                    <span class="text-slate-600">Completed</span>
+
+                  {% elif j.status == "CANCELLED" %}
+                    <span class="text-slate-600">Cancelled</span>
+
+                  {% elif j.scheduled_at %}
+                    <div class="font-semibold text-slate-900">{{ j.scheduled_at_local }}</div>
+                    {% if j.scheduled_tz %}
+                      <div class="mt-1 text-xs text-slate-500">{{ j.scheduled_tz }}</div>
+                    {% endif %}
+
+                  {% else %}
+                    —
+                  {% endif %}
+                </div>
+              </td>
+
+              <!-- Action -->
+              <td class="px-5 py-4 align-top text-right">
+                <a
+                  class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+                  href="/app/leads/{{ j.lead_id }}"
+                >
+                  Open lead
+                </a>
+              </td>
+            </tr>
+
+          {% else %}
+            <tr>
+              <td class="px-5 py-10 text-sm text-slate-600" colspan="5">No jobs found.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if jobs|length == 0 %}
+      <div class="border-t border-slate-200 px-5 py-4 text-sm text-slate-600">No jobs found.</div>
+    {% endif %}
+  </div>
+</div>
 
 {% endblock %}

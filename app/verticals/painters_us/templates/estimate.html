@@ -6,78 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{{ copy.doc_title if copy and copy.doc_title else "Painting Estimate" }}</title>
 
-  {# Keep app.css so we don't break existing styling #}
-  <link rel="stylesheet" href="https://offers.getpaintly.com/static/v1/app.css">
   <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    /* Light polish without fighting app.css */
-    .pill { white-space: nowrap; }
-    .badgeNote { margin-top: 8px; font-size: 12px; line-height: 1.5; }
-    .mutedSmall { font-size: 12px; line-height: 1.5; }
-    .kv .item span { max-width: 360px; overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .kv .item span.multiline { white-space: normal; overflow: visible; text-overflow: clip; max-width: none; }
-    .divider { height:1px; background: rgba(0,0,0,.08); margin: 12px 0; }
-
-    /* Trust chips */
-    .chip {
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 12px; border-radius:999px;
-      border:1px solid rgba(0,0,0,.08);
-      background: rgba(255,255,255,.75);
-      font-size:12px; font-weight:800;
-    }
-    .chip i { width:8px; height:8px; border-radius:999px; display:inline-block; background: rgba(0,0,0,.25); }
-    .chip.good i { background: rgba(46,204,113,.95); }
-    .chip.warn i { background: rgba(243,156,18,.95); }
-    .chip.neutral i { background: rgba(0,0,0,.25); }
-
-    /* Conversion hero */
-    .heroGrid{
-      display:flex; gap:14px; flex-wrap:wrap;
-      align-items:stretch; justify-content:space-between;
-    }
-    .heroLeft{ min-width: 280px; flex: 1; }
-    .heroRight{ min-width: 280px; flex: 0 0 340px; }
-    .totalBig{
-      font-size: 36px;
-      font-weight: 950;
-      letter-spacing: -0.02em;
-      line-height: 1.05;
-    }
-    .nextBox{
-      border:1px solid rgba(0,0,0,.08);
-      border-radius: 16px;
-      padding: 14px;
-      background: rgba(255,255,255,.65);
-    }
-
-    /* Buttons (only if app.css doesn't style .btn well) */
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:10px 12px; border-radius:12px;
-      border:1px solid rgba(0,0,0,.10);
-      background:#fff;
-      font-weight:900; font-size:13px;
-      text-decoration:none;
-    }
-    .btn.primary{
-      background:#111827; color:#fff; border-color:#111827;
-    }
-    .btn:active{ transform: translateY(1px); }
-
-    /* Print */
     @media print{
+      .no-print{ display:none !important; }
       a{ text-decoration:none; color:inherit; }
-      .btn{ display:none !important; }
-      .badges{ display:none !important; }
+      body{ background:white !important; }
     }
   </style>
 </head>
 
-<body>
-<div class="wrap">
-
+<body class="bg-slate-50 text-slate-900">
   {# ---------- pricing flags ---------- #}
   {% set reasons = (pricing.meta.needs_review_reasons if pricing and pricing.meta and pricing.meta.needs_review_reasons else []) %}
   {% set is_provisional = 'provisional_total' in reasons %}
@@ -88,486 +29,475 @@
   {% set lead_email = (customer.email if customer and customer.email else (lead.email if lead and lead.email else '')) %}
   {% set lead_phone = (customer.phone if customer and customer.phone else (lead.phone if lead and lead.phone else '')) %}
 
-  <div class="topbar">
-    <div class="brand">
-      <h1>{{ company.name if company and company.name else "Paintly" }}</h1>
-      <div class="muted">
-        {% if company.phone %}{{ company.phone }}{% endif %}
-        {% if company.phone and company.email %} • {% endif %}
-        {% if company.email %}{{ company.email }}{% endif %}
+  <div class="mx-auto max-w-6xl px-4 py-6 md:py-10">
+    <!-- Top brand bar -->
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-2xl bg-slate-900 text-white grid place-items-center font-black tracking-tight">P</div>
+          <div>
+            <div class="text-lg font-semibold leading-tight">{{ company.name if company and company.name else "Paintly" }}</div>
+            <div class="mt-0.5 text-xs text-slate-600">
+              {% if company.phone %}{{ company.phone }}{% endif %}
+              {% if company.phone and company.email %} • {% endif %}
+              {% if company.email %}{{ company.email }}{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="no-print flex flex-wrap items-center gap-2">
+        {% if show_prices and token %}
+          <form method="post" action="/e/{{ token }}/accept" class="m-0">
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+            >
+              Accept estimate
+            </button>
+          </form>
+        {% endif %}
+
+        {% if company and company.phone %}
+          <a class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+             href="tel:{{ company.phone }}">Call</a>
+        {% endif %}
+        {% if company and company.email %}
+          <a class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+             href="mailto:{{ company.email }}">Email</a>
+        {% endif %}
       </div>
     </div>
 
-    <div class="badges">
-      {# Keep logic, but make it customer-friendly #}
-      {% if not pricing_ready and not is_provisional %}
-        <div class="statusBadge warn"><i></i> Review needed</div>
-      {% elif is_provisional %}
-        <div class="statusBadge warn"><i></i> Rough estimate</div>
-      {% else %}
-        <div class="statusBadge good"><i></i> Fixed-price estimate</div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- DOCUMENT HERO -->
-  <div class="card" style="margin-bottom:14px;">
-    <div class="cardHeader">
-      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-        <div>
-          <div class="heroTitle">
-            {{ copy.doc_title if copy and copy.doc_title else "Painting Estimate" }}
-          </div>
-          <div class="lead">
-            <span class="muted">
+    <!-- Document header card -->
+    <div class="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div class="border-b border-slate-200 bg-slate-50 px-5 py-4 md:px-7">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div class="text-2xl font-semibold tracking-tight">
+              {{ copy.doc_title if copy and copy.doc_title else "Painting Estimate" }}
+            </div>
+            <div class="mt-1 text-sm text-slate-600">
               {{ project.location if project and project.location else "—" }}
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 text-sm">
+            <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+              Estimate <span class="ml-2 text-slate-900">#{{ project.estimate_id if project and project.estimate_id else project.lead_id }}</span>
             </span>
+            {% if project.date %}
+              <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                Date <span class="ml-2 text-slate-900">{{ project.date }}</span>
+              </span>
+            {% endif %}
+            {% if project.valid_until %}
+              <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                Valid until <span class="ml-2 text-slate-900">{{ project.valid_until }}</span>
+              </span>
+            {% endif %}
           </div>
-        </div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div class="pill">Estimate <strong>#{{ project.estimate_id if project and project.estimate_id else project.lead_id }}</strong></div>
-          {% if project.date %}<div class="pill">Date <strong>{{ project.date }}</strong></div>{% endif %}
-          {% if project.valid_until %}<div class="pill">Valid until <strong>{{ project.valid_until }}</strong></div>{% endif %}
         </div>
       </div>
-    </div>
 
-    <div class="cardBody">
-      {% if pricing_ready %}
-        <div class="noteBox">
-          {{ copy.opener_pricing_ready if copy and copy.opener_pricing_ready else
-            "This estimate is based on submitted photos and standard assumptions. Final price may adjust after on-site verification." }}
-        </div>
-      {% elif is_provisional %}
-        <div class="noteBox">
-          <div style="font-weight:950;">Rough estimate shown</div>
-          <div class="badgeNote muted">
-            This number helps you plan. We’ll confirm surfaces, prep level, and access and then send a finalized price.
+      <div class="px-5 py-5 md:px-7">
+        {% if not pricing_ready and not is_provisional %}
+          <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-slate-800">
+            <div class="font-semibold text-amber-900">Quick review needed</div>
+            <div class="mt-1 text-sm text-slate-700">
+              {{ needs_review.intro if needs_review and needs_review.intro else
+                "We detected uncertainty in the photos. Pricing is shown as TBD until a quick review." }}
+            </div>
+            <div class="mt-2 text-xs text-slate-600">
+              {{ needs_review.range_explanation if needs_review and needs_review.range_explanation else
+                "A reviewer will confirm surfaces, prep level, and access. You’ll receive a finalized price shortly." }}
+            </div>
           </div>
-        </div>
-      {% else %}
-        <div class="noteBox">
-          {{ needs_review.intro if needs_review and needs_review.intro else
-            "We detected uncertainty in the photos. Pricing is shown as TBD until a quick review." }}
-          <div style="margin-top:8px;">
-            {{ needs_review.range_explanation if needs_review and needs_review.range_explanation else
-              "A reviewer will confirm surfaces, prep level, and access. You’ll receive a finalized price shortly." }}
-          </div>
-        </div>
-      {% endif %}
-
-      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-        {% if pricing_ready %}
-          <span class="chip good"><i></i> Detailed estimate</span>
         {% elif is_provisional %}
-          <span class="chip warn"><i></i> Rough estimate</span>
+          <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-slate-800">
+            <div class="font-semibold text-amber-900">Rough estimate shown</div>
+            <div class="mt-1 text-sm text-slate-700">
+              This number helps you plan. We’ll confirm surfaces, prep level, and access and then send a finalized price.
+            </div>
+          </div>
         {% else %}
-          <span class="chip neutral"><i></i> Quick review required</span>
+          <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-slate-800">
+            <div class="font-semibold text-emerald-900">Fixed-price estimate</div>
+            <div class="mt-1 text-sm text-slate-700">
+              {{ copy.opener_pricing_ready if copy and copy.opener_pricing_ready else
+                "This estimate is based on submitted photos and standard assumptions. Final price may adjust after on-site verification." }}
+            </div>
+          </div>
         {% endif %}
 
-        {# Avoid exposing internal reason codes to customers #}
-        {% if (not pricing_ready) or is_provisional %}
-          <span class="chip neutral"><i></i> Based on photos — final verified on site</span>
-        {% endif %}
+        <div class="mt-4 flex flex-wrap gap-2">
+          {% if pricing_ready %}
+            <span class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900">
+              <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Detailed estimate
+            </span>
+          {% elif is_provisional %}
+            <span class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
+              <span class="h-2 w-2 rounded-full bg-amber-500"></span> Rough estimate
+            </span>
+          {% else %}
+            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-800">
+              <span class="h-2 w-2 rounded-full bg-slate-400"></span> Review required
+            </span>
+          {% endif %}
+
+          {% if (not pricing_ready) or is_provisional %}
+            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+              Based on photos — verified on site
+            </span>
+          {% endif %}
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- CONVERSION HERO (TOTAL + CTA) -->
-  <div class="card" style="margin-bottom:14px;">
-    <div class="cardBody">
-      <div class="heroGrid">
-        <div class="heroLeft">
-          <div class="sectionTitle" style="margin-bottom:6px;">Total estimate</div>
+    <!-- Main content grid -->
+    <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
+      <!-- Left: Breakdown -->
+      <div class="space-y-6">
 
-          {% if show_prices %}
-            <div class="totalBig">{{ fmt_usd(pricing.totals.grand_total) }}</div>
+        <!-- Total / CTA card -->
+        <div class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="border-b border-slate-200 bg-slate-50 px-5 py-4 md:px-7">
+            <div class="text-sm font-semibold text-slate-900">Total estimate</div>
+            <div class="mt-1 text-xs text-slate-600">Clear pricing, clear next steps.</div>
+          </div>
 
-            <div class="mutedSmall muted" style="margin-top:8px;">
-              {% if show_tax %}
-                Sales tax may apply depending on your location.
-              {% else %}
-                Sales tax not included unless required.
+          <div class="px-5 py-5 md:px-7">
+            {% if show_prices %}
+              <div class="text-4xl md:text-5xl font-black tracking-tight">
+                {{ fmt_usd(pricing.totals.grand_total) }}
+              </div>
+
+              <div class="mt-2 text-sm text-slate-600">
+                {% if show_tax %}
+                  Sales tax may apply depending on your location.
+                {% else %}
+                  Sales tax not included unless required.
+                {% endif %}
+                {% if project.valid_until %}
+                  <span> Valid until <span class="font-semibold text-slate-900">{{ project.valid_until }}</span>.</span>
+                {% endif %}
+              </div>
+
+              {% if is_provisional %}
+                <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <div class="text-sm font-semibold text-amber-900">Rough estimate</div>
+                  <div class="mt-1 text-xs text-slate-700">
+                    Final price after a quick review/walkthrough to confirm prep level, surfaces, and access.
+                  </div>
+                </div>
               {% endif %}
-              {% if project.valid_until %}
-                <span> Valid until <strong style="color:var(--text);font-weight:950;">{{ project.valid_until }}</strong>.</span>
+            {% else %}
+              <div class="text-2xl font-black tracking-tight">Pricing: TBD</div>
+              <div class="mt-2 text-sm text-slate-600">
+                We’ll finalize after a quick review of surfaces & prep/access.
+              </div>
+            {% endif %}
+
+            <div class="mt-4 flex flex-wrap gap-2">
+              <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">Protect floors & furniture</span>
+              <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">Daily cleanup</span>
+              <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">Workmanship warranty</span>
+            </div>
+
+            <div class="no-print mt-5 flex flex-wrap gap-2">
+              {% if show_prices and token %}
+                <form method="post" action="/e/{{ token }}/accept" class="m-0">
+                  <button
+                    type="submit"
+                    class="inline-flex items-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                  >
+                    Accept & reserve a spot
+                  </button>
+                </form>
+              {% endif %}
+
+              {% if company and company.phone %}
+                <a class="inline-flex items-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+                   href="tel:{{ company.phone }}">Call</a>
+              {% endif %}
+              {% if company and company.email %}
+                <a class="inline-flex items-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+                   href="mailto:{{ company.email }}">Email</a>
               {% endif %}
             </div>
 
-            {% if is_provisional %}
-              <div class="noteBox" style="margin-top:10px;">
-                <div style="font-weight:950;">Rough estimate</div>
-                <div class="mutedSmall muted">
-                  Final price after a quick review / walkthrough to confirm prep level, surfaces, and access.
+            <div class="mt-3 text-xs text-slate-500">
+              By accepting, you agree to the scope and assumptions below. Any changes will be priced and approved before we proceed.
+            </div>
+          </div>
+        </div>
+
+        <!-- Itemized -->
+        <div class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="border-b border-slate-200 bg-slate-50 px-5 py-4 md:px-7">
+            <div class="text-sm font-semibold text-slate-900">Itemized breakdown</div>
+            <div class="mt-1 text-xs text-slate-600">Line items based on your photos and standard assumptions.</div>
+          </div>
+
+          <div class="px-5 py-5 md:px-7">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-white">
+                  <tr>
+                    <th class="py-3 pr-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Area / Item</th>
+                    <th class="py-3 pr-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Qty</th>
+                    <th class="py-3 pr-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Prep</th>
+                    <th class="py-3 pr-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Access</th>
+                    <th class="py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Line total</th>
+                  </tr>
+                </thead>
+
+                <tbody class="divide-y divide-slate-200">
+                  {% if pricing and pricing.line_items and (pricing.line_items | length) > 0 %}
+                    {% for item in pricing.line_items %}
+                      {% set code = (item.code if item and item.code else '') %}
+                      {% set unit = (item.unit if item and item.unit else '') %}
+                      {% set qty = (item.quantity if item and item.quantity is defined else None) %}
+                      {% set is_row_provisional = is_provisional and (code in ['provisional_estimate','interior_painting_est','provisional_total','provisional']) %}
+                      {% set is_meaningless_job_qty = (unit == 'job' and (qty == 1 or qty == 1.0 or qty == '1' or qty == '1.0')) %}
+
+                      <tr class="align-top">
+                        <td class="py-4 pr-4">
+                          <div class="text-sm font-semibold text-slate-900">{{ item.label }}</div>
+                          {% if item.description %}
+                            <div class="mt-1 text-xs text-slate-600">{{ item.description }}</div>
+                          {% endif %}
+                          {% if is_row_provisional %}
+                            <div class="mt-1 text-xs text-slate-500">Shown to help you plan — final price after review.</div>
+                          {% endif %}
+                        </td>
+
+                        <td class="py-4 pr-4 text-sm text-slate-700">
+                          {% if is_row_provisional or is_meaningless_job_qty %}
+                            <span class="text-slate-500">—</span>
+                          {% else %}
+                            {{ fmt_qty(item.quantity, item.unit) }} {{ item.unit }}
+                          {% endif %}
+                        </td>
+
+                        <td class="py-4 pr-4 text-sm text-slate-700">
+                          {% if item.assumptions and item.assumptions.prep_level %}
+                            {{ item.assumptions.prep_level }}
+                          {% else %}
+                            <span class="text-slate-500">—</span>
+                          {% endif %}
+                        </td>
+
+                        <td class="py-4 pr-4 text-sm text-slate-700">
+                          {% if item.assumptions and item.assumptions.access %}
+                            {{ item.assumptions.access }}
+                          {% else %}
+                            <span class="text-slate-500">—</span>
+                          {% endif %}
+                        </td>
+
+                        <td class="py-4 text-right text-sm">
+                          {% if show_prices and item.total %}
+                            <span class="font-semibold text-slate-900">{{ fmt_usd(item.total) }}</span>
+                          {% else %}
+                            <span class="text-slate-500">TBD</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td colspan="5" class="py-8 text-sm text-slate-600">No line items yet — we’ll finalize scope during review.</td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-6 grid gap-6 md:grid-cols-2">
+              <div>
+                <div class="text-sm font-semibold text-slate-900">{{ copy.scope_label if copy and copy.scope_label else "Scope" }}</div>
+                <ul class="mt-2 space-y-2 text-sm text-slate-700 list-disc pl-5">
+                  {% for b in scope_bullets %}
+                    <li>{{ b }}</li>
+                  {% endfor %}
+                </ul>
+
+                <div class="mt-4 text-xs text-slate-500">
+                  Includes protection of floors/furniture and daily cleanup unless noted otherwise.
                 </div>
               </div>
-            {% endif %}
-          {% else %}
-            <div style="font-size:26px;font-weight:950;">Pricing: TBD</div>
-            <div class="mutedSmall muted" style="margin-top:8px;">
-              We’ll finalize after a quick review of surfaces & prep/access.
+
+              <div>
+                <div class="text-sm font-semibold text-slate-900">{{ copy.exclusions_label if copy and copy.exclusions_label else "Exclusions" }}</div>
+                <ul class="mt-2 space-y-2 text-sm text-slate-700 list-disc pl-5">
+                  {% for x in exclusions %}
+                    <li>{{ x }}</li>
+                  {% endfor %}
+                </ul>
+
+                <div class="mt-4">
+                  <div class="text-sm font-semibold text-slate-900">Change orders</div>
+                  <div class="mt-1 text-xs text-slate-600">
+                    If additional work is requested or discovered, we’ll provide a clear price for approval before proceeding.
+                  </div>
+                </div>
+              </div>
             </div>
-          {% endif %}
 
-          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-            <span class="chip good"><i></i> Protect floors & furniture</span>
-            <span class="chip good"><i></i> Daily cleanup</span>
-            <span class="chip good"><i></i> Workmanship warranty</span>
           </div>
         </div>
 
-        <div class="heroRight">
-          <div class="nextBox">
-            <div class="sectionTitle" style="margin-bottom:8px;">Next step</div>
-
-            {% if show_prices %}
-              <div class="mutedSmall muted" style="margin-bottom:10px;line-height:1.5;">
-                Accept this estimate to reserve a spot on our schedule. We’ll confirm the start date by text/email.
-              </div>
-
-              <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                {# Prefer public.accept_url if provided. If not, you can pass token and use /e/{{ token }}/accept. #}
-                {% if public and public.accept_url %}
-                  <a class="btn primary" href="{{ public.accept_url }}">Accept estimate</a>
-                {% elif token %}
-                  <a class="btn primary" href="/e/{{ token }}/accept">Accept estimate</a>
-                {% else %}
-                  <a class="btn primary" href="#" style="opacity:.6;pointer-events:none;">Accept estimate</a>
-                {% endif %}
-
-                {% if company and company.phone %}
-                  <a class="btn" href="tel:{{ company.phone }}">Call</a>
-                {% endif %}
-              </div>
-
-              <div class="mutedSmall muted" style="margin-top:10px;line-height:1.5;">
-                Questions? Call <strong style="color:var(--text);font-weight:950;">{{ company.phone if company and company.phone else "—" }}</strong>
-                {% if company and company.email %} or email <strong style="color:var(--text);font-weight:950;">{{ company.email }}</strong>{% endif %}.
-              </div>
-            {% else %}
-              <div class="mutedSmall muted" style="line-height:1.5;">
-                Want a faster finalized price? Call us for a 5-minute walkthrough.
-              </div>
-              <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-                {% if company and company.phone %}
-                  <a class="btn primary" href="tel:{{ company.phone }}">Call now</a>
-                {% endif %}
-                {% if company and company.email %}
-                  <a class="btn" href="mailto:{{ company.email }}">Email</a>
-                {% endif %}
-              </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid">
-    <!-- LEFT: Itemized -->
-    <div class="card">
-      <div class="cardHeader">
-        <div class="sectionTitle">Itemized breakdown</div>
-        <div class="muted" style="font-size:13px;line-height:1.5;">
-          Each line item reflects the areas identified from your photos and standard assumptions.
-        </div>
       </div>
 
-      <div class="cardBody">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:40%;">Area / Item</th>
-              <th style="width:14%;">Qty</th>
-              <th style="width:16%;">Prep</th>
-              <th style="width:14%;">Access</th>
-              <th class="right" style="width:16%;">Line total</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {% if pricing and pricing.line_items and (pricing.line_items | length) > 0 %}
-              {% for item in pricing.line_items %}
-                {% set code = (item.code if item and item.code else '') %}
-                {% set unit = (item.unit if item and item.unit else '') %}
-                {% set qty = (item.quantity if item and item.quantity is defined else None) %}
-                {% set is_row_provisional = is_provisional and (code in ['provisional_estimate','interior_painting_est','provisional_total','provisional']) %}
-                {% set is_meaningless_job_qty = (unit == 'job' and (qty == 1 or qty == 1.0 or qty == '1' or qty == '1.0')) %}
-
-                <tr>
-                  <td>
-                    <div style="font-weight:950;">{{ item.label }}</div>
-                    {% if item.description %}
-                      <div class="muted">{{ item.description }}</div>
-                    {% endif %}
-                    {% if is_row_provisional %}
-                      <div class="mutedSmall muted">Shown to help you plan — final price after review.</div>
-                    {% endif %}
-                  </td>
-
-                  <td>
-                    {% if is_row_provisional or is_meaningless_job_qty %}
-                      —
-                    {% else %}
-                      {{ fmt_qty(item.quantity, item.unit) }} {{ item.unit }}
-                    {% endif %}
-                  </td>
-
-                  <td>
-                    {% if item.assumptions and item.assumptions.prep_level %}
-                      {{ item.assumptions.prep_level }}
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-
-                  <td>
-                    {% if item.assumptions and item.assumptions.access %}
-                      {{ item.assumptions.access }}
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-
-                  <td class="right">
-                    {% if show_prices and item.total %}
-                      <span style="font-weight:950;">{{ fmt_usd(item.total) }}</span>
-                    {% else %}
-                      <span class="muted">TBD</span>
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endfor %}
-            {% else %}
-              <tr>
-                <td colspan="5" class="muted" style="padding:14px;">
-                  No line items yet — we’ll finalize scope during review.
-                </td>
-              </tr>
-            {% endif %}
-          </tbody>
-        </table>
-
-        <div class="divider"></div>
-
-        <div>
-          <div class="sectionTitle">{{ copy.scope_label if copy and copy.scope_label else "Scope" }}</div>
-          <ul>
-            {% for b in scope_bullets %}
-              <li>{{ b }}</li>
-            {% endfor %}
-          </ul>
-          <div class="muted" style="margin-top:10px;font-size:13px;">
-            See <strong style="font-weight:950;color:var(--text);">
-              {{ copy.exclusions_label if copy and copy.exclusions_label else "Exclusions" }}
-            </strong> below.
+      <!-- Right: Summary -->
+      <aside class="space-y-6">
+        <div class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden lg:sticky lg:top-6">
+          <div class="border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <div class="text-sm font-semibold text-slate-900">Summary</div>
+            <div class="mt-1 text-xs text-slate-600">Customer & project details</div>
           </div>
 
-          <div class="mutedSmall muted" style="margin-top:10px;">
-            Includes protection of floors/furniture and daily cleanup unless noted otherwise.
-          </div>
-        </div>
+          <div class="px-5 py-5">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Customer</div>
+            <div class="mt-2 space-y-2 text-sm">
+              <div class="flex items-start justify-between gap-3">
+                <div class="text-slate-600">Name</div>
+                <div class="font-semibold text-slate-900 text-right">{{ lead_name if lead_name else "—" }}</div>
+              </div>
+              <div class="flex items-start justify-between gap-3">
+                <div class="text-slate-600">Email</div>
+                <div class="text-slate-900 text-right">{{ lead_email if lead_email else "—" }}</div>
+              </div>
+              <div class="flex items-start justify-between gap-3">
+                <div class="text-slate-600">Phone</div>
+                <div class="text-slate-900 text-right">{{ lead_phone if lead_phone else "—" }}</div>
+              </div>
+            </div>
 
-        <div style="margin-top:14px;">
-          <div class="sectionTitle">{{ copy.exclusions_label if copy and copy.exclusions_label else "Exclusions" }}</div>
-          <ul>
-            {% for x in exclusions %}
-              <li>{{ x }}</li>
-            {% endfor %}
-          </ul>
-        </div>
+            <div class="my-5 h-px bg-slate-200"></div>
 
-        <div style="margin-top:14px;">
-          <div class="sectionTitle">Change orders</div>
-          <div class="mutedSmall muted">
-            If additional work is requested or discovered, we’ll provide a clear price for approval before proceeding.
-          </div>
-        </div>
-      </div>
-    </div>
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Project</div>
+            <div class="mt-2 space-y-2 text-sm">
+              <div class="flex items-start justify-between gap-3">
+                <div class="text-slate-600">Location</div>
+                <div class="text-slate-900 text-right">{{ project.location if project and project.location else "—" }}</div>
+              </div>
 
-    <!-- RIGHT: Summary -->
-    <div class="card">
-      <div class="cardHeader">
-        <div class="sectionTitle">Summary</div>
-      </div>
+              <div class="flex items-start justify-between gap-3">
+                <div class="text-slate-600">Estimate ID</div>
+                <div class="text-slate-900 text-right">
+                  {{ project.estimate_id if project and project.estimate_id else ("EST-" ~ (project.lead_id if project and project.lead_id else "—")) }}
+                </div>
+              </div>
 
-      <div class="cardBody">
-        <div class="sectionTitle">Customer</div>
-        <div class="kv" style="margin-bottom:12px;">
-          <div class="item">
-            <b>Name</b>
-            <span>{{ lead_name if lead_name else "—" }}</span>
-          </div>
-          <div class="item">
-            <b>Email</b>
-            <span>{{ lead_email if lead_email else "—" }}</span>
-          </div>
-          <div class="item">
-            <b>Phone</b>
-            <span>{{ lead_phone if lead_phone else "—" }}</span>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="sectionTitle">Project</div>
-        <div class="kv" style="margin-bottom:12px;">
-          <div class="item">
-            <b>Location</b>
-            <span class="multiline">{{ project.location if project and project.location else "—" }}</span>
-          </div>
-          <div class="item">
-            <b>Estimate ID</b>
-            <span>{{ project.estimate_id if project and project.estimate_id else ("EST-" ~ (project.lead_id if project and project.lead_id else "—")) }}</span>
-          </div>
-          <div class="item">
-            <b>Lead</b>
-            <span>#{{ project.lead_id if project and project.lead_id else "—" }}</span>
-          </div>
-          <div class="item">
-            <b>Status</b>
-            <span>
-              {% if pricing_ready %}Fixed-price estimate
-              {% elif is_provisional %}Rough estimate
-              {% else %}Review needed
+              {% if project and project.square_feet %}
+                <div class="flex items-start justify-between gap-3">
+                  <div class="text-slate-600">Area</div>
+                  <div class="text-slate-900 text-right">{{ project.square_feet }} ft²</div>
+                </div>
               {% endif %}
-            </span>
-          </div>
 
-          {# US market: show square feet (expects project.square_feet from step_render_v1) #}
-          {% if project and project.square_feet %}
-            <div class="item">
-              <b>Area</b>
-              <span>{{ project.square_feet }} ft²</span>
-            </div>
-          {% endif %}
-        </div>
-
-        {# Show cleaned description from step_render_v1 (project.description) #}
-        {% if project and project.description %}
-          <div class="sectionTitle">Description</div>
-          <div class="mutedSmall" style="margin-bottom:12px; white-space: normal;">
-            {{ project.description }}
-          </div>
-        {% endif %}
-
-        <div class="divider"></div>
-
-        <div class="sectionTitle">{{ (copy.labor_label if copy else "Labor") }} & {{ (copy.materials_label if copy else "Materials") }}</div>
-        <div class="totals">
-          {% if show_prices %}
-            <div class="totalRow">
-              <b>{{ copy.labor_label if copy and copy.labor_label else "Labor" }}</b>
-              <strong>{{ fmt_usd(pricing.subtotals.labor) }}</strong>
-            </div>
-
-            <div class="totalRow">
-              <b>{{ copy.materials_label if copy and copy.materials_label else "Materials" }}</b>
-              <strong>{{ fmt_usd(pricing.subtotals.materials) }}</strong>
-            </div>
-
-            {% if show_tax %}
-              <div class="totalRow">
-                <b>Sales tax (if applicable)</b>
-                <strong>
-                  {% if pricing.tax and pricing.tax.tax_amount is not none %}
-                    {{ fmt_usd(pricing.tax.tax_amount) }}
-                  {% else %}
-                    —
+              <div class="flex items-start justify-between gap-3">
+                <div class="text-slate-600">Status</div>
+                <div class="text-slate-900 text-right">
+                  {% if pricing_ready %}Fixed-price estimate
+                  {% elif is_provisional %}Rough estimate
+                  {% else %}Review needed
                   {% endif %}
-                </strong>
+                </div>
               </div>
-            {% endif %}
-
-            <div class="totalRow grand">
-              <b>Total</b>
-              <strong>{{ fmt_usd(pricing.totals.grand_total) }}</strong>
             </div>
 
-            {% if is_provisional %}
-              <div class="mutedSmall muted" style="margin-top:6px;">
-                Rough estimate — final price after quick review.
-              </div>
+            {% if project and project.description %}
+              <div class="my-5 h-px bg-slate-200"></div>
+              <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Description</div>
+              <div class="mt-2 text-sm text-slate-700 leading-relaxed">{{ project.description }}</div>
             {% endif %}
 
-            {% if subject_to_verification_copy %}
-              <div class="mutedSmall muted" style="margin-top:6px;">
-                {{ subject_to_verification_copy }}
-              </div>
-            {% endif %}
+            <div class="my-5 h-px bg-slate-200"></div>
 
-            {% if validity_copy %}
-              <div class="mutedSmall muted" style="margin-top:4px;">
-                {{ validity_copy }}
-              </div>
-            {% endif %}
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Totals</div>
+            <div class="mt-2 space-y-2 text-sm">
+              {% if show_prices %}
+                <div class="flex items-center justify-between gap-3">
+                  <div class="text-slate-600">{{ copy.labor_label if copy and copy.labor_label else "Labor" }}</div>
+                  <div class="font-semibold text-slate-900">{{ fmt_usd(pricing.subtotals.labor) }}</div>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <div class="text-slate-600">{{ copy.materials_label if copy and copy.materials_label else "Materials" }}</div>
+                  <div class="font-semibold text-slate-900">{{ fmt_usd(pricing.subtotals.materials) }}</div>
+                </div>
 
-            <div class="mutedSmall muted" style="margin-top:6px;">
-              Materials include paint & consumables unless noted.
+                {% if show_tax %}
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="text-slate-600">Sales tax (if applicable)</div>
+                    <div class="font-semibold text-slate-900">
+                      {% if pricing.tax and pricing.tax.tax_amount is not none %}
+                        {{ fmt_usd(pricing.tax.tax_amount) }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endif %}
+
+                <div class="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div class="flex items-center justify-between">
+                    <div class="text-sm font-semibold text-slate-900">Total</div>
+                    <div class="text-lg font-black tracking-tight">{{ fmt_usd(pricing.totals.grand_total) }}</div>
+                  </div>
+                  {% if is_provisional %}
+                    <div class="mt-1 text-xs text-slate-600">Rough estimate — final price after quick review.</div>
+                  {% endif %}
+                  <div class="mt-1 text-xs text-slate-600">Materials include paint & consumables unless noted.</div>
+                </div>
+              {% else %}
+                <div class="flex items-center justify-between gap-3">
+                  <div class="text-slate-600">Pricing</div>
+                  <div class="font-semibold text-slate-900">TBD</div>
+                </div>
+                <div class="mt-2 text-xs text-slate-600">
+                  We’ll finalize after a quick review of surfaces & prep/access.
+                </div>
+              {% endif %}
             </div>
-          {% else %}
-            <div class="totalRow">
-              <b>Pricing</b>
-              <strong class="muted">TBD</strong>
+
+            <div class="no-print mt-5 space-y-3">
+              <div class="text-sm font-semibold text-slate-900">What happens after you accept?</div>
+              <div class="text-sm text-slate-700 leading-relaxed">
+                We’ll confirm the start date, materials/colors, and access details. You’ll receive a simple schedule confirmation by text/email.
+              </div>
+
+              {% if show_prices and token %}
+                <form method="post" action="/e/{{ token }}/accept" class="m-0">
+                  <button type="submit"
+                          class="w-full inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                    Accept estimate
+                  </button>
+                </form>
+              {% endif %}
             </div>
-            <div class="mutedSmall muted" style="margin-top:6px;">
-              We’ll finalize after a quick review of surfaces & prep/access.
-            </div>
+          </div>
+        </div>
+
+        <!-- Footer note -->
+        <div class="text-xs text-slate-500">
+          {% if pricing_ready and copy and copy.disclaimer_pricing_ready %}
+            <div class="leading-relaxed">{{ copy.disclaimer_pricing_ready }}</div>
+          {% elif (is_provisional or (not pricing_ready)) and copy and copy.disclaimer_needs_review %}
+            <div class="leading-relaxed">{{ copy.disclaimer_needs_review }}</div>
           {% endif %}
-        </div>
 
-        <div class="divider"></div>
-
-        <div class="sectionTitle">What happens after you accept?</div>
-        <div class="mutedSmall muted" style="line-height:1.6;">
-          We’ll confirm the start date, materials/colors, and access details. You’ll receive a simple schedule confirmation by text/email.
-        </div>
-
-        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-          {% if show_prices %}
-            {% if public and public.accept_url %}
-              <a class="btn primary" href="{{ public.accept_url }}">Accept estimate</a>
-            {% elif token %}
-              <a class="btn primary" href="/e/{{ token }}/accept">Accept estimate</a>
+          <div class="mt-3">
+            Generated by Paintly
+            {% if project and project.lead_id %}
+              • Lead #{{ project.lead_id }}
             {% endif %}
-          {% endif %}
-
-          {% if company and company.phone %}
-            <a class="btn" href="tel:{{ company.phone }}">Call</a>
-          {% endif %}
-          {% if company and company.email %}
-            <a class="btn" href="mailto:{{ company.email }}">Email</a>
-          {% endif %}
+          </div>
         </div>
-
-        <div class="mutedSmall muted" style="margin-top:10px;line-height:1.5;">
-          By accepting, you agree to the scope and assumptions above. Any changes will be priced and approved before we proceed.
-        </div>
-      </div>
+      </aside>
     </div>
   </div>
-
-  <div class="footer">
-    {% if pricing_ready and copy and copy.disclaimer_pricing_ready %}
-      <div class="muted" style="font-size:11px;line-height:1.5;margin-bottom:10px;">
-        {{ copy.disclaimer_pricing_ready }}
-      </div>
-    {% elif (is_provisional or (not pricing_ready)) and copy and copy.disclaimer_needs_review %}
-      <div class="muted" style="font-size:11px;line-height:1.5;margin-bottom:10px;">
-        {{ copy.disclaimer_needs_review }}
-      </div>
-    {% endif %}
-
-    <div class="muted" style="font-size:11px;line-height:1.5;">
-      Generated by Paintly
-      {% if project and project.lead_id %}
-        • Lead #{{ project.lead_id }}
-      {% endif %}
-    </div>
-  </div>
-
-</div>
 </body>
 </html>

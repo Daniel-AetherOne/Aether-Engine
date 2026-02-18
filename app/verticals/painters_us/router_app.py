@@ -20,6 +20,10 @@ from app.models.job import Job
 from app.models.user import User
 from app.services.storage import get_storage, get_text
 
+from app.core.settings import settings
+from app.services.email import send_postmark_email, EmailError
+from app.verticals.painters_us.email_render import render_estimate_ready_email
+
 
 router = APIRouter(
     prefix="/app",
@@ -399,11 +403,58 @@ def send_estimate(
     if not lead.estimate_html_key:
         raise HTTPException(status_code=400, detail="No estimate to send")
 
+    # ensure public token
     if not lead.public_token:
         lead.public_token = secrets.token_hex(16)
 
+    # build public url (use env base url so it works behind proxies too)
+    base = (settings.APP_PUBLIC_BASE_URL or str(request.base_url)).rstrip("/")
+    public_url = f"{base}/e/{lead.public_token}"
+
+    # must have an email
+    to_email = (getattr(lead, "email", "") or "").strip()
+    if not to_email:
+        raise HTTPException(status_code=400, detail="Lead has no email address")
+
+    # render email html
+    company_name = "Paintly"
+    customer_name = getattr(lead, "name", "") or ""
+    email_html = render_estimate_ready_email(
+        customer_name=customer_name,
+        public_url=public_url,
+        company_name=company_name,
+    )
+
+    # send
+    try:
+        message_id = send_postmark_email(
+            to=to_email,
+            subject="Your estimate is ready",
+            html_body=email_html,
+            metadata={"lead_id": str(lead.id), "tenant_id": str(lead.tenant_id)},
+        )
+
+    except EmailError as e:
+        logger.exception("estimate_email_send_failed lead_id=%s err=%s", lead.id, e)
+        msg = str(e)
+
+        # Postmark pending approval (domain restriction)
+        if "ErrorCode': 412" in msg or 'ErrorCode": 412' in msg:
+            return RedirectResponse(
+                url=f"/app/leads/{lead_id}?send_error=postmark_pending",
+                status_code=303,
+            )
+
+        return RedirectResponse(
+            url=f"/app/leads/{lead_id}?send_error=send_failed",
+            status_code=303,
+        )
+    # mark sent
     lead.status = "SENT"
     lead.sent_at = _utcnow()
+    # optional: store message id if you add a column later
+    # lead.last_email_message_id = message_id
+
     db.add(lead)
     db.commit()
 

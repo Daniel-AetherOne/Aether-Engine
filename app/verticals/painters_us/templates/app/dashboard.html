@@ -1,93 +1,153 @@
 {% extends "app/layout.html" %}
 {% block content %}
 
-<div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
-  <div>
-    <h2 style="margin:0;">Dashboard</h2>
-    <div class="muted">Jobs & Leads overview</div>
-  </div>
- 
-</div>
+<div class="space-y-6">
 
-<div style="display:grid; grid-template-columns:repeat(5, minmax(120px, 1fr)); gap:12px; margin-top:16px;">
-  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
-    <div class="muted">NEW</div>
-    <div style="font-size:22px; font-weight:700;">{{ kpis.NEW }}</div>
-  </div>
-  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
-    <div class="muted">SCHEDULED</div>
-    <div style="font-size:22px; font-weight:700;">{{ kpis.SCHEDULED }}</div>
-  </div>
-  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
-    <div class="muted">IN_PROGRESS</div>
-    <div style="font-size:22px; font-weight:700;">{{ kpis.IN_PROGRESS }}</div>
-  </div>
-  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
-    <div class="muted">DONE</div>
-    <div style="font-size:22px; font-weight:700;">{{ kpis.DONE }}</div>
-  </div>
-  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
-    <div class="muted">CANCELLED</div>
-    <div style="font-size:22px; font-weight:700;">{{ kpis.CANCELLED }}</div>
-  </div>
-</div>
+  <!-- Header -->
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h2 class="text-2xl font-semibold tracking-tight">Dashboard</h2>
+      <div class="mt-1 text-sm text-slate-600">Jobs & Leads overview</div>
+    </div>
 
-<form method="post" action="/app/dev/set_timezone" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
-  <input name="tz" value="America/Chicago" style="padding:8px;border-radius:10px;border:1px solid #ddd; width:240px;">
-  <button class="btn" type="submit">Set timezone</button>
-</form>
-
-<div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:18px;">
-  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
-    <h3 style="margin:0 0 10px 0;">Recent jobs</h3>
-    <table style="width:100%; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="text-align:left; padding:8px 0;">Job</th>
-          <th style="text-align:left; padding:8px 0;">Status</th>
-          <th style="text-align:left; padding:8px 0;">Lead</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for j in jobs %}
-        <tr style="border-top:1px solid #f1f1f1;">
-          <td style="padding:10px 0;">#{{ j.id }}</td>
-          <td style="padding:10px 0;">
-            <span class="badge JOB_{{ j.status }}">{{ j.status }}</span>
-          </td>
-          <td style="padding:10px 0;">
-           
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <!-- Timezone (dev) -->
+    <form method="post" action="/app/dev/set_timezone" class="flex flex-wrap items-center gap-2">
+      <input
+        name="tz"
+        value="America/Chicago"
+        class="h-10 w-60 rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+      />
+      <button
+        class="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+        type="submit"
+      >
+        Set timezone
+      </button>
+    </form>
   </div>
 
-  <div style="background:white; border:1px solid #eee; border-radius:14px; padding:12px;">
-    <h3 style="margin:0 0 10px 0;">Recent leads</h3>
-    <table style="width:100%; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="text-align:left; padding:8px 0;">Lead</th>
-          <th style="text-align:left; padding:8px 0;">Customer</th>
-          <th style="text-align:left; padding:8px 0;">Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for l in leads %}
-        <tr style="border-top:1px solid #f1f1f1;">
-          <td style="padding:10px 0;">
-            <a href="/app/leads/{{ l.id }}">#{{ l.id }}</a>
-          </td>
-          <td style="padding:10px 0;">{{ l.name }}</td>
-          <td style="padding:10px 0;">
-            <span class="badge {{ l.status }}">{{ l.status }}</span>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <!-- KPI grid -->
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    {% set kpi_cards = [
+      ('NEW', kpis.NEW, 'bg-slate-900 text-white'),
+      ('SCHEDULED', kpis.SCHEDULED, 'bg-sky-50 text-slate-900'),
+      ('IN_PROGRESS', kpis.IN_PROGRESS, 'bg-indigo-50 text-slate-900'),
+      ('DONE', kpis.DONE, 'bg-emerald-50 text-slate-900'),
+      ('CANCELLED', kpis.CANCELLED, 'bg-rose-50 text-slate-900'),
+    ] %}
+
+    {% for label, value, cls in kpi_cards %}
+      <div class="rounded-2xl border border-slate-200 {{ cls }} p-4 shadow-sm">
+        <div class="text-xs font-semibold uppercase tracking-wide opacity-80">{{ label }}</div>
+        <div class="mt-2 text-2xl font-semibold tracking-tight">{{ value }}</div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Two columns -->
+  <div class="grid gap-6 lg:grid-cols-2">
+
+    <!-- Recent jobs -->
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900">Recent jobs</h3>
+      </div>
+
+      <div class="mt-4 overflow-hidden rounded-xl border border-slate-200">
+        <table class="min-w-full divide-y divide-slate-200">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Job</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Lead</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 bg-white">
+            {% for j in jobs %}
+              {% set st = (j.status or '').upper() %}
+              {% if st == 'DONE' %}
+                {% set badge = 'bg-emerald-100 text-emerald-800 border-emerald-200' %}
+              {% elif st == 'IN_PROGRESS' %}
+                {% set badge = 'bg-indigo-100 text-indigo-800 border-indigo-200' %}
+              {% elif st == 'SCHEDULED' %}
+                {% set badge = 'bg-sky-100 text-sky-800 border-sky-200' %}
+              {% elif st == 'CANCELLED' %}
+                {% set badge = 'bg-rose-100 text-rose-800 border-rose-200' %}
+              {% else %}
+                {% set badge = 'bg-slate-100 text-slate-800 border-slate-200' %}
+              {% endif %}
+
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 text-sm font-semibold text-slate-900">#{{ j.id }}</td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ badge }}">
+                    {{ st or '—' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-700">
+                  {# If you later add lead_id to job vm, link it here. Leaving blank for now. #}
+                  —
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td class="px-4 py-6 text-sm text-slate-600" colspan="3">No jobs yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent leads -->
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-900">Recent leads</h3>
+      </div>
+
+      <div class="mt-4 overflow-hidden rounded-xl border border-slate-200">
+        <table class="min-w-full divide-y divide-slate-200">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Lead</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Customer</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 bg-white">
+            {% for l in leads %}
+              {% set lst = (l.status or '').upper() %}
+              {% if lst in ['ACCEPTED','DONE','COMPLETED'] %}
+                {% set lbadge = 'bg-emerald-100 text-emerald-800 border-emerald-200' %}
+              {% elif lst in ['SENT','VIEWED'] %}
+                {% set lbadge = 'bg-amber-100 text-amber-800 border-amber-200' %}
+              {% elif lst in ['CANCELLED'] %}
+                {% set lbadge = 'bg-rose-100 text-rose-800 border-rose-200' %}
+              {% else %}
+                {% set lbadge = 'bg-slate-100 text-slate-800 border-slate-200' %}
+              {% endif %}
+
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 text-sm">
+                  <a href="/app/leads/{{ l.id }}" class="font-semibold text-slate-900 hover:underline">#{{ l.id }}</a>
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-700">{{ l.name or '—' }}</td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ lbadge }}">
+                    {{ lst or '—' }}
+                  </span>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td class="px-4 py-6 text-sm text-slate-600" colspan="3">No leads yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 

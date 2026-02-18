@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+  <body style="margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#f6f7fb;">
+    <div style="padding:24px 12px;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;padding:22px;border:1px solid #e8eaf0;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:34px;height:34px;border-radius:10px;background:#065f46;"></div>
+          <div>
+            <div style="font-weight:800;letter-spacing:0.2px;">{{ company_name or "Paintly" }}</div>
+            <div style="color:#6b7280;font-size:13px;">Acceptance received</div>
+          </div>
+        </div>
+
+        <h1 style="font-size:22px;line-height:1.2;margin:0 0 10px;color:#111827;">Thanks — we received your acceptance</h1>
+        <p style="margin:0 0 14px;color:#374151;line-height:1.55;">
+          Hi {{ customer_name or "there" }}, thanks for accepting the estimate. We’ll reach out shortly to confirm the next steps.
+        </p>
+
+        <div style="margin:18px 0 14px;">
+          <a href="{{ public_url }}"
+             style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:12px 16px;border-radius:12px;font-weight:800;">
+            View estimate
+          </a>
+        </div>
+
+        <div style="background:#f9fafb;border:1px solid #eef0f6;border-radius:14px;padding:12px 14px;margin:0 0 14px;color:#374151;font-size:13px;line-height:1.5;">
+          <div style="font-weight:700;color:#111827;margin-bottom:6px;">What happens next</div>
+          <div>• We confirm availability and start date.</div>
+          <div>• You’ll receive any final scheduling details by email or phone.</div>
+        </div>
+
+        <p style="margin:0 0 6px;color:#6b7280;font-size:12px;">If the button doesn’t work, copy this link:</p>
+        <p style="margin:0;color:#111827;font-size:12px;word-break:break-all;">{{ public_url }}</p>
+
+        <hr style="border:0;border-top:1px solid #eef0f6;margin:18px 0;">
+
+        <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5;">
+          {{ company_name or "Paintly" }} • Sent via Postmark
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

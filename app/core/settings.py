@@ -14,6 +14,15 @@ class Settings(BaseSettings):
     ENABLE_DEV_ROUTES: bool = False
     ENABLE_LLM_PRICING: bool = False
 
+    # Postmark
+    POSTMARK_SERVER_TOKEN: str = ""
+    POSTMARK_FROM: str = ""
+    POSTMARK_REPLY_TO: str = ""
+    APP_PUBLIC_BASE_URL: str = "http://127.0.0.1:8000"
+
+    # Public estimate flow
+    SEND_ACCEPT_CONFIRMATION_EMAIL: bool = True
+
     # Security-critical (geen defaults)
     JWT_SECRET: str
     SECRET_KEY: str

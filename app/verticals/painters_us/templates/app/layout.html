@@ -1,43 +1,85 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
+  <script src="https://cdn.tailwindcss.com"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ title or "Paintly App" }}</title>
-<div style="display:flex; gap:10px; align-items:center; margin-bottom:18px;">
-  <a class="btn" href="/app/dashboard">Dashboard</a>
-  <a class="btn" href="/app/leads">Leads</a>
-  <a class="btn" href="/app/jobs">Jobs</a>
-  <a class="btn" href="/app/calendar">Calendar</a>
-</div>
+
+  <!-- (Optional) keep your existing CSS if it contains other styles you still use -->
   <link rel="stylesheet" href="/static/app.css">
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; margin: 24px; }
-    header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 18px; }
-    a { color: inherit; }
-    .badge { padding: 4px 10px; border-radius: 999px; font-size: 12px; border: 1px solid #ddd; }
-    .RUNNING { background: #f4f4f4; }
-    .NEEDS_REVIEW { background: #fff3cd; border-color:#ffe69c; }
-    .SUCCEEDED { background: #d1e7dd; border-color:#a3cfbb; }
-    table { width:100%; border-collapse: collapse; }
-    th, td { text-align:left; padding: 10px; border-bottom: 1px solid #eee; vertical-align: top;}
-    .muted { color:#666; font-size: 12px; }
-    .btn { display:inline-block; padding: 8px 12px; border: 1px solid #ddd; border-radius: 10px; text-decoration:none; }
-  </style>
 </head>
-<body>
-  <header>
-    <div>
-      <div style="font-weight:700;">Paintly App</div>
-      <div class="muted">painters_us</div>
-    </div>
-    <div>
-      <form method="post" action="/auth/logout" style="display:inline;">
-        <button class="btn" type="submit">Logout</button>
-      </form>
+
+<body class="bg-slate-50 text-slate-900 antialiased">
+  <!-- Topbar -->
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
+      <div class="flex items-center gap-4">
+        <div>
+          <div class="text-sm font-semibold leading-tight">Paintly App</div>
+          <div class="text-xs text-slate-500">painters_us</div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="hidden items-center gap-2 sm:flex">
+          {% set path = request.url.path if request else "" %}
+          {% set link_base = "inline-flex items-center rounded-xl px-3 py-2 text-sm font-semibold transition" %}
+
+          <a href="/app/dashboard"
+             class="{{ link_base }} {% if path.startswith('/app/dashboard') %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+            Dashboard
+          </a>
+          <a href="/app/leads"
+             class="{{ link_base }} {% if path.startswith('/app/leads') %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+            Leads
+          </a>
+          <a href="/app/jobs"
+             class="{{ link_base }} {% if path.startswith('/app/jobs') %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+            Jobs
+          </a>
+          <a href="/app/calendar"
+             class="{{ link_base }} {% if path.startswith('/app/calendar') %}bg-slate-900 text-white{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+            Calendar
+          </a>
+        </nav>
+      </div>
+
+      <!-- Right actions -->
+      <div class="flex items-center gap-2">
+        <!-- Mobile nav (simple) -->
+        <div class="sm:hidden">
+          <select
+            class="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            onchange="if(this.value) window.location.href=this.value;"
+          >
+            <option value="">Menu…</option>
+            <option value="/app/dashboard" {% if path.startswith('/app/dashboard') %}selected{% endif %}>Dashboard</option>
+            <option value="/app/leads" {% if path.startswith('/app/leads') %}selected{% endif %}>Leads</option>
+            <option value="/app/jobs" {% if path.startswith('/app/jobs') %}selected{% endif %}>Jobs</option>
+            <option value="/app/calendar" {% if path.startswith('/app/calendar') %}selected{% endif %}>Calendar</option>
+          </select>
+        </div>
+
+        <form method="post" action="/auth/logout" class="m-0">
+          <button
+            class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+            type="submit"
+          >
+            Logout
+          </button>
+        </form>
+      </div>
     </div>
   </header>
 
-  {% block content %}{% endblock %}
+  <!-- Page container -->
+  <main class="mx-auto max-w-5xl px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="mx-auto max-w-5xl px-4 pb-10 pt-6 text-xs text-slate-500">
+    © {{ (now().year if now is defined else "") }} Paintly • Internal App
+  </footer>
 </body>
 </html>
