@@ -2,36 +2,120 @@
 {% block content %}
 
 <div class="space-y-6">
+
   <!-- Header -->
-  <div class="flex flex-wrap items-end justify-between gap-3">
+  <div class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h2 class="text-2xl font-semibold tracking-tight">Leads</h2>
-      <div class="mt-1 text-sm text-slate-600">Manage customer requests and send estimates.</div>
+      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Leads</h1>
+      <div class="mt-1 text-sm text-slate-600">Manage customer requests and send estimates</div>
     </div>
+    
+    <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
+       href="/app/leads/new">
+      <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      New Lead
+    </a>
   </div>
 
   <!-- Toast (copy link feedback) -->
   <div id="toast"
-       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-lg">
-    <div class="font-semibold">Copied</div>
-    <div class="text-xs text-slate-600">Public estimate link copied to clipboard.</div>
+       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
+    <div class="flex items-start gap-3">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold text-slate-900">Link copied</div>
+        <div class="text-xs text-slate-500">Public estimate link copied to clipboard</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {% set counts = {'new': 0, 'pending': 0, 'accepted': 0, 'total': leads|length} %}
+    {% for lead in leads %}
+      {% set st = (lead.status or '').upper() %}
+      {% if st in ['NEW', 'DRAFT'] %}
+        {% set _ = counts.update({'new': counts.new + 1}) %}
+      {% elif st in ['SENT', 'VIEWED'] %}
+        {% set _ = counts.update({'pending': counts.pending + 1}) %}
+      {% elif st in ['ACCEPTED'] %}
+        {% set _ = counts.update({'accepted': counts.accepted + 1}) %}
+      {% endif %}
+    {% endfor %}
+    
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-slate-900">{{ counts.total }}</div>
+          <div class="text-xs text-slate-500">Total leads</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-slate-900">{{ counts.new }}</div>
+          <div class="text-xs text-slate-500">New / Draft</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-slate-900">{{ counts.pending }}</div>
+          <div class="text-xs text-slate-500">Estimate sent</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-slate-900">{{ counts.accepted }}</div>
+          <div class="text-xs text-slate-500">Accepted</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Table card -->
-  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-5 py-4">
-      <div class="text-sm font-semibold text-slate-900">All leads</div>
-      <div class="mt-1 text-xs text-slate-600">Click a lead to open details.</div>
+  <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
+      <div class="flex items-center gap-2">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-slate-900">All leads</div>
+          <div class="text-xs text-slate-500">Click a lead to view details</div>
+        </div>
+      </div>
     </div>
 
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-slate-200">
         <thead class="bg-slate-50">
           <tr>
-            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Customer</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Estimate</th>
-            <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Actions</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Customer</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Estimate</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Actions</th>
           </tr>
         </thead>
 
@@ -39,50 +123,57 @@
           {% for lead in leads %}
             {% set st = (lead.status or '').upper() %}
             {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
-              {% set badge_cls = 'bg-emerald-100 text-emerald-800 border-emerald-200' %}
+              {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
             {% elif st in ['SENT','VIEWED'] %}
-              {% set badge_cls = 'bg-amber-100 text-amber-800 border-amber-200' %}
+              {% set badge_color = 'bg-amber-50 text-amber-700 ring-amber-600/20' %}
             {% elif st in ['CANCELLED'] %}
-              {% set badge_cls = 'bg-rose-100 text-rose-800 border-rose-200' %}
+              {% set badge_color = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
             {% else %}
-              {% set badge_cls = 'bg-slate-100 text-slate-800 border-slate-200' %}
+              {% set badge_color = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
             {% endif %}
 
             {% set total = lead.get("total") if lead is mapping else None %}
 
-            <tr class="hover:bg-slate-50">
+            <tr class="hover:bg-slate-50/80 transition-colors">
               <!-- Customer -->
-              <td class="px-5 py-4 align-top">
-                <div class="flex flex-col gap-1">
-                  <a href="/app/leads/{{ lead.id }}" class="text-sm font-semibold text-slate-900 hover:underline">
+              <td class="px-4 py-3 align-top">
+                <div class="flex flex-col gap-0.5">
+                  <a href="/app/leads/{{ lead.id }}" class="text-sm font-semibold text-slate-900 hover:text-slate-700 transition-colors">
                     {{ lead.customer_name or "—" }}
                   </a>
-                  <div class="text-xs text-slate-600">{{ lead.address or "" }}</div>
+                  {% if lead.address %}
+                    <div class="flex items-center gap-1 text-xs text-slate-500">
+                      <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                      <span class="truncate max-w-[200px]">{{ lead.address }}</span>
+                    </div>
+                  {% endif %}
                 </div>
               </td>
 
               <!-- Status -->
-              <td class="px-5 py-4 align-top">
-                <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ badge_cls }}">
-                  {{ st or "—" }}
+              <td class="px-4 py-3 align-top">
+                <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
+                  {{ st or "NEW" }}
                 </span>
               </td>
 
               <!-- Estimate -->
-              <td class="px-5 py-4 align-top">
-                <div class="text-xs text-slate-600">
+              <td class="px-4 py-3 align-top">
+                <div class="flex flex-col gap-1">
                   {% if lead.estimate_html_key %}
-
-                    <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                      HTML ✓
+                    <span class="inline-flex w-fit items-center gap-1.5 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                      Ready
                     </span>
-
                   {% else %}
-                    —
+                    <span class="inline-flex w-fit items-center gap-1.5 rounded-md bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/20">
+                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      Pending
+                    </span>
                   {% endif %}
 
                   {% if total is not none %}
-                    <div class="mt-2 text-sm font-semibold text-slate-900">
+                    <div class="text-sm font-semibold text-slate-900">
                       ${{ "%.2f"|format(total) }}
                     </div>
                   {% endif %}
@@ -90,13 +181,13 @@
               </td>
 
               <!-- Actions -->
-              <td class="px-5 py-4 align-top text-right">
+              <td class="px-4 py-3 align-top text-right">
                 <div class="flex flex-wrap justify-end gap-2">
                   {% set a = lead.next_action %}
                   {% if a.method == "POST" %}
                     <form method="post" action="{{ a.href }}" class="m-0">
                       <button
-                        class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                        class="inline-flex h-8 items-center justify-center rounded-md bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
                         type="submit"
                       >
                         {{ a.label }}
@@ -104,7 +195,7 @@
                     </form>
                   {% else %}
                     <a
-                      class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                      class="inline-flex h-8 items-center justify-center rounded-md bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
                       href="{{ a.href }}"
                     >
                       {{ a.label }}
@@ -113,10 +204,11 @@
 
                   {% if lead.public_url %}
                     <button
-                      class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+                      class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-colors"
                       type="button"
                       onclick="copyText('{{ lead.public_url }}')"
                     >
+                      <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                       Copy link
                     </button>
                   {% endif %}
@@ -125,7 +217,18 @@
             </tr>
           {% else %}
             <tr>
-              <td class="px-5 py-10 text-sm text-slate-600" colspan="4">No leads yet.</td>
+              <td class="px-4 py-12 text-center" colspan="4">
+                <div class="flex flex-col items-center justify-center">
+                  <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  </div>
+                  <p class="text-sm font-medium text-slate-900">No leads yet</p>
+                  <p class="text-xs text-slate-500 mt-1">Create your first lead to get started</p>
+                  <a href="/app/leads/new" class="mt-3 inline-flex h-8 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors">
+                    Create lead
+                  </a>
+                </div>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -146,7 +249,7 @@
       window.__toastTimer = setTimeout(() => {
         toast.classList.add("hidden");
         toast.classList.remove("block");
-      }, 1600);
+      }, 2000);
     };
 
     if (navigator.clipboard && navigator.clipboard.writeText) {

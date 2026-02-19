@@ -6,57 +6,55 @@
   {% set sent = request.query_params.get('sent') %}
   {% set send_error = request.query_params.get('send_error') %}
 
-  <!-- Toast (copy link feedback) -->
+  <!-- Toast -->
   <div id="toast"
-       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-lg">
-    <div class="font-semibold">Copied</div>
-    <div class="text-xs text-slate-600">Link copied to clipboard.</div>
+       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg z-50">
+    <div class="flex items-start gap-3">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold text-slate-900">Link copied</div>
+        <div class="text-xs text-slate-500">Copied to clipboard</div>
+      </div>
+    </div>
   </div>
 
-  <!-- Top row: back + title + actions -->
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <a
-      href="/app/leads"
-      class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
-    >
-      ← Back to leads
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <a href="/app/leads"
+       class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
+      <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      Back to leads
     </a>
 
     <div class="flex flex-wrap items-center gap-2">
       {% if lead.public_token %}
-        <a
-          class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
-          href="/e/{{ lead.public_token }}"
-          target="_blank"
-        >
-          Open public estimate
+        <a class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
+           href="/e/{{ lead.public_token }}" target="_blank">
+          <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          View public
         </a>
 
-        <button
-          class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
-          type="button"
-          onclick="copyText('{{ '/e/' ~ lead.public_token }}')"
-          title="Copy public path"
-        >
+        <button class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
+                type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
+          <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
           Copy link
         </button>
       {% endif %}
 
       {% if lead.estimate_html_key %}
-        <a
-          class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
-          href="/app/leads/{{ lead.id }}/estimate"
-          target="_blank"
-        >
+        <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
+           href="/app/leads/{{ lead.id }}/estimate" target="_blank">
+          <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           Open estimate
         </a>
 
         <form id="sendEstimateFormTop" method="post" action="/app/leads/{{ lead.id }}/send" class="m-0">
-          <button
-            id="sendEstimateBtnTop"
-            class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            type="submit"
-          >
+          <button id="sendEstimateBtnTop"
+                  class="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                  type="submit">
+            <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
             Send estimate
           </button>
         </form>
@@ -66,346 +64,345 @@
 
   <!-- Alerts -->
   {% if sent == '1' %}
-    <div class="rounded-2xl border border-emerald-500/30 bg-emerald-50 px-4 py-3">
-      <div class="font-semibold text-emerald-900">Estimate sent</div>
-      <div class="mt-0.5 text-sm text-slate-700">The customer will receive the email shortly.</div>
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+      <div class="flex items-start gap-3">
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-emerald-900">Estimate sent</div>
+          <div class="text-xs text-emerald-700 mt-0.5">The customer will receive the email shortly</div>
+        </div>
+      </div>
     </div>
   {% endif %}
 
   {% if send_error == 'postmark_pending' %}
-    <div class="rounded-2xl border border-rose-500/30 bg-rose-50 px-4 py-3">
-      <div class="font-semibold text-rose-900">Email sending not active yet</div>
-      <div class="mt-0.5 text-sm text-slate-700">
-        Postmark is pending approval. While pending, you can only send to recipients on the same domain as your From address
-        (<code class="rounded bg-white/60 px-1 py-0.5">getpaintly.com</code>).
-      </div>
-      <div class="mt-2 text-xs text-slate-600">
-        Tip: for testing, use <code class="rounded bg-white/60 px-1 py-0.5">you@getpaintly.com</code>.
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <div class="flex items-start gap-3">
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-amber-900">Email sending not active yet</div>
+          <div class="text-xs text-amber-700 mt-1">
+            Postmark is pending approval. While pending, you can only send to recipients on the same domain as your From address
+            (<code class="rounded bg-white/60 px-1 py-0.5 font-mono">getpaintly.com</code>).
+          </div>
+          <div class="text-xs text-amber-600 mt-2">
+            Tip: for testing, use <code class="rounded bg-white/60 px-1 py-0.5 font-mono">you@getpaintly.com</code>
+          </div>
+        </div>
       </div>
     </div>
   {% endif %}
 
   {% if send_error and send_error not in ['postmark_pending'] %}
-    <div class="rounded-2xl border border-rose-500/30 bg-rose-50 px-4 py-3">
-      <div class="font-semibold text-rose-900">Could not send estimate</div>
-      <div class="mt-0.5 text-sm text-slate-700">Please try again.</div>
+    <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+      <div class="flex items-start gap-3">
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-rose-900">Could not send estimate</div>
+          <div class="text-xs text-rose-700 mt-0.5">Please try again</div>
+        </div>
+      </div>
     </div>
   {% endif %}
 
-  <!-- Lead card -->
-  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <h2 class="text-xl font-semibold tracking-tight">Lead {{ lead.id }}</h2>
+  <div class="grid gap-6 lg:grid-cols-[1fr_400px]">
+    
+    <!-- Left column: Lead info -->
+    <div class="space-y-6">
+      
+      <!-- Lead card -->
+      <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-slate-900">Lead #{{ lead.id }}</div>
+              <div class="text-xs text-slate-500">Customer details</div>
+            </div>
+          </div>
+          
+          {% set st = (lead.status or '').upper() %}
+          {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
+            {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
+          {% elif st in ['SENT','VIEWED'] %}
+            {% set badge_color = 'bg-amber-50 text-amber-700 ring-amber-600/20' %}
+          {% elif st in ['CANCELLED'] %}
+            {% set badge_color = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
+          {% else %}
+            {% set badge_color = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
+          {% endif %}
 
-        {% set st = (lead.status or '').upper() %}
-        {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
-          {% set badge_cls = 'bg-emerald-100 text-emerald-800 border-emerald-200' %}
-        {% elif st in ['SENT','VIEWED'] %}
-          {% set badge_cls = 'bg-amber-100 text-amber-800 border-amber-200' %}
-        {% elif st in ['CANCELLED'] %}
-          {% set badge_cls = 'bg-rose-100 text-rose-800 border-rose-200' %}
-        {% else %}
-          {% set badge_cls = 'bg-slate-100 text-slate-800 border-slate-200' %}
-        {% endif %}
-
-        <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ badge_cls }}">
-          {{ st or '—' }}
-        </span>
-      </div>
-
-      {% if lead.estimate_html_key %}
-        <div id="sendHint" class="hidden text-xs text-slate-600">
-          Sending estimate…
-        </div>
-      {% endif %}
-    </div>
-
-    <div class="mt-4 grid gap-4 md:grid-cols-2">
-      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Customer</div>
-        <div class="mt-1 text-sm font-semibold text-slate-900">{{ lead.customer_name or "—" }}</div>
-
-        <div class="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Address</div>
-        <div class="mt-1 text-sm text-slate-800">{{ lead.address or "—" }}</div>
-      </div>
-
-      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Description</div>
-        <div class="mt-1 text-sm text-slate-800">
-          {{ lead.project_description or "—" }}
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-      <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Estimate HTML Key</div>
-      <div class="mt-1 break-all text-sm text-slate-700">{{ lead.estimate_html_key or "—" }}</div>
-    </div>
-
-    {% if lead.public_token %}
-      <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Public URL</div>
-
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <a
-            class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
-            href="/e/{{ lead.public_token }}"
-            target="_blank"
-          >
-            Open public estimate
-          </a>
-
-          <span class="rounded-lg bg-white px-3 py-2 text-xs text-slate-600 ring-1 ring-inset ring-slate-200">
-            /e/{{ lead.public_token }}
+          <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
+            {{ st or 'NEW' }}
           </span>
-
-          <button
-            class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
-            type="button"
-            onclick="copyText('{{ '/e/' ~ lead.public_token }}')"
-          >
-            Copy link
-          </button>
         </div>
 
-        <div class="mt-2 text-xs text-slate-500">
-          Tip: This is the link customers can use to view and accept the estimate.
-        </div>
-      </div>
-    {% endif %}
-
-    {% if lead.needs_review_reasons %}
-      <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-        <div class="text-sm font-semibold text-slate-900">Needs review reasons</div>
-        <pre class="mt-2 max-h-80 overflow-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-700 ring-1 ring-inset ring-slate-200">{{ lead.needs_review_reasons }}</pre>
-      </div>
-    {% endif %}
-  </div>
-
-  <!-- Job card -->
-  {% if job %}
-    <div id="job" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div class="text-sm font-semibold text-slate-900">Job</div>
-          <div class="mt-1 text-sm text-slate-700">
-            Job ID: <span class="font-semibold text-slate-900">{{ job.id }}</span>
+        <div class="p-4 space-y-4">
+          <!-- Customer info -->
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Customer</div>
+              <div class="mt-1 text-sm font-semibold text-slate-900">{{ lead.customer_name or "—" }}</div>
+            </div>
+            
+            <div>
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Address</div>
+              <div class="mt-1 text-sm text-slate-700">{{ lead.address or "—" }}</div>
+            </div>
           </div>
-        </div>
 
-        {% set jst = (job.status or '').upper() %}
-        {% if jst in ['DONE'] %}
-          {% set jbadge = 'bg-emerald-100 text-emerald-800 border-emerald-200' %}
-        {% elif jst in ['IN_PROGRESS'] %}
-          {% set jbadge = 'bg-indigo-100 text-indigo-800 border-indigo-200' %}
-        {% elif jst in ['SCHEDULED'] %}
-          {% set jbadge = 'bg-sky-100 text-sky-800 border-sky-200' %}
-        {% elif jst in ['CANCELLED'] %}
-          {% set jbadge = 'bg-rose-100 text-rose-800 border-rose-200' %}
-        {% else %}
-          {% set jbadge = 'bg-slate-100 text-slate-800 border-slate-200' %}
-        {% endif %}
-
-        <div class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ jbadge }}">
-          {{ jst or '—' }}
-        </div>
-      </div>
-
-      <!-- Timeline -->
-      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-        <div class="grid gap-1">
+          <!-- Description -->
           <div>
-            <span class="font-semibold text-slate-900">Scheduled:</span>
-            {% if job.scheduled_at %}
-              {{ scheduled_display }} <span class="text-xs text-slate-500">({{ tz_name }})</span>
-            {% else %}
-              —
-            {% endif %}
+            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Project description</div>
+            <div class="mt-1 text-sm text-slate-700 bg-slate-50 rounded-lg p-3 border border-slate-100">
+              {{ lead.project_description or "No description provided" }}
+            </div>
           </div>
 
-          {% if job.started_at %}
-            <div>
-              <span class="font-semibold text-slate-900">Started:</span>
-              {{ started_display }} <span class="text-xs text-slate-500">({{ tz_name }})</span>
+          <!-- Estimate key -->
+          {% if lead.estimate_html_key %}
+            <div class="pt-4 border-t border-slate-100">
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Estimate key</div>
+              <code class="mt-1 block text-xs font-mono text-slate-600 bg-slate-100 rounded px-2 py-1 break-all">{{ lead.estimate_html_key }}</code>
             </div>
           {% endif %}
 
-          {% if job.done_at %}
-            <div>
-              <span class="font-semibold text-slate-900">Done:</span>
-              {{ done_display }} <span class="text-xs text-slate-500">({{ tz_name }})</span>
+          <!-- Public URL -->
+          {% if lead.public_token %}
+            <div class="pt-4 border-t border-slate-100">
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Public URL</div>
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <code class="text-xs font-mono text-slate-600 bg-slate-100 rounded px-2 py-1">/e/{{ lead.public_token }}</code>
+                <button class="inline-flex h-7 items-center justify-center rounded-md bg-white px-2 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
+                        type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
+                  Copy
+                </button>
+              </div>
+              <p class="mt-2 text-xs text-slate-500">Share this link with the customer to view and accept the estimate</p>
+            </div>
+          {% endif %}
+
+          <!-- Review reasons -->
+          {% if lead.needs_review_reasons %}
+            <div class="pt-4 border-t border-slate-100">
+              <div class="text-xs font-medium text-amber-600 uppercase tracking-wide flex items-center gap-1">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                Needs review
+              </div>
+              <pre class="mt-2 max-h-40 overflow-auto rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200">{{ lead.needs_review_reasons }}</pre>
             </div>
           {% endif %}
         </div>
       </div>
 
-      <!-- Hidden unschedule form -->
-      <form id="unscheduleForm" method="post" action="/app/jobs/{{ job.id }}/unschedule" class="hidden"></form>
-
-      {% if job.scheduled_at and job.status not in ["CANCELLED"] %}
-        <div>
-          <button
-            class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
-            type="button"
-            onclick="document.getElementById('unscheduleForm').submit();"
-          >
-            Unschedule
-          </button>
-        </div>
-      {% endif %}
-
-      <!-- Scheduling UX Upgrade -->
-      {% if job.status in ["NEW","SCHEDULED"] %}
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div class="text-sm font-semibold text-slate-900">Scheduling</div>
-              <div class="mt-1 text-xs text-slate-600">Timezone: {{ tz_name }}</div>
+      <!-- Job card -->
+      {% if job %}
+        <div id="job" class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
+            <div class="flex items-center gap-2">
+              <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-slate-900">Job #{{ job.id }}</div>
+                <div class="text-xs text-slate-500">Scheduling & status</div>
+              </div>
             </div>
 
-            {% if job.scheduled_at %}
-              <div class="text-right">
-                <div class="text-sm font-semibold text-slate-900">{{ scheduled_display }}</div>
-                <div class="text-xs text-slate-600">Currently scheduled</div>
-              </div>
+            {% set jst = (job.status or '').upper() %}
+            {% if jst == 'DONE' %}
+              {% set jbadge = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
+            {% elif jst == 'IN_PROGRESS' %}
+              {% set jbadge = 'bg-violet-50 text-violet-700 ring-violet-600/20' %}
+            {% elif jst == 'SCHEDULED' %}
+              {% set jbadge = 'bg-blue-50 text-blue-700 ring-blue-600/20' %}
+            {% elif jst == 'CANCELLED' %}
+              {% set jbadge = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
+            {% else %}
+              {% set jbadge = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
             {% endif %}
+
+            <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ jbadge }}">
+              {{ jst or 'NEW' }}
+            </span>
           </div>
 
-          <form id="scheduleForm" method="post" action="/app/jobs/{{ job.id }}/schedule" class="space-y-3">
-            <div class="flex flex-wrap items-center gap-2">
-              <input
-                id="dtInput"
-                type="datetime-local"
-                name="scheduled_at_local"
-                value="{{ scheduled_input_value }}"
-                required
-                class="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-              />
+          <div class="p-4 space-y-4">
+            <!-- Timeline -->
+            <div class="space-y-3">
+              <div class="flex items-center gap-3">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full {% if job.scheduled_at %}bg-blue-100 text-blue-600{% else %}bg-slate-100 text-slate-400{% endif %}">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div class="flex-1">
+                  <div class="text-sm font-medium text-slate-900">Scheduled</div>
+                  <div class="text-xs text-slate-500">
+                    {% if job.scheduled_at %}
+                      {{ scheduled_display }} <span class="text-slate-400">({{ tz_name }})</span>
+                    {% else %}
+                      Not scheduled yet
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
 
-              <button
-                class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
-                type="submit"
-              >
-                {% if job.scheduled_at %}Update{% else %}Schedule{% endif %}
-              </button>
+              {% if job.started_at %}
+                <div class="flex items-center gap-3">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-sm font-medium text-slate-900">Started</div>
+                    <div class="text-xs text-slate-500">{{ started_display }} <span class="text-slate-400">({{ tz_name }})</span></div>
+                  </div>
+                </div>
+              {% endif %}
 
-              {% if job.scheduled_at %}
-                <button
-                  class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
-                  type="button"
-                  onclick="document.getElementById('unscheduleForm').submit();"
-                >
-                  Clear
-                </button>
+              {% if job.done_at %}
+                <div class="flex items-center gap-3">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-sm font-medium text-slate-900">Completed</div>
+                    <div class="text-xs text-slate-500">{{ done_display }} <span class="text-slate-400">({{ tz_name }})</span></div>
+                  </div>
+                </div>
               {% endif %}
             </div>
 
-            <div class="flex flex-wrap gap-2">
-              <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="setDayOffset(0)">Today</button>
-              <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="setDayOffset(1)">Tomorrow</button>
-              <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="setDayOffset(2)">+2 days</button>
-            </div>
+            <!-- Status update -->
+            <div class="pt-4 border-t border-slate-100">
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Update status</div>
+              <div class="flex flex-wrap items-center gap-2">
+                {% if job.status == "SCHEDULED" %}
+                  <form method="post" action="/app/jobs/{{ job.id }}/start" class="m-0">
+                    <button class="inline-flex h-8 items-center justify-center rounded-md bg-violet-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-violet-700 transition-colors" type="submit">
+                      <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      Start job
+                    </button>
+                  </form>
+                {% endif %}
 
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Quick times</div>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="setTime('09:00')">9:00</button>
-                <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="setTime('11:00')">11:00</button>
-                <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="setTime('13:00')">1:00 PM</button>
-                <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="setTime('15:00')">3:00 PM</button>
+                {% if job.status == "IN_PROGRESS" %}
+                  <form method="post" action="/app/jobs/{{ job.id }}/done" class="m-0">
+                    <button class="inline-flex h-8 items-center justify-center rounded-md bg-emerald-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors" type="submit">
+                      <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                      Mark done
+                    </button>
+                  </form>
+                {% endif %}
+
+                <form method="post" action="/app/jobs/{{ job.id }}/status" class="flex flex-wrap items-center gap-2 m-0">
+                  <select name="status"
+                          class="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900">
+                    {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
+                      <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s|replace('_', ' ') }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors" type="submit">
+                    Update
+                  </button>
+                </form>
               </div>
             </div>
-
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">One-click schedule</div>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="quickSchedule(0,'09:00')">Today 9</button>
-                <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="quickSchedule(0,'13:00')">Today 1</button>
-                <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="quickSchedule(1,'09:00')">Tomorrow 9</button>
-                <button type="button" class="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" onclick="quickSchedule(1,'13:00')">Tomorrow 1</button>
-              </div>
-            </div>
-          </form>
-
-          <script>
-            function pad(n){ return String(n).padStart(2,'0'); }
-            function setDayOffset(offsetDays){
-              const input = document.getElementById("dtInput");
-              if(!input) return;
-              const current = input.value ? new Date(input.value) : new Date();
-              const d = new Date(current.getTime());
-              d.setDate(d.getDate() + offsetDays);
-              const yyyy = d.getFullYear();
-              const mm = pad(d.getMonth()+1);
-              const dd = pad(d.getDate());
-              let time = "09:00";
-              if (input.value && input.value.includes("T")) {
-                const t = input.value.split("T")[1];
-                time = (t && t.length >= 5) ? t.slice(0,5) : "09:00";
-              }
-              input.value = `${yyyy}-${mm}-${dd}T${time}`;
-            }
-            function setTime(hhmm){
-              const input = document.getElementById("dtInput");
-              if(!input) return;
-              if(!input.value){
-                const d = new Date();
-                const yyyy = d.getFullYear();
-                const mm = pad(d.getMonth()+1);
-                const dd = pad(d.getDate());
-                input.value = `${yyyy}-${mm}-${dd}T${hhmm}`;
-                return;
-              }
-              const parts = input.value.split("T");
-              const datePart = parts[0];
-              input.value = `${datePart}T${hhmm}`;
-            }
-            function quickSchedule(dayOffset, hhmm){
-              setDayOffset(dayOffset);
-              setTime(hhmm);
-              document.getElementById("scheduleForm").submit();
-            }
-          </script>
+          </div>
         </div>
       {% endif %}
-
-      <!-- Action buttons -->
-      <div class="flex flex-wrap items-center gap-2">
-        {% if job.status == "SCHEDULED" %}
-          <form method="post" action="/app/jobs/{{ job.id }}/start" class="m-0">
-            <button class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800" type="submit">
-              Start
-            </button>
-          </form>
-        {% endif %}
-
-        {% if job.status == "IN_PROGRESS" %}
-          <form method="post" action="/app/jobs/{{ job.id }}/done" class="m-0">
-            <button class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800" type="submit">
-              Mark done
-            </button>
-          </form>
-        {% endif %}
-
-        <form method="post" action="/app/jobs/{{ job.id }}/status" class="flex flex-wrap items-center gap-2 m-0">
-          <select
-            name="status"
-            class="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-          >
-            {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
-              <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-          </select>
-
-          <button class="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50" type="submit">
-            Update
-          </button>
-        </form>
-      </div>
     </div>
-  {% endif %}
 
+    <!-- Right column: Scheduling -->
+    {% if job and job.status in ["NEW","SCHEDULED"] %}
+      <div class="space-y-6">
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
+            <div class="flex items-center gap-2">
+              <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-slate-900">Scheduling</div>
+                <div class="text-xs text-slate-500">{{ tz_name }}</div>
+              </div>
+            </div>
+            
+            {% if job.scheduled_at %}
+              <div class="text-right">
+                <div class="text-sm font-semibold text-slate-900">{{ scheduled_display }}</div>
+                <div class="text-xs text-slate-500">Currently scheduled</div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="p-4 space-y-4">
+            <!-- Date/time input -->
+            <form id="scheduleForm" method="post" action="/app/jobs/{{ job.id }}/schedule" class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Date & time</label>
+                <div class="flex gap-2">
+                  <input id="dtInput" type="datetime-local" name="scheduled_at_local" value="{{ scheduled_input_value }}" required
+                         class="flex-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900" />
+                  <button class="inline-flex h-9 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors" type="submit">
+                    {% if job.scheduled_at %}Update{% else %}Schedule{% endif %}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick dates -->
+              <div>
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Quick select</label>
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" onclick="setDayOffset(0)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Today</button>
+                  <button type="button" onclick="setDayOffset(1)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Tomorrow</button>
+                  <button type="button" onclick="setDayOffset(2)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">+2 days</button>
+                </div>
+              </div>
+
+              <!-- Quick times -->
+              <div>
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Common times</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" onclick="setTime('09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">9:00 AM</button>
+                  <button type="button" onclick="setTime('11:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">11:00 AM</button>
+                  <button type="button" onclick="setTime('13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">1:00 PM</button>
+                  <button type="button" onclick="setTime('15:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">3:00 PM</button>
+                </div>
+              </div>
+
+              <!-- One-click -->
+              <div class="pt-3 border-t border-slate-100">
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">One-click schedule</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" onclick="quickSchedule(0,'09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Today 9am</button>
+                  <button type="button" onclick="quickSchedule(0,'13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Today 1pm</button>
+                  <button type="button" onclick="quickSchedule(1,'09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Tomorrow 9am</button>
+                  <button type="button" onclick="quickSchedule(1,'13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Tomorrow 1pm</button>
+                </div>
+              </div>
+            </form>
+
+            <!-- Unschedule -->
+            {% if job.scheduled_at %}
+              <form id="unscheduleForm" method="post" action="/app/jobs/{{ job.id }}/unschedule" class="pt-3 border-t border-slate-100">
+                <button type="submit" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-rose-600 shadow-sm ring-1 ring-rose-200 hover:bg-rose-50 transition-colors">
+                  <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Clear schedule
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
 </div>
 
 <script>
@@ -420,7 +417,7 @@
       window.__toastTimer = setTimeout(() => {
         toast.classList.add("hidden");
         toast.classList.remove("block");
-      }, 1600);
+      }, 2000);
     };
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -432,19 +429,59 @@
     }
   }
 
-  // Sending state hint (top send form)
+  // Sending state hint
   (function(){
     const form = document.getElementById('sendEstimateFormTop');
-    const btn  = document.getElementById('sendEstimateBtnTop');
-    const hint = document.getElementById('sendHint');
+    const btn = document.getElementById('sendEstimateBtnTop');
     if(!form || !btn) return;
 
     form.addEventListener('submit', () => {
       btn.disabled = true;
-      btn.textContent = 'Sending…';
-      if (hint) hint.classList.remove('hidden');
+      btn.innerHTML = '<svg class="mr-1.5 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Sending...';
     });
   })();
+
+  // Scheduling helpers
+  function pad(n){ return String(n).padStart(2,'0'); }
+  
+  function setDayOffset(offsetDays){
+    const input = document.getElementById("dtInput");
+    if(!input) return;
+    const current = input.value ? new Date(input.value) : new Date();
+    const d = new Date(current.getTime());
+    d.setDate(d.getDate() + offsetDays);
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth()+1);
+    const dd = pad(d.getDate());
+    let time = "09:00";
+    if (input.value && input.value.includes("T")) {
+      const t = input.value.split("T")[1];
+      time = (t && t.length >= 5) ? t.slice(0,5) : "09:00";
+    }
+    input.value = `${yyyy}-${mm}-${dd}T${time}`;
+  }
+  
+  function setTime(hhmm){
+    const input = document.getElementById("dtInput");
+    if(!input) return;
+    if(!input.value){
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = pad(d.getMonth()+1);
+      const dd = pad(d.getDate());
+      input.value = `${yyyy}-${mm}-${dd}T${hhmm}`;
+      return;
+    }
+    const parts = input.value.split("T");
+    const datePart = parts[0];
+    input.value = `${datePart}T${hhmm}`;
+  }
+  
+  function quickSchedule(dayOffset, hhmm){
+    setDayOffset(dayOffset);
+    setTime(hhmm);
+    document.getElementById("scheduleForm").submit();
+  }
 </script>
 
 {% if job and job.status not in ["DONE","CANCELLED"] %}

@@ -1,433 +1,430 @@
 <!-- app/templates/quote_status.html -->
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Estimate status</title>
-    <style>
-      :root{
-        --bg:#f6f7fb;
-        --card:#ffffff;
-        --text:#0f172a;
-        --muted:#5b6474;
-        --line:#e7e9f1;
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Estimate Status — Paintly</title>
+  
+  <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 0.5; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+    .pulse-ring::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+  </style>
+</head>
 
-        --brand:#2563eb;
-        --brand2:#16a34a;
-        --danger:#dc2626;
-        --warn:#f59e0b;
-
-        --shadow:0 18px 45px rgba(15,23,42,.10);
-        --radius:18px;
-      }
-
-      *{box-sizing:border-box;margin:0;padding:0}
-      body{
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-        color:var(--text);
-        background:
-          radial-gradient(900px 520px at 18% 0%, rgba(37,99,235,.10), transparent 60%),
-          radial-gradient(900px 520px at 86% 12%, rgba(22,163,74,.08), transparent 60%),
-          linear-gradient(180deg, #fbfcff, var(--bg));
-        min-height:100vh;
-        padding:28px 16px;
-      }
-
-      .wrap{max-width:900px;margin:0 auto;display:grid;gap:14px}
-      .card{
-        background:var(--card);
-        border:1px solid var(--line);
-        border-radius:var(--radius);
-        box-shadow:var(--shadow);
-        overflow:hidden;
-      }
-
-      .header{
-        padding:20px 22px 16px 22px;
-        border-bottom:1px solid var(--line);
-        background:
-          radial-gradient(900px 240px at 0% 0%, rgba(37,99,235,.08), transparent 60%),
-          radial-gradient(900px 240px at 100% 0%, rgba(22,163,74,.06), transparent 60%);
-      }
-
-      .titleRow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-      .title{
-        font-size:22px;
-        font-weight:950;
-        letter-spacing:.2px;
-        line-height:1.2;
-      }
-      .subtitle{
-        margin-top:8px;
-        color:var(--muted);
-        line-height:1.5;
-        font-size:14px;
-        max-width: 70ch;
-      }
-
-      .pill{
-        display:inline-flex;
-        align-items:center;
-        gap:8px;
-        padding:8px 10px;
-        border-radius:999px;
-        font-size:12px;
-        border:1px solid var(--line);
-        background: rgba(255,255,255,.75);
-        color:var(--muted);
-        font-weight:900;
-        white-space:nowrap;
-      }
-      .dot{width:9px;height:9px;border-radius:999px;background:rgba(37,99,235,.35);box-shadow:0 0 0 4px rgba(37,99,235,.10);}
-      .dot.ok{background: rgba(22,163,74,.55); box-shadow:0 0 0 4px rgba(22,163,74,.12);}
-      .dot.warn{background: rgba(245,158,11,.70); box-shadow:0 0 0 4px rgba(245,158,11,.14);}
-      .dot.err{background: rgba(220,38,38,.70); box-shadow:0 0 0 4px rgba(220,38,38,.14);}
-
-      .content{padding:18px 22px 22px 22px;display:grid;gap:14px}
-      .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-      .kv{display:flex;gap:8px;align-items:baseline}
-      .muted{color:var(--muted)}
-
-      .progress{
-        border:1px solid var(--line);
-        border-radius:16px;
-        background:#fff;
-        padding:14px;
-        display:grid;
-        gap:10px;
-      }
-      .steps{display:flex;gap:10px;flex-wrap:wrap}
-      .step{
-        display:flex;align-items:center;gap:8px;
-        padding:9px 10px;
-        border-radius:999px;
-        border:1px solid var(--line);
-        background:rgba(255,255,255,.85);
-        font-size:12px;
-        color:var(--muted);
-        font-weight:900;
-      }
-      .step.active{
-        border-color: rgba(37,99,235,.35);
-        box-shadow: 0 0 0 4px rgba(37,99,235,.10);
-        color: var(--text);
-      }
-      .bar{
-        height:10px;
-        border-radius:999px;
-        background: #eef2ff;
-        overflow:hidden;
-        border:1px solid rgba(37,99,235,.16);
-      }
-      .bar > div{
-        height:100%;
-        width:0%;
-        background: linear-gradient(90deg, rgba(37,99,235,.95), rgba(22,163,74,.90));
-        transition: width .25s ease;
-      }
-
-      .actions{display:flex;gap:10px;flex-wrap:wrap}
-      .btn{
-        appearance:none;
-        border:none;
-        border-radius:14px;
-        padding:12px 14px;
-        font-weight:950;
-        cursor:pointer;
-        text-decoration:none;
-        transition: transform .05s ease, opacity .15s ease, box-shadow .15s ease;
-        display:inline-flex;
-        align-items:center;
-        gap:10px;
-      }
-      .btn:active{transform: translateY(1px)}
-      .btnPrimary{
-        background: linear-gradient(135deg, rgba(37,99,235,.98), rgba(22,163,74,.92));
-        color:#ffffff;
-        box-shadow: 0 14px 30px rgba(37,99,235,.18);
-      }
-      .btnGhost{
-        background:#fff;
-        color:var(--text);
-        border:1px solid var(--line);
-      }
-
-      .msg{
-        border:1px solid var(--line);
-        border-radius:16px;
-        background:#fff;
-        padding:14px;
-        line-height:1.55;
-      }
-      .msg.ok{border-color: rgba(22,163,74,.30)}
-      .msg.warn{border-color: rgba(245,158,11,.35)}
-      .msg.err{border-color: rgba(220,38,38,.30)}
-      .msg h3{font-size:14px;margin-bottom:6px;font-weight:950}
-      pre{
-        margin-top:10px;
-        background:#0b1020;
-        color:#d1d5db;
-        padding:12px;
-        border-radius:12px;
-        overflow:auto;
-        font-size:12px;
-      }
-
-      .tiny{font-size:12px;color:var(--muted);line-height:1.4}
-
-      @media (max-width: 740px){
-        .title{font-size:20px}
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="wrap">
-      <div class="card">
-        <div class="header">
-          <div class="titleRow">
-            <div class="title" id="headline">We’re processing your estimate…</div>
-            <div class="pill" title="Current status">
-              <span class="dot" id="statusDot"></span>
-              <span id="statusText">…</span>
-            </div>
-          </div>
-          <div class="subtitle" id="subhead">
-            This page updates automatically. You can keep it open.
-          </div>
-        </div>
-
-        <div class="content">
-          <div class="row">
-            <div class="kv"><span class="muted">Lead</span><strong>#{{ lead_id }}</strong></div>
-            <div class="kv muted" id="updated"></div>
-          </div>
-
-          <div class="progress" id="progressBox">
-            <div class="steps">
-              <div class="step" id="step1">1 · Intake</div>
-              <div class="step" id="step2">2 · Photos</div>
-              <div class="step" id="step3">3 · Estimate</div>
-            </div>
-            <div class="bar"><div id="barFill"></div></div>
-            <div class="tiny" id="progressHint">Preparing…</div>
-          </div>
-
-          <div class="actions" id="actions"></div>
-          <div id="message"></div>
-        </div>
+<body class="bg-slate-50 text-slate-900 antialiased min-h-screen flex items-center justify-center p-4">
+  
+  <div class="w-full max-w-2xl">
+    
+    <!-- Logo -->
+    <div class="flex justify-center mb-8">
+      <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
       </div>
     </div>
 
-    <script>
-      // ✅ Jinja safe
-      const leadId = Number({{ lead_id | tojson }});
-      const autostart = Number({{ (autostart or 0) | int | tojson }});
+    <!-- Main Card -->
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      
+      <!-- Header -->
+      <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 class="text-xl font-bold text-slate-900" id="headline">We're processing your estimate…</h1>
+            <p class="text-sm text-slate-500 mt-1" id="subhead">This page updates automatically. You can keep it open.</p>
+          </div>
+          
+          <!-- Status Pill -->
+          <div class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200" id="statusPill">
+            <span class="relative flex h-2.5 w-2.5" id="statusDotContainer">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" id="statusPing"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" id="statusDot"></span>
+            </span>
+            <span id="statusText">Processing</span>
+          </div>
+        </div>
+      </div>
 
-      let publishStarted = false;
-      let pollTimer = null;
+      <!-- Content -->
+      <div class="px-6 py-5 space-y-5">
+        
+        <!-- Lead Info -->
+        <div class="flex flex-wrap items-center gap-4 text-sm">
+          <div class="flex items-center gap-2">
+            <span class="text-slate-500">Lead</span>
+            <span class="font-mono font-semibold text-slate-900">#{{ lead_id }}</span>
+          </div>
+          <div class="h-4 w-px bg-slate-200 hidden sm:block"></div>
+          <div class="text-slate-400 text-xs" id="updated"></div>
+        </div>
 
-      const elHeadline = document.getElementById("headline");
-      const elSubhead = document.getElementById("subhead");
-      const elStatusText = document.getElementById("statusText");
-      const elStatusDot = document.getElementById("statusDot");
-      const elUpdated = document.getElementById("updated");
-      const elActions = document.getElementById("actions");
-      const elMessage = document.getElementById("message");
-
-      const step1 = document.getElementById("step1");
-      const step2 = document.getElementById("step2");
-      const step3 = document.getElementById("step3");
-      const barFill = document.getElementById("barFill");
-      const progressHint = document.getElementById("progressHint");
-      const progressBox = document.getElementById("progressBox");
-
-      function setHeadline(text){ if (elHeadline) elHeadline.textContent = text || ""; }
-      function setSubhead(text){ if (elSubhead) elSubhead.textContent = text || ""; }
-
-      function setActions(html){ elActions.innerHTML = html || ""; }
-      function setMessage(html){ elMessage.innerHTML = html || ""; }
-
-      function stopPolling(){
-        if (pollTimer) {
-          clearTimeout(pollTimer);
-          pollTimer = null;
-        }
-      }
-
-      async function startPublishOnce(){
-        if (publishStarted) return;
-        publishStarted = true;
-        try{
-          await fetch(`/quotes/publish/${leadId}`, {
-            method: "POST",
-            headers: { "accept": "application/json" },
-            cache: "no-store",
-          });
-        }catch(e){
-          console.warn("publish failed to start:", e);
-        }
-      }
-
-      async function safeJson(res){
-        const ct = (res.headers.get("content-type") || "").toLowerCase();
-        if (!ct.includes("application/json")) {
-          const text = await res.text();
-          throw new Error(`Expected JSON but got: ${ct || "unknown"} :: ${text.slice(0, 200)}`);
-        }
-        return await res.json();
-      }
-
-      function setStatusPill(status){
-        elStatusText.textContent = status;
-
-        elStatusDot.className = "dot"; // reset
-        if (status === "SUCCEEDED") elStatusDot.classList.add("ok");
-        else if (status === "NEEDS_REVIEW") elStatusDot.classList.add("warn");
-        else if (status === "FAILED") elStatusDot.classList.add("err");
-      }
-
-      function setProgress(stage){
-        // stage: 1..3
-        step1.classList.toggle("active", stage >= 1);
-        step2.classList.toggle("active", stage >= 2);
-        step3.classList.toggle("active", stage >= 3);
-
-        const pct = stage === 1 ? 25 : stage === 2 ? 60 : stage === 3 ? 90 : 10;
-        barFill.style.width = pct + "%";
-      }
-
-      function renderRunning(status){
-        setHeadline("We’re processing your estimate…");
-        setSubhead("This page updates automatically. You can keep it open.");
-        setActions(`<span class="tiny muted">Processing…</span>`);
-        setMessage("");
-        progressBox.style.display = "grid";
-
-        if (status === "NEW") {
-          setProgress(1);
-          progressHint.textContent = "Starting…";
-        } else if (status === "RUNNING") {
-          setProgress(3);
-          progressHint.textContent = "Generating estimate…";
-        } else {
-          setProgress(2);
-          progressHint.textContent = "Preparing…";
-        }
-      }
-
-      function renderSucceeded(){
-        setHeadline("Your estimate is ready ✅");
-        setSubhead("You can open the estimate now.");
-        progressBox.style.display = "none";
-
-        setActions(`
-          <a class="btn btnPrimary" href="/quotes/${leadId}/html">Open estimate</a>
-          <a class="btn btnGhost" href="/quotes/${leadId}/json" target="_blank" rel="noopener">Debug JSON</a>
-        `);
-
-        setMessage(`<div class="msg ok"><h3>Done</h3><div class="muted">Thanks — your estimate has been generated successfully.</div></div>`);
-      }
-
-      function renderNeedsReview(){
-        // FASE 4: customer-safe terminal state (no estimate link)
-        setHeadline("Thanks — we’ll review this and get back to you shortly.");
-        setSubhead("Your project needs a quick manual check to ensure accuracy.");
-        progressBox.style.display = "none";
-
-        setActions(`
-          <a class="btn btnGhost" href="/intake/painters-us">Start a new request</a>
-        `);
-
-        setMessage(`
-          <div class="msg warn">
-            <h3>Manual review</h3>
-            <div class="muted">
-              We’ll review your photos and scope details and follow up with the final estimate.
-              You don’t need to do anything right now.
+        <!-- Progress Section -->
+        <div id="progressBox" class="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-4">
+          
+          <!-- Steps -->
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-1">
+              <div id="step1" class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shadow-sm">1</div>
+              <div class="hidden sm:block text-xs font-medium text-slate-600">Intake</div>
+            </div>
+            
+            <div class="h-px flex-1 bg-slate-200 relative">
+              <div id="line1" class="absolute inset-y-0 left-0 bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+            </div>
+            
+            <div class="flex items-center gap-2 flex-1">
+              <div id="step2" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs font-bold transition-colors">2</div>
+              <div class="hidden sm:block text-xs font-medium text-slate-500">Photos</div>
+            </div>
+            
+            <div class="h-px flex-1 bg-slate-200 relative">
+              <div id="line2" class="absolute inset-y-0 left-0 bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+            </div>
+            
+            <div class="flex items-center gap-2 flex-1">
+              <div id="step3" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs font-bold transition-colors">3</div>
+              <div class="hidden sm:block text-xs font-medium text-slate-500">Estimate</div>
             </div>
           </div>
-        `);
-      }
 
-      function renderFailed(msg){
-        setHeadline("Something went wrong");
-        setSubhead("Please retry, or start a new request.");
-        progressBox.style.display = "none";
-
-        setActions(`
-          <a class="btn btnGhost" href="/quotes/${leadId}/status?autostart=1">Retry</a>
-          <a class="btn btnGhost" href="/intake/painters-us">Start a new request</a>
-        `);
-
-        setMessage(`
-          <div class="msg err">
-            <h3>Error</h3>
-            <div class="muted">If this keeps happening, we’ll need to take a quick look internally.</div>
-            <pre>${(msg || "Unknown error").toString()}</pre>
+          <!-- Progress Bar -->
+          <div class="space-y-2">
+            <div class="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+              <div id="barFill" class="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500" style="width: 10%"></div>
+            </div>
+            <p class="text-xs text-slate-500" id="progressHint">Preparing…</p>
           </div>
-        `);
+        </div>
+
+        <!-- Actions -->
+        <div id="actions" class="flex flex-wrap gap-3">
+          <span class="inline-flex items-center gap-2 text-sm text-slate-500">
+            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            Processing…
+          </span>
+        </div>
+
+        <!-- Message -->
+        <div id="message"></div>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center mt-6">
+      <p class="text-xs text-slate-400">Paintly • AI-Powered Estimates</p>
+    </div>
+
+  </div>
+
+  <script>
+    // ✅ Jinja safe
+    const leadId = Number({{ lead_id | tojson }});
+    const autostart = Number({{ (autostart or 0) | int | tojson }});
+
+    let publishStarted = false;
+    let pollTimer = null;
+
+    const elHeadline = document.getElementById("headline");
+    const elSubhead = document.getElementById("subhead");
+    const elStatusText = document.getElementById("statusText");
+    const elStatusDot = document.getElementById("statusDot");
+    const elStatusPing = document.getElementById("statusPing");
+    const elStatusDotContainer = document.getElementById("statusDotContainer");
+    const elStatusPill = document.getElementById("statusPill");
+    const elUpdated = document.getElementById("updated");
+    const elActions = document.getElementById("actions");
+    const elMessage = document.getElementById("message");
+
+    const step1 = document.getElementById("step1");
+    const step2 = document.getElementById("step2");
+    const step3 = document.getElementById("step3");
+    const line1 = document.getElementById("line1");
+    const line2 = document.getElementById("line2");
+    const barFill = document.getElementById("barFill");
+    const progressHint = document.getElementById("progressHint");
+    const progressBox = document.getElementById("progressBox");
+
+    function setHeadline(text) { if (elHeadline) elHeadline.textContent = text || ""; }
+    function setSubhead(text) { if (elSubhead) elSubhead.textContent = text || ""; }
+
+    function setActions(html) { elActions.innerHTML = html || ""; }
+    function setMessage(html) { elMessage.innerHTML = html || ""; }
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
       }
+    }
 
-      async function poll(){
-        try{
-          const res = await fetch(`/quotes/${leadId}/status.json`, {
-            headers: { "accept": "application/json" },
-            cache: "no-store",
-          });
+    async function startPublishOnce() {
+      if (publishStarted) return;
+      publishStarted = true;
+      try {
+        await fetch(`/quotes/publish/${leadId}`, {
+          method: "POST",
+          headers: { "accept": "application/json" },
+          cache: "no-store",
+        });
+      } catch (e) {
+        console.warn("publish failed to start:", e);
+      }
+    }
 
-          const data = await safeJson(res);
-          const status = (data.status || "UNKNOWN").toString();
+    async function safeJson(res) {
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      if (!ct.includes("application/json")) {
+        const text = await res.text();
+        throw new Error(`Expected JSON but got: ${ct || "unknown"} :: ${text.slice(0, 200)}`);
+      }
+      return await res.json();
+    }
 
-          setStatusPill(status);
+    function setStatusPill(status) {
+      elStatusText.textContent = status;
+      
+      // Reset classes
+      elStatusPill.className = "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold border";
+      elStatusDot.className = "relative inline-flex rounded-full h-2.5 w-2.5";
+      elStatusPing.className = "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75";
+      
+      if (status === "SUCCEEDED") {
+        elStatusPill.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-200");
+        elStatusDot.classList.add("bg-emerald-500");
+        elStatusPing.classList.add("bg-emerald-400");
+        elStatusDotContainer.classList.remove("pulse-ring");
+      } else if (status === "NEEDS_REVIEW") {
+        elStatusPill.classList.add("bg-amber-50", "text-amber-700", "border-amber-200");
+        elStatusDot.classList.add("bg-amber-500");
+        elStatusPing.classList.add("bg-amber-400");
+        elStatusDotContainer.classList.remove("pulse-ring");
+      } else if (status === "FAILED") {
+        elStatusPill.classList.add("bg-rose-50", "text-rose-700", "border-rose-200");
+        elStatusDot.classList.add("bg-rose-500");
+        elStatusPing.classList.add("bg-rose-400");
+        elStatusDotContainer.classList.remove("pulse-ring");
+      } else {
+        elStatusPill.classList.add("bg-blue-50", "text-blue-700", "border-blue-200");
+        elStatusDot.classList.add("bg-blue-500");
+        elStatusPing.classList.add("bg-blue-400");
+        elStatusDotContainer.classList.add("pulse-ring");
+      }
+    }
 
-          elUpdated.textContent = data.updated_at ? `Updated: ${data.updated_at}` : "";
+    function setProgress(stage) {
+      // stage: 1..3
+      const stages = [
+        { step: step1, line: null, pct: 15 },
+        { step: step2, line: line1, pct: 50 },
+        { step: step3, line: line2, pct: 85 }
+      ];
 
-          // ✅ autostart: start publish once als niet-terminal
-          if (autostart === 1) {
-            const terminal = ["SUCCEEDED", "NEEDS_REVIEW", "FAILED"];
-            if (!terminal.includes(status)) {
-              await startPublishOnce();
-            }
-          }
-
-          if (status === "SUCCEEDED") {
-            stopPolling();
-            renderSucceeded();
-            return;
-          }
-
-          if (status === "NEEDS_REVIEW") {
-            stopPolling();
-            renderNeedsReview();
-            return;
-          }
-
-          if (status === "FAILED") {
-            stopPolling();
-            renderFailed(data.error_message);
-            return;
-          }
-
-          renderRunning(status);
-          pollTimer = setTimeout(poll, 1500);
-        }catch(err){
-          console.error(err);
-          setStatusPill("CONNECTING…");
-          setHeadline("Reconnecting…");
-          setSubhead("Trying again in a moment…");
-          setActions(`<span class="tiny muted">Reconnecting…</span>`);
-          setMessage("");
-          progressBox.style.display = "grid";
-          setProgress(2);
-          progressHint.textContent = "Reconnecting…";
-          pollTimer = setTimeout(poll, 2000);
+      stages.forEach((s, idx) => {
+        const active = stage > idx;
+        const current = stage === idx + 1;
+        
+        if (active || current) {
+          s.step.className = "flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-bold shadow-sm transition-colors " + 
+            (active ? "bg-emerald-500" : "bg-blue-600");
+          s.step.innerHTML = active ? "✓" : (idx + 1);
+        } else {
+          s.step.className = "flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs font-bold transition-colors";
+          s.step.innerHTML = idx + 1;
         }
-      }
+        
+        if (s.line) {
+          s.line.style.width = active ? "100%" : (current ? "50%" : "0%");
+        }
+      });
 
-      // boot
-      poll();
-    </script>
-  </body>
+      const pct = stage === 1 ? 15 : stage === 2 ? 50 : stage === 3 ? 85 : 10;
+      barFill.style.width = pct + "%";
+    }
+
+    function renderRunning(status) {
+      setHeadline("We're processing your estimate…");
+      setSubhead("This page updates automatically. You can keep it open.");
+      setActions(`
+        <span class="inline-flex items-center gap-2 text-sm text-slate-500">
+          <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+          Processing…
+        </span>
+      `);
+      setMessage("");
+      progressBox.style.display = "block";
+
+      if (status === "NEW") {
+        setProgress(1);
+        progressHint.textContent = "Starting…";
+      } else if (status === "RUNNING") {
+        setProgress(3);
+        progressHint.textContent = "Generating estimate with AI…";
+      } else {
+        setProgress(2);
+        progressHint.textContent = "Analyzing photos…";
+      }
+    }
+
+    function renderSucceeded() {
+      setHeadline("Your estimate is ready!");
+      setSubhead("You can view and accept your estimate now.");
+      progressBox.style.display = "none";
+
+      setActions(`
+        <a href="/quotes/${leadId}/html" class="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors">
+          <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          View Estimate
+        </a>
+      `);
+
+      setMessage(`
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <div class="flex items-start gap-3">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-emerald-900">Success!</div>
+              <div class="text-xs text-emerald-700 mt-0.5">Your estimate has been generated and is ready for review.</div>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderNeedsReview() {
+      setHeadline("We'll review this and get back to you");
+      setSubhead("Your project needs a quick manual check to ensure accuracy.");
+      progressBox.style.display = "none";
+
+      setActions(`
+        <a href="/intake/painters-us" class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
+          Start a new request
+        </a>
+      `);
+
+      setMessage(`
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <div class="flex items-start gap-3">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-amber-900">Manual review needed</div>
+              <div class="text-xs text-amber-700 mt-0.5">We'll review your photos and scope details and follow up with the final estimate. You don't need to do anything right now.</div>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderFailed(msg) {
+      setHeadline("Something went wrong");
+      setSubhead("Please retry, or start a new request.");
+      progressBox.style.display = "none";
+
+      setActions(`
+        <a href="/quotes/${leadId}/status?autostart=1" class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
+          <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Retry
+        </a>
+        <a href="/intake/painters-us" class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
+          Start new request
+        </a>
+      `);
+
+      setMessage(`
+        <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+          <div class="flex items-start gap-3">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-rose-900">Error</div>
+              <div class="text-xs text-rose-700 mt-0.5">If this keeps happening, we'll need to take a quick look internally.</div>
+              <pre class="mt-2 max-h-32 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(msg || "Unknown error").toString()}</pre>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    async function poll() {
+      try {
+        const res = await fetch(`/quotes/${leadId}/status.json`, {
+          headers: { "accept": "application/json" },
+          cache: "no-store",
+        });
+
+        const data = await safeJson(res);
+        const status = (data.status || "UNKNOWN").toString();
+
+        setStatusPill(status);
+        elUpdated.textContent = data.updated_at ? `Updated ${data.updated_at}` : "";
+
+        // ✅ autostart: start publish once als niet-terminal
+        if (autostart === 1) {
+          const terminal = ["SUCCEEDED", "NEEDS_REVIEW", "FAILED"];
+          if (!terminal.includes(status)) {
+            await startPublishOnce();
+          }
+        }
+
+        if (status === "SUCCEEDED") {
+          stopPolling();
+          renderSucceeded();
+          return;
+        }
+
+        if (status === "NEEDS_REVIEW") {
+          stopPolling();
+          renderNeedsReview();
+          return;
+        }
+
+        if (status === "FAILED") {
+          stopPolling();
+          renderFailed(data.error_message);
+          return;
+        }
+
+        renderRunning(status);
+        pollTimer = setTimeout(poll, 1500);
+      } catch (err) {
+        console.error(err);
+        setStatusPill("CONNECTING");
+        setHeadline("Reconnecting…");
+        setSubhead("Trying again in a moment…");
+        setActions(`
+          <span class="inline-flex items-center gap-2 text-sm text-slate-500">
+            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            Reconnecting…
+          </span>
+        `);
+        setMessage("");
+        progressBox.style.display = "block";
+        setProgress(2);
+        progressHint.textContent = "Reconnecting…";
+        pollTimer = setTimeout(poll, 2000);
+      }
+    }
+
+    // boot
+    poll();
+  </script>
+</body>
 </html>

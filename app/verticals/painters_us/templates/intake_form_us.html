@@ -3,413 +3,199 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Painting Estimate Request — {{ tenant_id or "painters_us" }}</title>
+  <title>Get Your Painting Estimate — {{ tenant_id or "Paintly" }}</title>
+
+  <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    @import url("https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css");
-
-    :root{
-      --bg:#f8fafc;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#64748b;
-      --muted2:#94a3b8;
-      --line:#e5e7eb;
-
-      --primary:#0f172a;
-      --primaryHover:#020617;
-
-      --okBorder: rgba(16,185,129,.25);
-      --okBg: #ecfdf5;
-      --errBorder: rgba(239,68,68,.25);
-      --errBg: #fef2f2;
-
-      --shadow: 0 10px 30px rgba(2,6,23,0.06);
-      --shadowSm: 0 6px 18px rgba(2,6,23,0.05);
-
-      --radius: 20px;
-      --radiusSm: 14px;
+    @media print {
+      .no-print { display: none !important; }
     }
-
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family:"Geist Sans", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      color:var(--text);
-      background:var(--bg);
-      min-height:100vh;
-      padding:28px 16px;
+    
+    /* Smooth transitions */
+    * { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+    
+    /* Custom file upload styling */
+    .upload-zone {
+      background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%23CBD5E1FF' stroke-width='2' stroke-dasharray='8%2c8' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
     }
-
-    a{ color: inherit; text-decoration:none; }
-
-    .topbar{
-      max-width:1120px;
-      margin:0 auto 16px;
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-end;
-      gap:12px;
+    .upload-zone:hover {
+      background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%233B82F6FF' stroke-width='2' stroke-dasharray='8%2c8' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
     }
-    .brandBlock{display:flex;flex-direction:column;gap:6px}
-    .brandTitle{font-size:18px;font-weight:800;letter-spacing:-0.015em}
-    .brandSub{color:var(--muted);font-size:13px;line-height:1.45;max-width:80ch}
-
-    .badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 10px;
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:999px;
-      font-size:12px;
-      color:var(--muted);
-      box-shadow:var(--shadowSm);
-    }
-    .badge strong{color:var(--text);font-weight:750}
-
-    .wrap{
-      max-width:1120px;
-      margin:0 auto;
-      display:grid;
-      grid-template-columns: 1.45fr .55fr;
-      gap:16px;
-      align-items:start;
-    }
-    @media (max-width:980px){
-      .topbar{align-items:flex-start;flex-direction:column}
-      .badges{justify-content:flex-start}
-      .wrap{grid-template-columns:1fr}
-    }
-
-    .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-
-    .header{
-      padding:22px;
-      border-bottom:1px solid var(--line);
-      background:#fff;
-    }
-    .title{font-size:22px;font-weight:850;letter-spacing:-0.02em;margin-bottom:6px}
-    .subtitle{color:var(--muted);line-height:1.55;font-size:14px;max-width:72ch}
-    .content{padding:18px 22px 22px}
-
-    .stepRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-    .step{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding:8px 12px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background:#fff;
-      font-size:12px;
-      color:var(--muted);
-      font-weight:700;
-    }
-    .dot{
-      width:9px;height:9px;border-radius:999px;
-      background:rgba(15,23,42,.45);
-      box-shadow:0 0 0 4px rgba(15,23,42,.08);
-    }
-    .step strong{color:var(--text);font-weight:850}
-
-    .grid{display:grid;gap:14px}
-    .grid.two{grid-template-columns:1fr 1fr}
-    .grid.three{grid-template-columns:1fr 1fr 1fr}
-    @media (max-width:740px){
-      .grid.two,.grid.three{grid-template-columns:1fr}
-    }
-
-    label{
-      display:block;
-      font-size:12px;
-      letter-spacing:.35px;
-      color:var(--muted2);
-      margin:0 0 8px 2px;
-      text-transform:uppercase;
-      font-weight:800;
-    }
-
-    input,textarea,select{
-      width:100%;
-      padding:14px 16px;
-	  font-size:15px;
-      border-radius:12px;
-      border:1px solid var(--line);
-      background:#fff;
-      color:var(--text);
-      outline:none;
-      transition:border .15s ease, box-shadow .15s ease;
-    }
-    input::placeholder,textarea::placeholder{color:rgba(15,23,42,.35)}
-    input:focus,textarea:focus,select:focus{
-      border-color:var(--primary);
-      box-shadow:0 0 0 3px rgba(15,23,42,.08);
-    }
-    textarea{min-height:110px;resize:vertical}
-
-    .hint{
-      font-size:13px;
-      color:var(--muted);
-      line-height:1.5;
-      margin-top:10px;
-    }
-
-    .section{
-      margin-top:18px;
-      padding-top:18px;
-      border-top:1px solid var(--line);
-    }
-    .sectionTitle{
-      font-weight:900;
-      font-size:13px;
-      margin-bottom:10px;
-      letter-spacing:.02em;
-      text-transform:uppercase;
-      color:var(--text);
-    }
-
-    /* Upload */
-    .uploadBox{
-      border:1.5px dashed #cbd5e1;
-      border-radius:16px;
-      padding:16px;
-      background:#ffffff;
-      cursor:pointer;
-      transition:all .15s ease;
-      display:block;
-    }
-    .uploadBox:hover{
-      border-color:var(--primary);
-      background:#ffffff;
-    }
-    .uploadTop{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:10px;
-    }
-    .uploadTitle{font-weight:900;font-size:14px;letter-spacing:-0.01em}
-    .uploadMeta{color:var(--muted);font-size:12px;line-height:1.4}
-
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:6px 10px;
-      border-radius:999px;
-      font-size:12px;
-      border:1px solid var(--line);
-      background:#fff;
-      color:var(--muted);
-      font-weight:800;
-      white-space:nowrap;
-    }
-
-    .files{margin-top:10px;display:grid;gap:8px}
-    .fileRow{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      padding:10px 12px;
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:14px;
-      font-size:13px;
-      color:var(--text);
-    }
-    .fileRow small{color:var(--muted)}
-    .status{margin-top:10px;font-size:13px;color:var(--muted)}
-
-    .tag{
-      display:inline-flex;
-      align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:800;
-      border:1px solid var(--line);
-      background:#fff;
-      color:var(--muted);
-    }
-    .tag.up{ color:#0f172a; }
-    .tag.ok{ color:#065f46; border-color:rgba(16,185,129,.25); background:rgba(16,185,129,.08); }
-
-    /* Actions */
-    .actions{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
-    .btn{
-      appearance:none;
-      border:none;
-      border-radius:12px;
-      padding:12px 14px;
-      font-weight:900;
-      cursor:pointer;
-      transition:transform .05s ease, opacity .15s ease, box-shadow .15s ease, background .15s ease, border .15s ease;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-    }
-    .btn:active{transform:translateY(1px)}
-    .btnPrimary{
-  background:#0f172a;
-  color:#fff;
-  box-shadow:none;
-}
-    .btnPrimary:hover{
-  background:#020617;
-}}
-    .btnGhost{
-      background:#fff;
-      color:var(--text);
-      border:1px solid var(--line);
-    }
-    .btnGhost:hover{background:#f8fafc}
-    .btn[disabled]{opacity:.55;cursor:not-allowed}
-
-    /* Messages */
-    .msg{
-      display:none;
-      margin-bottom:12px;
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:#fff;
-      font-size:13px;
-      line-height:1.5;
-    }
-    .msg.ok{border-color:var(--okBorder); background:var(--okBg)}
-    .msg.err{border-color:var(--errBorder); background:var(--errBg)}
-    .tiny{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.4}
-
-    /* Sidebar */
-    .sideCard .content{padding:16px}
-    .sideTitle{
-      font-weight:950;
-      font-size:13px;
-      margin-bottom:10px;
-      letter-spacing:.02em;
-      text-transform:uppercase;
-      color:var(--text);
-    }
-    .sideList{display:grid;gap:10px}
-    .sideItem{
-      padding:14px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:#fff;
-    }
-    .sideItem b{display:block;margin-bottom:4px;font-weight:950}
-    .sideItem span{color:var(--muted);font-size:13px;line-height:1.45}
-
-    .summary{
-      margin-top:12px;
-      border-top:1px solid var(--line);
-      padding-top:12px;
-      display:grid;
-      gap:8px;
-      color:var(--muted);
-      font-size:13px
-    }
-    .kv{display:flex;justify-content:space-between;gap:10px}
-    .kv strong{color:var(--text);font-weight:950}
   </style>
 </head>
 
-<body>
-  <div class="topbar">
-    <div class="brandBlock">
-      <div class="brandTitle">Painting Estimate Request</div>
-      <div class="brandSub">Fast, itemized estimate based on area + photos. Typical turnaround: minutes.</div>
-    </div>
-    <div class="badges">
-      <div class="badge">Tenant: <strong>{{ tenant_id or "painters_us" }}</strong></div>
-      <div class="badge">Units: <strong>Square Feet</strong></div>
-      <div class="badge">Photos: <strong>1–5</strong></div>
+<body class="bg-slate-50 text-slate-900 antialiased min-h-screen">
+  
+  <!-- Header -->
+  <div class="bg-white border-b border-slate-200">
+    <div class="mx-auto max-w-6xl px-4 py-4">
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-slate-900">Get Your Free Estimate</h1>
+            <p class="text-xs text-slate-500">Fast, itemized quote based on your photos</p>
+          </div>
+        </div>
+        
+        <div class="hidden sm:flex items-center gap-2 text-xs text-slate-500">
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-medium">Typical response: 5-10 min</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="wrap">
-    <div class="card">
-      <div class="header">
-        <div class="title">Tell us about the project</div>
-        <div class="subtitle">
-          Fill in your contact details, approximate paintable area, and upload a few photos.
-          We’ll generate a clean estimate for labor &amp; materials.
+  <!-- Progress steps -->
+  <div class="bg-white border-b border-slate-200">
+    <div class="mx-auto max-w-6xl px-4 py-4">
+      <div class="flex items-center gap-4 text-sm">
+        <div class="flex items-center gap-2 text-blue-600 font-semibold">
+          <div class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold">1</div>
+          <span class="hidden sm:inline">Contact</span>
         </div>
-        <div class="stepRow">
-          <div class="step"><span class="dot"></span> <span><strong>1</strong> Contact</span></div>
-          <div class="step"><span class="dot"></span> <span><strong>2</strong> Area &amp; scope</span></div>
-          <div class="step"><span class="dot"></span> <span><strong>3</strong> Photos</span></div>
+        <div class="h-px w-8 bg-slate-200"></div>
+        <div class="flex items-center gap-2 text-slate-400">
+          <div class="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 text-xs font-bold">2</div>
+          <span class="hidden sm:inline">Details</span>
+        </div>
+        <div class="h-px w-8 bg-slate-200"></div>
+        <div class="flex items-center gap-2 text-slate-400">
+          <div class="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 text-xs font-bold">3</div>
+          <span class="hidden sm:inline">Photos</span>
         </div>
       </div>
+    </div>
+  </div>
 
-      <div class="content">
-        <div id="msgOk" class="msg ok"></div>
-        <div id="msgErr" class="msg err"></div>
+  <div class="mx-auto max-w-6xl px-4 py-8">
+    <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+      
+      <!-- Main form -->
+      <div class="space-y-6">
+        
+        <!-- Alerts -->
+        <div id="msgOk" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <div class="flex items-start gap-3">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div class="text-sm text-emerald-800" id="msgOkText"></div>
+          </div>
+        </div>
 
-        <form id="intakeForm" enctype="multipart/form-data">
+        <div id="msgErr" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+          <div class="flex items-start gap-3">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div class="text-sm text-rose-800" id="msgErrText"></div>
+          </div>
+        </div>
+
+        <form id="intakeForm" enctype="multipart/form-data" class="space-y-6">
           <input type="hidden" name="tenant_id" value="{{ tenant_id or 'painters_us' }}" />
           <input type="hidden" name="vertical" value="{{ vertical or 'painters_us' }}" />
           <input type="hidden" name="area_unit" value="sqft" />
           <input type="hidden" name="lead_id" id="lead_id" value="" />
 
-          <div class="section" style="margin-top:0;padding-top:0;border-top:none;">
-            <div class="sectionTitle">Contact</div>
-            <div class="grid two">
-              <div>
-                <label for="name">Full Name *</label>
-                <input id="name" name="name" type="text" autocomplete="name" required />
-              </div>
-              <div>
-                <label for="email">Email *</label>
-                <input id="email" name="email" type="email" autocomplete="email" required />
+          <!-- Contact section -->
+          <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="border-b border-slate-100 bg-slate-50/50 px-5 py-4">
+              <div class="flex items-center gap-2">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Contact Information</h2>
+                  <p class="text-xs text-slate-500">How we'll reach you with your estimate</p>
+                </div>
               </div>
             </div>
-            <div class="grid two" style="margin-top:14px;">
-              <div>
-                <label for="phone">Phone *</label>
-                <input id="phone" name="phone" type="tel" autocomplete="tel" required />
+            
+            <div class="p-5 space-y-4">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label for="name" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Full Name *</label>
+                  <input id="name" name="name" type="text" autocomplete="name" required
+                         class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         placeholder="John Smith" />
+                </div>
+                <div>
+                  <label for="email" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Email *</label>
+                  <input id="email" name="email" type="email" autocomplete="email" required
+                         class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         placeholder="john@example.com" />
+                </div>
               </div>
-              <div>
-                <label for="square_meters">Approx. Paintable Area (sq ft) *</label>
-                <input id="square_meters" name="square_meters" type="number" min="10" step="1" required />
+              
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label for="phone" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Phone *</label>
+                  <input id="phone" name="phone" type="tel" autocomplete="tel" required
+                         class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         placeholder="(555) 123-4567" />
+                </div>
+                <div>
+                  <label for="square_meters" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Approx. Area (sq ft) *</label>
+                  <input id="square_meters" name="square_meters" type="number" min="10" step="1" required
+                         class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         placeholder="e.g., 1200" />
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="section">
-            <div class="sectionTitle">Location</div>
-            <div class="grid three">
-              <div>
-                <label for="street">Street Address *</label>
-                <input id="street" name="street" type="text" autocomplete="street-address" required />
-              </div>
-              <div>
-                <label for="city">City *</label>
-                <input id="city" name="city" type="text" autocomplete="address-level2" required />
-              </div>
-              <div>
-                <label for="state">State *</label>
-                <input id="state" name="state" type="text" maxlength="2" placeholder="CA" autocomplete="address-level1" required />
+          <!-- Location section -->
+          <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="border-b border-slate-100 bg-slate-50/50 px-5 py-4">
+              <div class="flex items-center gap-2">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Project Location</h2>
+                  <p class="text-xs text-slate-500">Where the work will be done</p>
+                </div>
               </div>
             </div>
-            <div class="grid two" style="margin-top:14px;">
+            
+            <div class="p-5 space-y-4">
               <div>
-                <label for="zip">ZIP Code *</label>
-                <input id="zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" required />
+                <label for="street" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Street Address *</label>
+                <input id="street" name="street" type="text" autocomplete="street-address" required
+                       class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                       placeholder="123 Main Street" />
               </div>
+              
+              <div class="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label for="city" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">City *</label>
+                  <input id="city" name="city" type="text" autocomplete="address-level2" required
+                         class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         placeholder="Los Angeles" />
+                </div>
+                <div>
+                  <label for="state" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">State *</label>
+                  <input id="state" name="state" type="text" maxlength="2" autocomplete="address-level1" required
+                         class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm uppercase focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         placeholder="CA" />
+                </div>
+                <div>
+                  <label for="zip" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">ZIP Code *</label>
+                  <input id="zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" required
+                         class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         placeholder="90210" />
+                </div>
+              </div>
+
               <div>
-                <label for="job_type">Job Type</label>
-                <select id="job_type" name="job_type">
+                <label for="job_type" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Job Type</label>
+                <select id="job_type" name="job_type"
+                        class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                   <option value="interior">Interior</option>
                   <option value="exterior">Exterior</option>
                   <option value="both">Both</option>
@@ -418,439 +204,495 @@
             </div>
           </div>
 
-          <div class="section">
-            <div class="sectionTitle">Scope details</div>
-            <div>
-              <label for="address">Project Notes / Location Details *</label>
-              <textarea
-                id="address"
-                name="address"
-                required
-                placeholder="Example: Living room + hallway. Walls only. Existing paint in good condition. Please include minor patching."
-              ></textarea>
-              <div class="hint">Helpful: # rooms, ceiling height, trim/doors, prep &amp; repairs, access notes.</div>
+          <!-- Scope section -->
+          <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="border-b border-slate-100 bg-slate-50/50 px-5 py-4">
+              <div class="flex items-center gap-2">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                </div>
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Project Details</h2>
+                  <p class="text-xs text-slate-500">Tell us about the work needed</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="p-5">
+              <label for="address" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">Project Notes *</label>
+              <textarea id="address" name="address" required rows="4"
+                        class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-y"
+                        placeholder="Example: Living room + hallway. Walls only. Existing paint in good condition. Please include minor patching. 8ft ceilings."></textarea>
+              <p class="mt-2 text-xs text-slate-500">Helpful: number of rooms, ceiling height, trim/doors, prep needs, access issues.</p>
             </div>
           </div>
 
-          <div class="section">
-            <div class="sectionTitle">Photos</div>
-            <div>
-              <label>Upload Photos (1–5 images) *</label>
-
-              <label class="uploadBox" id="uploadBox" for="files" style="display:block;">
-                <input type="file" id="files" name="files" multiple accept="image/*" style="display:none" />
-                <div class="uploadTop">
-                  <div>
-                    <div class="uploadTitle">Click to select photos</div>
-                    <div class="uploadMeta">JPG/PNG/WebP • Up to 5 files</div>
+          <!-- Photos section -->
+          <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="border-b border-slate-100 bg-slate-50/50 px-5 py-4">
+              <div class="flex items-center gap-2">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Photos</h2>
+                  <p class="text-xs text-slate-500">Upload 1-5 photos of the project area</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="p-5">
+              <label class="upload-zone block rounded-xl p-6 cursor-pointer transition-colors bg-slate-50 hover:bg-blue-50" id="uploadBox" for="files">
+                <input type="file" id="files" name="files" multiple accept="image/*" class="hidden" />
+                
+                <div class="text-center">
+                  <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm mb-3">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                   </div>
-                  <div class="pill">S3 presigned</div>
+                  <div class="text-sm font-semibold text-slate-900">Click to upload photos</div>
+                  <div class="text-xs text-slate-500 mt-1">JPG, PNG, or WebP • Max 5 files • 15MB each</div>
                 </div>
 
-                <div class="files" id="fileList"></div>
-                <div class="status" id="uploadStatus">No files selected yet.</div>
+                <div id="fileList" class="mt-4 space-y-2"></div>
+                <div id="uploadStatus" class="mt-3 text-center text-xs text-slate-500">No files selected yet</div>
                 <div id="photoKeysContainer"></div>
               </label>
-            </div>
 
-            <div class="actions">
-              <button type="submit" class="btn btnPrimary" id="submitBtn">Submit Request</button>
-              <button type="button" class="btn btnGhost" id="resetBtn">Reset</button>
-            </div>
+              <div class="mt-5 flex flex-wrap gap-3">
+                <button type="submit" id="submitBtn"
+                        class="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-6 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Get My Estimate
+                </button>
+                
+                <button type="button" id="resetBtn"
+                        class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
+                  Reset
+                </button>
+              </div>
 
-            <div class="tiny">By submitting, you agree we may use your photos to generate an automated estimate.</div>
+              <p class="mt-3 text-xs text-slate-500">By submitting, you agree we may use your photos to generate an automated estimate.</p>
+            </div>
           </div>
         </form>
       </div>
-    </div>
 
-    <div class="card sideCard">
-      <div class="header">
-        <div class="title" style="font-size:18px;">Estimate summary</div>
-        <div class="subtitle">We’ll price labor + materials and generate a shareable estimate link.</div>
-      </div>
-      <div class="content">
-        <div class="sideTitle">What we need</div>
-        <div class="sideList">
-          <div class="sideItem"><b>Clear photos</b><span>Wide shots + close-ups of repairs or damage.</span></div>
-          <div class="sideItem"><b>Approx. area (sq ft)</b><span>Estimate is fine — we refine from vision output.</span></div>
-          <div class="sideItem"><b>Notes</b><span>Trim/doors? Ceilings? Prep level? Access issues?</span></div>
+      <!-- Sidebar -->
+      <aside class="space-y-6">
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden lg:sticky lg:top-6">
+          <div class="border-b border-slate-100 bg-slate-50/50 px-5 py-4">
+            <div class="flex items-center gap-2">
+              <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">What to expect</h3>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-5 space-y-4">
+            <div class="flex gap-3">
+              <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-xs font-bold">1</div>
+              <div>
+                <div class="text-sm font-semibold text-slate-900">Submit your request</div>
+                <p class="text-xs text-slate-500 mt-0.5">Fill in your details and upload photos</p>
+              </div>
+            </div>
+            
+            <div class="flex gap-3">
+              <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-xs font-bold">2</div>
+              <div>
+                <div class="text-sm font-semibold text-slate-900">AI analyzes your project</div>
+                <p class="text-xs text-slate-500 mt-0.5">Our system reviews photos and calculates scope</p>
+              </div>
+            </div>
+            
+            <div class="flex gap-3">
+              <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-xs font-bold">3</div>
+              <div>
+                <div class="text-sm font-semibold text-slate-900">Receive your estimate</div>
+                <p class="text-xs text-slate-500 mt-0.5">Detailed, itemized quote in minutes</p>
+              </div>
+            </div>
+
+            <div class="h-px bg-slate-100"></div>
+
+            <div class="rounded-lg bg-slate-50 p-3">
+              <div class="text-xs font-semibold text-slate-700 mb-2">Photo tips</div>
+              <ul class="space-y-1.5 text-xs text-slate-600">
+                <li class="flex items-start gap-1.5">
+                  <svg class="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  Wide shots of each room
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <svg class="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  Close-ups of damage or repairs needed
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <svg class="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  Good lighting helps accuracy
+                </li>
+              </ul>
+            </div>
+
+            <div class="rounded-lg bg-blue-50 p-3 border border-blue-100">
+              <div class="flex items-start gap-2">
+                <svg class="h-4 w-4 text-blue-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="text-xs text-blue-800">
+                  <span class="font-semibold">Example scope:</span> "Interior walls only, 2 bedrooms + hallway, standard prep, include minor patching, 8 ft ceilings."
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="summary">
-          <div class="kv"><span>Tenant</span><strong>{{ tenant_id or "painters_us" }}</strong></div>
-          <div class="kv"><span>Units</span><strong>Square feet</strong></div>
-          <div class="kv"><span>Photos</span><strong>1–5</strong></div>
+        <!-- Trust badges -->
+        <div class="flex flex-wrap gap-2 justify-center">
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+            <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            Secure upload
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+            <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            5-10 min response
+          </span>
         </div>
+      </aside>
 
-        <div class="sideTitle" style="margin-top:14px;">Example scope</div>
-        <div class="sideItem">
-          <span>“Interior walls only, 2 bedrooms + hallway, standard prep, include minor patching, 8 ft ceilings.”</span>
-        </div>
-      </div>
     </div>
   </div>
 
-<script>
-  const TENANT_ID = "{{ tenant_id or 'painters_us' }}";
-  const VERTICAL_SLUG = "painters-us"; // /intake/painters-us/lead
+  <!-- JavaScript (unchanged functionality) -->
+  <script>
+    const TENANT_ID = "{{ tenant_id or 'painters_us' }}";
+    const VERTICAL_SLUG = "painters-us";
 
-  const MAX_FILES = 5;
-  const MAX_BYTES = 15 * 1024 * 1024;
-  const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+    const MAX_FILES = 5;
+    const MAX_BYTES = 15 * 1024 * 1024;
+    const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-  const form = document.getElementById('intakeForm');
-  const fileInput = document.getElementById('files');
-  const fileList = document.getElementById('fileList');
-  const uploadStatus = document.getElementById('uploadStatus');
-  const photoKeysContainer = document.getElementById('photoKeysContainer');
-  const submitBtn = document.getElementById('submitBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const leadIdInput = document.getElementById('lead_id');
+    const form = document.getElementById('intakeForm');
+    const fileInput = document.getElementById('files');
+    const fileList = document.getElementById('fileList');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const photoKeysContainer = document.getElementById('photoKeysContainer');
+    const submitBtn = document.getElementById('submitBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const leadIdInput = document.getElementById('lead_id');
 
-  const msgOk = document.getElementById('msgOk');
-  const msgErr = document.getElementById('msgErr');
+    const msgOk = document.getElementById('msgOk');
+    const msgErr = document.getElementById('msgErr');
 
-  let uploadInProgress = false;
-  let leadId = null;
+    let uploadInProgress = false;
+    let leadId = null;
 
-  function showOk(html){
-    msgErr.style.display = 'none';
-    msgOk.innerHTML = html;
-    msgOk.style.display = 'block';
-  }
-
-  function showErr(text){
-    msgOk.style.display = 'none';
-    msgErr.textContent = text;
-    msgErr.style.display = 'block';
-  }
-
-  function clearMsgs(){
-    msgOk.style.display = 'none';
-    msgErr.style.display = 'none';
-  }
-
-  function createHiddenPhotoKey(key){
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'photo_keys';
-    input.value = key; // object_key (tenant/.../uploads/...)
-    photoKeysContainer.appendChild(input);
-  }
-
-  function normalizeType(file){
-    const t = (file.type || "image/jpeg").toLowerCase();
-    return t === "image/jpg" ? "image/jpeg" : t;
-  }
-
-  function formatBytes(bytes){
-    const mb = bytes / 1024 / 1024;
-    return `${mb.toFixed(mb >= 10 ? 0 : 2)} MB`;
-  }
-
-  function createFileRow(file){
-    const row = document.createElement('div');
-    row.className = 'fileRow';
-    row.innerHTML = `
-      <div class="fileLeft">
-        <div class="fileName" title="${file.name}">${file.name}</div>
-        <small>${formatBytes(file.size)}</small>
-      </div>
-      <div class="fileMeta">
-        <span class="tag up">Uploading…</span>
-      </div>
-    `;
-    const tag = row.querySelector('.tag');
-    return { row, tag };
-  }
-
-  async function createDraftLeadViaForm(){
-    const name  = (form.querySelector('#name')?.value || '').trim();
-    const email = (form.querySelector('#email')?.value || '').trim();
-    const phone = (form.querySelector('#phone')?.value || '').trim();
-
-    if(!name || !email || !phone){
-      throw new Error("Fill contact fields (name/email/phone) before uploading photos.");
+    function showOk(html) {
+      msgErr.classList.add('hidden');
+      document.getElementById('msgOkText').innerHTML = html;
+      msgOk.classList.remove('hidden');
     }
 
-    const fd = new FormData();
-    fd.append("tenant_id", TENANT_ID);
-    fd.append("vertical", "painters_us");
-    fd.append("area_unit", "sqft");
-
-    fd.append("name", name);
-    fd.append("email", email);
-    fd.append("phone", phone);
-
-    const sqm = (form.querySelector('#square_meters')?.value || "").toString();
-    if(sqm) fd.append("square_meters", sqm);
-
-    const addressNotes = (form.querySelector('#address')?.value || '').trim();
-    if(addressNotes) fd.append("address", addressNotes);
-
-    const url = `/intake/${VERTICAL_SLUG}/lead?format=json`;
-    const resp = await fetch(url, { method: "POST", body: fd });
-
-    const data = await resp.json().catch(()=> ({}));
-    if(!resp.ok){
-      throw new Error(`create_lead_failed: ${JSON.stringify(data.detail ?? data)}`);
-    }
-    if(!data.lead_id){
-      throw new Error("create_lead_failed: missing lead_id");
-    }
-    return data.lead_id;
-  }
-
-  async function ensureLeadId(){
-    if(leadId) return leadId;
-
-    uploadStatus.textContent = "Creating request…";
-    leadId = await createDraftLeadViaForm();
-    if(leadIdInput) leadIdInput.value = String(leadId);
-    uploadStatus.textContent = `Request created (#${leadId}). Uploading photos…`;
-    return leadId;
-  }
-
-  async function uploadFileToS3(file){
-    const ctype = normalizeType(file);
-
-    if(file.size <= 0 || file.size > MAX_BYTES){
-      throw new Error("file_too_large");
-    }
-    if(!ALLOWED_TYPES.has(ctype)){
-      throw new Error("unsupported_type");
+    function showErr(text) {
+      msgOk.classList.add('hidden');
+      document.getElementById('msgErrText').textContent = text;
+      msgErr.classList.remove('hidden');
     }
 
-    const id = await ensureLeadId();
-
-    // presign
-    const res = await fetch('/uploads/presign', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer demo'
-      },
-      body: JSON.stringify({
-        filename: file.name,
-        content_type: ctype,
-        size: file.size,
-        lead_id: String(id)
-      })
-    });
-
-    if(!res.ok){
-      const t = await res.text();
-      throw new Error("presign_failed: " + t);
+    function clearMsgs() {
+      msgOk.classList.add('hidden');
+      msgErr.classList.add('hidden');
     }
 
-    const data = await res.json();
-
-    // upload to S3
-    const formData = new FormData();
-    Object.entries(data.fields).forEach(([k,v]) => formData.append(k, v));
-    formData.append('file', file);
-
-    const s3Res = await fetch(data.url, { method:'POST', body: formData });
-    if(!s3Res.ok){
-      const txt = await s3Res.text().catch(()=> "");
-      throw new Error("s3_upload_failed: " + txt);
+    function createHiddenPhotoKey(key) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'photo_keys';
+      input.value = key;
+      photoKeysContainer.appendChild(input);
     }
 
-    // complete (create UploadRecord)
-    const cRes = await fetch('/uploads/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        lead_id: Number(id),
-        object_key: data.object_key
-      })
-    });
-    if(!cRes.ok){
-      const t = await cRes.text();
-      throw new Error("complete_failed: " + t);
+    function normalizeType(file) {
+      const t = (file.type || "image/jpeg").toLowerCase();
+      return t === "image/jpg" ? "image/jpeg" : t;
     }
 
-    return data.object_key;
-  }
-
-  fileInput.addEventListener('change', async function(){
-    clearMsgs();
-
-    const files = Array.from(this.files || []);
-    fileList.innerHTML = '';
-    photoKeysContainer.innerHTML = '';
-
-    if(files.length === 0){
-      uploadStatus.textContent = 'No files selected yet.';
-      return;
+    function formatBytes(bytes) {
+      const mb = bytes / 1024 / 1024;
+      return `${mb.toFixed(mb >= 10 ? 0 : 2)} MB`;
     }
 
-    if(files.length > MAX_FILES){
-      showErr(`Maximum ${MAX_FILES} files allowed.`);
-      this.value = '';
-      uploadStatus.textContent = 'Upload cancelled.';
-      return;
+    function createFileRow(file) {
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between gap-3 rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-200';
+      row.innerHTML = `
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-sm font-medium text-slate-900 truncate">${file.name}</div>
+            <div class="text-xs text-slate-500">${formatBytes(file.size)}</div>
+          </div>
+        </div>
+        <span class="status-badge inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">Uploading...</span>
+      `;
+      return { row, badge: row.querySelector('.status-badge') };
     }
 
-    for(const f of files){
-      const ctype = normalizeType(f);
-      if(!ALLOWED_TYPES.has(ctype)){
-        showErr('Only JPG, PNG or WebP images are allowed.');
-        this.value = '';
-        uploadStatus.textContent = 'Upload cancelled.';
-        return;
-      }
-      if(f.size <= 0 || f.size > MAX_BYTES){
-        showErr(`Each file must be under ${Math.floor(MAX_BYTES/1024/1024)} MB.`);
-        this.value = '';
-        uploadStatus.textContent = 'Upload cancelled.';
-        return;
-      }
-    }
+    async function createDraftLeadViaForm() {
+      const name = (form.querySelector('#name')?.value || '').trim();
+      const email = (form.querySelector('#email')?.value || '').trim();
+      const phone = (form.querySelector('#phone')?.value || '').trim();
 
-    uploadInProgress = true;
-    submitBtn.disabled = true;
-    uploadStatus.textContent = `Uploading ${files.length} photo(s)…`;
-
-    try{
-      let uploaded = 0;
-
-      for(const f of files){
-        const { row, tag } = createFileRow(f);
-        fileList.appendChild(row);
-
-        const key = await uploadFileToS3(f);
-        createHiddenPhotoKey(key);
-
-        uploaded += 1;
-        tag.textContent = 'Uploaded';
-        tag.classList.remove('up');
-        tag.classList.add('ok');
-
-        uploadStatus.textContent = `✅ Uploaded ${uploaded}/${files.length} photo(s)`;
+      if (!name || !email || !phone) {
+        throw new Error("Fill contact fields (name/email/phone) before uploading photos.");
       }
 
-      uploadStatus.textContent = `✅ Uploaded ${uploaded} photo(s)`;
-    }catch(err){
-      console.error(err);
-      const msg = String(err?.message || err || '');
+      const fd = new FormData();
+      fd.append("tenant_id", TENANT_ID);
+      fd.append("vertical", "painters_us");
+      fd.append("area_unit", "sqft");
+      fd.append("name", name);
+      fd.append("email", email);
+      fd.append("phone", phone);
 
-      if(msg.includes('Fill contact fields')){
-        showErr('Please fill Name, Email and Phone before uploading photos.');
-      }else if(msg.includes('file_too_large')){
-        showErr(`One of the files is too large (max ${Math.floor(MAX_BYTES/1024/1024)} MB).`);
-      }else if(msg.includes('unsupported_type')){
-        showErr('Unsupported file type. Please use JPG, PNG, or WebP.');
-      }else if(msg.includes('presign_failed')){
-        showErr('Could not start upload (presign failed). Please try again.');
-      }else if(msg.includes('complete_failed')){
-        showErr('Upload succeeded but server did not register the file (complete failed).');
-      }else{
-        showErr('Photo upload failed. Please try again.');
+      const sqm = (form.querySelector('#square_meters')?.value || "").toString();
+      if (sqm) fd.append("square_meters", sqm);
+
+      const addressNotes = (form.querySelector('#address')?.value || '').trim();
+      if (addressNotes) fd.append("address", addressNotes);
+
+      const url = `/intake/${VERTICAL_SLUG}/lead?format=json`;
+      const resp = await fetch(url, { method: "POST", body: fd });
+
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(`create_lead_failed: ${JSON.stringify(data.detail ?? data)}`);
       }
-
-      this.value = '';
-      fileList.innerHTML = '';
-      photoKeysContainer.innerHTML = '';
-      uploadStatus.textContent = '❌ Upload failed';
-    }finally{
-      uploadInProgress = false;
-      submitBtn.disabled = false;
-    }
-  });
-
-  resetBtn.addEventListener('click', () => {
-    form.reset();
-    fileInput.value = '';
-    fileList.innerHTML = '';
-    photoKeysContainer.innerHTML = '';
-    uploadStatus.textContent = 'No files selected yet.';
-    clearMsgs();
-
-    leadId = null;
-    if(leadIdInput) leadIdInput.value = '';
-  });
-
-  form.addEventListener('submit', async function(e){
-    e.preventDefault();
-    clearMsgs();
-
-    if(uploadInProgress){
-      showErr('Please wait until photo uploads finish.');
-      return;
+      if (!data.lead_id) {
+        throw new Error("create_lead_failed: missing lead_id");
+      }
+      return data.lead_id;
     }
 
-    const photoKeyInputs = document.querySelectorAll('input[name="photo_keys"]');
-    if(photoKeyInputs.length === 0){
-      showErr('Please upload at least one photo.');
-      return;
+    async function ensureLeadId() {
+      if (leadId) return leadId;
+      uploadStatus.textContent = "Creating request...";
+      leadId = await createDraftLeadViaForm();
+      if (leadIdInput) leadIdInput.value = String(leadId);
+      uploadStatus.textContent = `Request created (#${leadId}). Uploading photos...`;
+      return leadId;
     }
 
-    const area = parseFloat(form.querySelector('#square_meters').value);
-    if(!area || area <= 0){
-      showErr('Please enter an area greater than 0.');
-      return;
-    }
-
-    const oldBtnText = submitBtn.textContent;
-
-    try{
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting…';
+    async function uploadFileToS3(file) {
+      const ctype = normalizeType(file);
+      if (file.size <= 0 || file.size > MAX_BYTES) throw new Error("file_too_large");
+      if (!ALLOWED_TYPES.has(ctype)) throw new Error("unsupported_type");
 
       const id = await ensureLeadId();
-      if(leadIdInput) leadIdInput.value = String(id);
 
-      const street = (form.querySelector('#street')?.value || '').trim();
-      const city = (form.querySelector('#city')?.value || '').trim();
-      const state = (form.querySelector('#state')?.value || '').trim();
-      const zip = (form.querySelector('#zip')?.value || '').trim();
+      const res = await fetch('/uploads/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer demo' },
+        body: JSON.stringify({ filename: file.name, content_type: ctype, size: file.size, lead_id: String(id) })
+      });
 
-      const notes = form.querySelector('#address');
-      const oneLine = [street, city, state, zip].filter(Boolean).join(', ');
-      if(oneLine && notes && !notes.value.includes(oneLine)){
-        notes.value = `Address: ${oneLine}\n\n${notes.value || ''}`.trim();
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error("presign_failed: " + t);
       }
 
-      const formData = new FormData(form);
-      formData.set("lead_id", String(id));
+      const data = await res.json();
+      const formData = new FormData();
+      Object.entries(data.fields).forEach(([k, v]) => formData.append(k, v));
+      formData.append('file', file);
 
-      const res = await fetch('/intake/lead', { method:'POST', body: formData });
-
-      if (res.redirected) { window.location.href = res.url; return; }
-
-      const loc = res.headers.get('location');
-      if ([301,302,303,307,308].includes(res.status) && loc) { window.location.href = loc; return; }
-
-      const ct = (res.headers.get('content-type') || '').toLowerCase();
-      const data = ct.includes('application/json') ? await res.json() : null;
-
-      if(!res.ok){
-        showErr(data?.detail ? JSON.stringify(data.detail) : 'Submission failed.');
-        return;
+      const s3Res = await fetch(data.url, { method: 'POST', body: formData });
+      if (!s3Res.ok) {
+        const txt = await s3Res.text().catch(() => "");
+        throw new Error("s3_upload_failed: " + txt);
       }
 
-      if (data?.lead_id) {
-        window.location.href = `/quotes/${data.lead_id}/status?autostart=1`;
-        return;
+      const cRes = await fetch('/uploads/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_id: Number(id), object_key: data.object_key })
+      });
+      if (!cRes.ok) {
+        const t = await cRes.text();
+        throw new Error("complete_failed: " + t);
       }
 
-      if(leadId){
-        window.location.href = `/quotes/${leadId}/status?autostart=1`;
-        return;
-      }
-
-      showErr('Unexpected response from server.');
-    }catch(err){
-      console.error(err);
-      showErr('Unexpected error submitting request.');
-    }finally{
-      submitBtn.disabled = false;
-      submitBtn.textContent = oldBtnText || 'Submit Request';
+      return data.object_key;
     }
-  });
-</script>
+
+    fileInput.addEventListener('change', async function() {
+      clearMsgs();
+      const files = Array.from(this.files || []);
+      fileList.innerHTML = '';
+      photoKeysContainer.innerHTML = '';
+
+      if (files.length === 0) {
+        uploadStatus.textContent = 'No files selected yet.';
+        uploadStatus.className = 'mt-3 text-center text-xs text-slate-500';
+        return;
+      }
+
+      if (files.length > MAX_FILES) {
+        showErr(`Maximum ${MAX_FILES} files allowed.`);
+        this.value = '';
+        uploadStatus.textContent = 'Upload cancelled.';
+        return;
+      }
+
+      for (const f of files) {
+        const ctype = normalizeType(f);
+        if (!ALLOWED_TYPES.has(ctype)) {
+          showErr('Only JPG, PNG or WebP images are allowed.');
+          this.value = '';
+          uploadStatus.textContent = 'Upload cancelled.';
+          return;
+        }
+        if (f.size <= 0 || f.size > MAX_BYTES) {
+          showErr(`Each file must be under ${Math.floor(MAX_BYTES / 1024 / 1024)} MB.`);
+          this.value = '';
+          uploadStatus.textContent = 'Upload cancelled.';
+          return;
+        }
+      }
+
+      uploadInProgress = true;
+      submitBtn.disabled = true;
+      uploadStatus.textContent = `Uploading ${files.length} photo(s)...`;
+      uploadStatus.className = 'mt-3 text-center text-xs text-blue-600 font-medium';
+
+      try {
+        let uploaded = 0;
+        for (const f of files) {
+          const { row, badge } = createFileRow(f);
+          fileList.appendChild(row);
+
+          const key = await uploadFileToS3(f);
+          createHiddenPhotoKey(key);
+
+          uploaded += 1;
+          badge.textContent = 'Uploaded';
+          badge.className = 'status-badge inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20';
+          
+          uploadStatus.textContent = `Uploaded ${uploaded}/${files.length} photo(s)`;
+        }
+        uploadStatus.textContent = `✓ ${uploaded} photo(s) ready`;
+        uploadStatus.className = 'mt-3 text-center text-xs text-emerald-600 font-medium';
+      } catch (err) {
+        console.error(err);
+        const msg = String(err?.message || err || '');
+        if (msg.includes('Fill contact fields')) showErr('Please fill Name, Email and Phone before uploading photos.');
+        else if (msg.includes('file_too_large')) showErr(`One of the files is too large (max ${Math.floor(MAX_BYTES / 1024 / 1024)} MB).`);
+        else if (msg.includes('unsupported_type')) showErr('Unsupported file type. Please use JPG, PNG, or WebP.');
+        else if (msg.includes('presign_failed')) showErr('Could not start upload. Please try again.');
+        else if (msg.includes('complete_failed')) showErr('Upload succeeded but server did not register the file.');
+        else showErr('Photo upload failed. Please try again.');
+
+        this.value = '';
+        fileList.innerHTML = '';
+        photoKeysContainer.innerHTML = '';
+        uploadStatus.textContent = 'Upload failed';
+        uploadStatus.className = 'mt-3 text-center text-xs text-rose-600 font-medium';
+      } finally {
+        uploadInProgress = false;
+        submitBtn.disabled = false;
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      form.reset();
+      fileInput.value = '';
+      fileList.innerHTML = '';
+      photoKeysContainer.innerHTML = '';
+      uploadStatus.textContent = 'No files selected yet.';
+      uploadStatus.className = 'mt-3 text-center text-xs text-slate-500';
+      clearMsgs();
+      leadId = null;
+      if (leadIdInput) leadIdInput.value = '';
+    });
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      clearMsgs();
+
+      if (uploadInProgress) {
+        showErr('Please wait until photo uploads finish.');
+        return;
+      }
+
+      const photoKeyInputs = document.querySelectorAll('input[name="photo_keys"]');
+      if (photoKeyInputs.length === 0) {
+        showErr('Please upload at least one photo.');
+        return;
+      }
+
+      const area = parseFloat(form.querySelector('#square_meters').value);
+      if (!area || area <= 0) {
+        showErr('Please enter an area greater than 0.');
+        return;
+      }
+
+      const oldBtnText = submitBtn.innerHTML;
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Submitting...';
+
+        const id = await ensureLeadId();
+        if (leadIdInput) leadIdInput.value = String(id);
+
+        const street = (form.querySelector('#street')?.value || '').trim();
+        const city = (form.querySelector('#city')?.value || '').trim();
+        const state = (form.querySelector('#state')?.value || '').trim();
+        const zip = (form.querySelector('#zip')?.value || '').trim();
+
+        const notes = form.querySelector('#address');
+        const oneLine = [street, city, state, zip].filter(Boolean).join(', ');
+        if (oneLine && notes && !notes.value.includes(oneLine)) {
+          notes.value = `Address: ${oneLine}\n\n${notes.value || ''}`.trim();
+        }
+
+        const formData = new FormData(form);
+        formData.set("lead_id", String(id));
+
+        const res = await fetch('/intake/lead', { method: 'POST', body: formData });
+
+        if (res.redirected) { window.location.href = res.url; return; }
+        const loc = res.headers.get('location');
+        if ([301, 302, 303, 307, 308].includes(res.status) && loc) { window.location.href = loc; return; }
+
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        const data = ct.includes('application/json') ? await res.json() : null;
+
+        if (!res.ok) {
+          showErr(data?.detail ? JSON.stringify(data.detail) : 'Submission failed.');
+          return;
+        }
+
+        if (data?.lead_id) {
+          window.location.href = `/quotes/${data.lead_id}/status?autostart=1`;
+          return;
+        }
+        if (leadId) {
+          window.location.href = `/quotes/${leadId}/status?autostart=1`;
+          return;
+        }
+        showErr('Unexpected response from server.');
+      } catch (err) {
+        console.error(err);
+        showErr('Unexpected error submitting request.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = oldBtnText;
+      }
+    });
+  </script>
 
 </body>
 </html>

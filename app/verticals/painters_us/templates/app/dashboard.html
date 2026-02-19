@@ -4,21 +4,26 @@
 <div class="space-y-6">
 
   <!-- Header -->
-  <div class="flex flex-wrap items-end justify-between gap-3">
+  <div class="flex flex-wrap items-start justify-between gap-4">
     <div>
-      <h2 class="text-2xl font-semibold tracking-tight">Dashboard</h2>
+      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
       <div class="mt-1 text-sm text-slate-600">Jobs & Leads overview</div>
     </div>
 
     <!-- Timezone (dev) -->
     <form method="post" action="/app/dev/set_timezone" class="flex flex-wrap items-center gap-2">
-      <input
-        name="tz"
-        value="America/Chicago"
-        class="h-10 w-60 rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-      />
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <input
+          name="tz"
+          value="America/Chicago"
+          class="h-9 w-56 rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-colors"
+        />
+      </div>
       <button
-        class="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+        class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
         type="submit"
       >
         Set timezone
@@ -27,71 +32,144 @@
   </div>
 
   <!-- KPI grid -->
-  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-    {% set kpi_cards = [
-      ('NEW', kpis.NEW, 'bg-slate-900 text-white'),
-      ('SCHEDULED', kpis.SCHEDULED, 'bg-sky-50 text-slate-900'),
-      ('IN_PROGRESS', kpis.IN_PROGRESS, 'bg-indigo-50 text-slate-900'),
-      ('DONE', kpis.DONE, 'bg-emerald-50 text-slate-900'),
-      ('CANCELLED', kpis.CANCELLED, 'bg-rose-50 text-slate-900'),
-    ] %}
-
-    {% for label, value, cls in kpi_cards %}
-      <div class="rounded-2xl border border-slate-200 {{ cls }} p-4 shadow-sm">
-        <div class="text-xs font-semibold uppercase tracking-wide opacity-80">{{ label }}</div>
-        <div class="mt-2 text-2xl font-semibold tracking-tight">{{ value }}</div>
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <!-- NEW -->
+    <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-slate-900">{{ kpis.NEW }}</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">New</div>
+        </div>
       </div>
-    {% endfor %}
+    </div>
+
+    <!-- SCHEDULED -->
+    <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-slate-900">{{ kpis.SCHEDULED }}</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Scheduled</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IN_PROGRESS -->
+    <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100 text-violet-700">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-slate-900">{{ kpis.IN_PROGRESS }}</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">In Progress</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DONE -->
+    <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-slate-900">{{ kpis.DONE }}</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Done</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CANCELLED -->
+    <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-100 text-rose-700">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-slate-900">{{ kpis.CANCELLED }}</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Cancelled</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Two columns -->
   <div class="grid gap-6 lg:grid-cols-2">
 
     <!-- Recent jobs -->
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-slate-900">Recent jobs</h3>
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
+        <div class="flex items-center gap-2">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-slate-900">Recent Jobs</div>
+            <div class="text-xs text-slate-500">Latest activity</div>
+          </div>
+        </div>
+        <a href="/app/jobs" class="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">View all →</a>
       </div>
 
-      <div class="mt-4 overflow-hidden rounded-xl border border-slate-200">
+      <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200">
           <thead class="bg-slate-50">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Job</th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Lead</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Customer</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 bg-white">
             {% for j in jobs %}
               {% set st = (j.status or '').upper() %}
               {% if st == 'DONE' %}
-                {% set badge = 'bg-emerald-100 text-emerald-800 border-emerald-200' %}
+                {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
               {% elif st == 'IN_PROGRESS' %}
-                {% set badge = 'bg-indigo-100 text-indigo-800 border-indigo-200' %}
+                {% set badge_color = 'bg-violet-50 text-violet-700 ring-violet-600/20' %}
               {% elif st == 'SCHEDULED' %}
-                {% set badge = 'bg-sky-100 text-sky-800 border-sky-200' %}
+                {% set badge_color = 'bg-blue-50 text-blue-700 ring-blue-600/20' %}
               {% elif st == 'CANCELLED' %}
-                {% set badge = 'bg-rose-100 text-rose-800 border-rose-200' %}
+                {% set badge_color = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
               {% else %}
-                {% set badge = 'bg-slate-100 text-slate-800 border-slate-200' %}
+                {% set badge_color = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
               {% endif %}
 
-              <tr class="hover:bg-slate-50">
-                <td class="px-4 py-3 text-sm font-semibold text-slate-900">#{{ j.id }}</td>
+              <tr class="hover:bg-slate-50/80 transition-colors">
                 <td class="px-4 py-3">
-                  <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ badge }}">
-                    {{ st or '—' }}
+                  <a href="/app/jobs/{{ j.id }}" class="text-sm font-semibold text-slate-900 hover:text-slate-700 transition-colors">#{{ j.id }}</a>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
+                    {{ st or 'NEW' }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-slate-700">
-                  {# If you later add lead_id to job vm, link it here. Leaving blank for now. #}
-                  —
+                <td class="px-4 py-3 text-sm text-slate-600">
+                  {% if j.customer_name %}
+                    {{ j.customer_name }}
+                  {% elif j.lead_id %}
+                    <a href="/app/leads/{{ j.lead_id }}" class="text-slate-500 hover:text-slate-700">Lead #{{ j.lead_id }}</a>
+                  {% else %}
+                    —
+                  {% endif %}
                 </td>
               </tr>
             {% else %}
               <tr>
-                <td class="px-4 py-6 text-sm text-slate-600" colspan="3">No jobs yet.</td>
+                <td class="px-4 py-12 text-center" colspan="3">
+                  <div class="flex flex-col items-center justify-center">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-2">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    </div>
+                    <p class="text-sm text-slate-600">No jobs yet</p>
+                  </div>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
@@ -100,12 +178,21 @@
     </div>
 
     <!-- Recent leads -->
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-slate-900">Recent leads</h3>
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
+        <div class="flex items-center gap-2">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-slate-900">Recent Leads</div>
+            <div class="text-xs text-slate-500">Latest inquiries</div>
+          </div>
+        </div>
+        <a href="/app/leads" class="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">View all →</a>
       </div>
 
-      <div class="mt-4 overflow-hidden rounded-xl border border-slate-200">
+      <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200">
           <thead class="bg-slate-50">
             <tr>
@@ -118,29 +205,36 @@
             {% for l in leads %}
               {% set lst = (l.status or '').upper() %}
               {% if lst in ['ACCEPTED','DONE','COMPLETED'] %}
-                {% set lbadge = 'bg-emerald-100 text-emerald-800 border-emerald-200' %}
+                {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
               {% elif lst in ['SENT','VIEWED'] %}
-                {% set lbadge = 'bg-amber-100 text-amber-800 border-amber-200' %}
+                {% set badge_color = 'bg-amber-50 text-amber-700 ring-amber-600/20' %}
               {% elif lst in ['CANCELLED'] %}
-                {% set lbadge = 'bg-rose-100 text-rose-800 border-rose-200' %}
+                {% set badge_color = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
               {% else %}
-                {% set lbadge = 'bg-slate-100 text-slate-800 border-slate-200' %}
+                {% set badge_color = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
               {% endif %}
 
-              <tr class="hover:bg-slate-50">
-                <td class="px-4 py-3 text-sm">
-                  <a href="/app/leads/{{ l.id }}" class="font-semibold text-slate-900 hover:underline">#{{ l.id }}</a>
-                </td>
-                <td class="px-4 py-3 text-sm text-slate-700">{{ l.name or '—' }}</td>
+              <tr class="hover:bg-slate-50/80 transition-colors">
                 <td class="px-4 py-3">
-                  <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold {{ lbadge }}">
-                    {{ lst or '—' }}
+                  <a href="/app/leads/{{ l.id }}" class="text-sm font-semibold text-slate-900 hover:text-slate-700 transition-colors">#{{ l.id }}</a>
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-600">{{ l.name or '—' }}</td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
+                    {{ lst or 'NEW' }}
                   </span>
                 </td>
               </tr>
             {% else %}
               <tr>
-                <td class="px-4 py-6 text-sm text-slate-600" colspan="3">No leads yet.</td>
+                <td class="px-4 py-12 text-center" colspan="3">
+                  <div class="flex flex-col items-center justify-center">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-2">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    </div>
+                    <p class="text-sm text-slate-600">No leads yet</p>
+                  </div>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
