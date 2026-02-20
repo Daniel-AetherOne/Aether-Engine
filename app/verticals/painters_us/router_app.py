@@ -12,6 +12,8 @@ from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 import logging
+from fastapi import Form
+import json
 
 from app.auth.deps import require_user_html
 from app.db import get_db
@@ -19,6 +21,8 @@ from app.models.lead import Lead
 from app.models.job import Job
 from app.models.user import User
 from app.services.storage import get_storage, get_text
+from fastapi import BackgroundTasks
+from app.models.lead import LeadFile
 
 from app.core.settings import settings
 from app.services.email import send_postmark_email, EmailError
@@ -333,7 +337,7 @@ def app_lead_detail(
     )
 
 
-@router.get("/leads/{lead_id}/estimate", response_class=HTMLResponse)
+@router.get("/leads/{lead_id}/estimate")
 def app_lead_estimate(
     lead_id: int,
     request: Request,
@@ -354,35 +358,22 @@ def app_lead_estimate(
 
     storage = get_storage()
 
-    try:
-        html = get_text(storage, tenant_id=str(current_user.tenant_id), key=html_key)
-        return HTMLResponse(content=html)
+    # ✅ Redirect to presigned URL (fresh each time)
+    if hasattr(storage, "presigned_get_url"):
+        url = storage.presigned_get_url(
+            tenant_id=str(current_user.tenant_id),
+            key=html_key,
+            expires_seconds=300,
+        )
+        resp = RedirectResponse(url=url, status_code=302)
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
 
-    except RuntimeError as e:
-        msg = str(e)
-
-        # alleen "missing file" netjes afhandelen
-        if "HeadObject" in msg and ("404" in msg or "Not Found" in msg):
-            logger.warning(
-                "estimate_html_missing tenant=%s key=%s",
-                current_user.tenant_id,
-                html_key,
-            )
-            return templates.TemplateResponse(
-                "estimate_missing.html",
-                {
-                    "request": request,
-                    "missing_key": html_key,
-                    "lead_id": lead_id,
-                    "tenant_id": str(current_user.tenant_id),
-                },
-                status_code=404,
-            )
-
-        # echte errors niet verbergen
-        raise
-
-    return HTMLResponse(content=html)
+    # fallback: public url (if you don't have presign)
+    url = storage.public_url(tenant_id=str(current_user.tenant_id), key=html_key)
+    resp = RedirectResponse(url=url, status_code=302)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @router.post("/leads/{lead_id}/send")
@@ -923,3 +914,196 @@ def app_calendar_week(
             "toggle_done_url": toggle_done_url,
         },
     )
+
+
+@router.get("/reviews", response_class=HTMLResponse)
+def app_reviews_list(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    leads = (
+        db.query(Lead)
+        .filter(
+            Lead.tenant_id == str(current_user.tenant_id),
+            Lead.status == "NEEDS_REVIEW",
+        )
+        .order_by(desc(Lead.updated_at), desc(Lead.id))
+        .limit(200)
+        .all()
+    )
+
+    return templates.TemplateResponse(
+        "app/reviews_list.html",
+        {"request": request, "leads": leads},
+    )
+
+
+@router.get("/reviews/{lead_id}", response_class=HTMLResponse)
+def app_review_detail(
+    request: Request,
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    lead = (
+        db.query(Lead)
+        .filter(Lead.id == lead_id, Lead.tenant_id == str(current_user.tenant_id))
+        .first()
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # reasons MVP: uit estimate_json.meta.needs_review_reasons
+    reasons = []
+    try:
+        if lead.estimate_json:
+            est = json.loads(lead.estimate_json)
+            reasons = (est.get("meta") or {}).get("needs_review_reasons") or []
+    except Exception:
+        reasons = []
+
+    storage = get_storage()
+
+    # photo previews
+    files = db.query(LeadFile).filter(LeadFile.lead_id == lead.id).all()
+    photo_urls = []
+    for f in files:
+        key = (f.s3_key or "").strip()
+        if not key:
+            continue
+
+        if hasattr(storage, "presigned_get_url"):
+            url = storage.presigned_get_url(
+                tenant_id=str(current_user.tenant_id),
+                key=key,
+                expires_seconds=3600,
+            )
+        else:
+            url = storage.public_url(tenant_id=str(current_user.tenant_id), key=key)
+
+        photo_urls.append(url)
+
+    # ✅ Estimate preview URL (presigned, always fresh)
+    estimate_preview_url = None
+    html_key = (getattr(lead, "estimate_html_key", None) or "").strip()
+    if html_key:
+        if hasattr(storage, "presigned_get_url"):
+            estimate_preview_url = storage.presigned_get_url(
+                tenant_id=str(current_user.tenant_id),
+                key=html_key,
+                expires_seconds=300,
+            )
+        else:
+            estimate_preview_url = storage.public_url(
+                tenant_id=str(current_user.tenant_id),
+                key=html_key,
+            )
+
+    can_preview = bool(html_key)
+
+    intake = {}
+    try:
+        if getattr(lead, "intake_payload", None):
+            intake = json.loads(lead.intake_payload)
+    except Exception:
+        intake = {}
+
+    return templates.TemplateResponse(
+        "app/review_detail.html",
+        {
+            "request": request,
+            "lead": lead,
+            "reasons": reasons,
+            "photo_urls": photo_urls,
+            "can_preview": can_preview,
+            "estimate_preview_url": estimate_preview_url,  # ✅ NEW
+            "intake": intake,
+        },
+    )
+
+
+@router.post("/reviews/{lead_id}/generate-estimate")
+def app_review_generate_estimate(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    lead = (
+        db.query(Lead)
+        .filter(Lead.id == lead_id, Lead.tenant_id == str(current_user.tenant_id))
+        .first()
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Reset -> laat quotes status page opnieuw publishen via autostart JS
+    lead.status = "NEW"
+    lead.error_message = None
+    lead.estimate_json = None
+    lead.estimate_html_key = None
+    lead.updated_at = _utcnow()
+
+    # ✅ Manual override flag
+    payload = {}
+    try:
+        if getattr(lead, "intake_payload", None):
+            payload = json.loads(lead.intake_payload)
+    except Exception:
+        payload = {}
+
+    payload["manual_override"] = True
+    lead.intake_payload = json.dumps(payload, ensure_ascii=False)
+
+    db.add(lead)
+    db.commit()
+
+    return RedirectResponse(
+        url=f"/quotes/{lead_id}/status?autostart=1", status_code=303
+    )
+
+
+@router.post("/reviews/{lead_id}/overrides")
+def app_review_save_overrides(
+    lead_id: int,
+    square_feet: int | None = Form(default=None),
+    job_type: str | None = Form(default=None),
+    project_description: str | None = Form(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    lead = (
+        db.query(Lead)
+        .filter(Lead.id == lead_id, Lead.tenant_id == str(current_user.tenant_id))
+        .first()
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    payload = {}
+    try:
+        if getattr(lead, "intake_payload", None):
+            payload = json.loads(lead.intake_payload)
+    except Exception:
+        payload = {}
+
+    # sqft -> m² (consistent met jouw intake adapter)
+    if square_feet is not None:
+        payload["square_meters"] = float(square_feet) * 0.092903
+
+    if job_type:
+        payload["job_type"] = job_type
+        if hasattr(lead, "job_type"):
+            lead.job_type = job_type
+
+    if project_description is not None:
+        payload["project_description"] = project_description
+        if hasattr(lead, "notes"):
+            lead.notes = project_description
+
+    lead.intake_payload = json.dumps(payload, ensure_ascii=False)
+
+    db.add(lead)
+    db.commit()
+
+    return RedirectResponse(url=f"/app/reviews/{lead_id}", status_code=303)

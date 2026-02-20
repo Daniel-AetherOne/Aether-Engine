@@ -64,7 +64,6 @@ class PaintersUSAdapter:
     vertical_id = "painters_us"
 
     def render_intake_form(self, request, lead_id: str, tenant_id: str = "public"):
-        # tenant_id meegeven is prima (bv hidden field), maar we vertrouwen hem niet server-side
         return painters_us_templates.TemplateResponse(
             "intake_form_us.html",
             {
@@ -83,6 +82,7 @@ class PaintersUSAdapter:
         if not lead:
             raise HTTPException(status_code=404, detail="Lead not found")
 
+        # Ensure vertical
         if not lead.vertical:
             lead.vertical = self.vertical_id
             db.add(lead)
@@ -95,6 +95,7 @@ class PaintersUSAdapter:
                 detail=f"Lead vertical mismatch: {lead.vertical} (expected {self.vertical_id})",
             )
 
+        # Must have uploads
         files = db.query(LeadFile).filter(LeadFile.lead_id == lead_id).all()
         if not files:
             raise HTTPException(status_code=400, detail="No uploads for lead")
@@ -103,78 +104,41 @@ class PaintersUSAdapter:
             # ✅ Run engine facade (config-driven)
             result = compute_quote_for_lead_v15(db, lead, vertical_id=self.vertical_id)
 
-            # ==============
-            # DEV DEBUG BLOCK
-            # ==============
-            # Deze logs geven je exact:
-            # - of pricing step in de pipeline zit
-            # - wat engine_status/failure_step is
-            # - waarom estimate_json totals 0 blijven
+            # DEBUG (safe, non-blocking)
             try:
-                # We loggen naar "aether" logger omdat jouw infra die al toont
+                import hashlib
+
                 dbg_logger = logging.getLogger("aether")
+                dbg_logger.warning(
+                    "DEBUG facade estimate_html_key=%s",
+                    result.get("estimate_html_key"),
+                )
 
-                if isinstance(result, dict):
-                    dbg_logger.warning(
-                        "DEBUG facade result keys=%s",
-                        sorted(list(result.keys())),
-                    )
-                    dbg_logger.warning(
-                        "DEBUG facade engine_status=%s failure_step=%s needs_review=%s",
-                        result.get("engine_status"),
-                        result.get("failure_step"),
-                        result.get("needs_review"),
-                    )
-                    dbg_logger.warning(
-                        "DEBUG facade available_steps=%s",
-                        result.get("available_steps"),
-                    )
-                    dbg_logger.warning(
-                        "DEBUG facade logs_tail=%s",
-                        result.get("logs_tail"),
-                    )
+                est_dbg = result.get("estimate_json")
+                if isinstance(est_dbg, str):
+                    try:
+                        est_dbg_obj = json.loads(est_dbg)
+                    except Exception:
+                        est_dbg_obj = {"_raw": est_dbg}
+                elif isinstance(est_dbg, dict):
+                    est_dbg_obj = est_dbg
+                else:
+                    est_dbg_obj = {"_type": str(type(est_dbg))}
 
-                    est = result.get("estimate_json")
-                    if isinstance(est, dict):
-                        totals = est.get("totals") or {}
-                        dbg_logger.warning("DEBUG estimate_json.totals=%s", totals)
-                        dbg_logger.warning(
-                            "DEBUG estimate_json.line_items_len=%s",
-                            len(est.get("line_items") or []),
-                        )
-                        dbg_logger.warning(
-                            "DEBUG estimate_json.needs_review_reasons=%s",
-                            (est.get("meta") or {}).get("needs_review_reasons"),
-                        )
-                    else:
-                        dbg_logger.warning("DEBUG estimate_json type=%s", type(est))
-
-                    # Als je later in de facade `debug_pricing_raw` toevoegt, zie je ’m hier meteen
-                    if "debug_pricing_raw" in result:
-                        dbg_logger.warning(
-                            "DEBUG debug_pricing_raw=%s",
-                            result.get("debug_pricing_raw"),
-                        )
+                digest = hashlib.md5(
+                    json.dumps(est_dbg_obj, sort_keys=True, default=str).encode("utf-8")
+                ).hexdigest()
+                dbg_logger.warning("DEBUG facade estimate_json_md5=%s", digest)
             except Exception:
-                # debug mag nooit de flow breken
                 pass
-            # ==============
-            # END DEBUG BLOCK
-            # ==============
 
             html_key = result.get("estimate_html_key")
             if not html_key:
-                raise RuntimeError(
-                    "engine_missing_estimate_html_key "
-                    f"(status={result.get('engine_status')}, "
-                    f"failure_step={result.get('failure_step')}, "
-                    f"available_steps={result.get('available_steps')}, "
-                    f"logs_tail={result.get('logs_tail')})"
-                )
+                raise RuntimeError("engine_missing_estimate_html_key")
 
             estimate_obj = result.get("estimate_json")
 
-            # persist estimate_json as string in DB (existing behavior)
+            # Persist estimate_json as string
             if isinstance(estimate_obj, str):
                 try:
                     parsed = json.loads(estimate_obj)
@@ -186,7 +150,9 @@ class PaintersUSAdapter:
                     )
             else:
                 lead.estimate_json = json.dumps(
-                    estimate_obj, ensure_ascii=False, default=str
+                    jsonable_encoder(estimate_obj),
+                    ensure_ascii=False,
+                    default=str,
                 )
 
             lead.estimate_html_key = html_key
@@ -194,6 +160,7 @@ class PaintersUSAdapter:
             needs_review = bool(result.get("needs_review", False))
             lead.status = "NEEDS_REVIEW" if needs_review else "SUCCEEDED"
 
+            lead.error_message = None
             db.add(lead)
             db.commit()
             db.refresh(lead)
@@ -207,11 +174,10 @@ class PaintersUSAdapter:
         except HTTPException:
             raise
         except Exception as e:
-            # mark failed and surface a clear error in the UI
             lead.status = "FAILED"
+            lead.error_message = f"{type(e).__name__}: {e}"
             db.add(lead)
             db.commit()
-
             raise HTTPException(
                 status_code=500,
                 detail=f"compute_quote_failed:{type(e).__name__}:{e}",
@@ -266,6 +232,7 @@ class PaintersUSAdapter:
             or form_dict.get("address"),
             "object_keys": object_keys,  # ✅ tenant-loos
             "square_meters": square_meters,
+            "job_type": form_dict.get("job_type"),
         }
 
         try:
@@ -381,6 +348,7 @@ class PaintersUSAdapter:
             or form_dict.get("address"),
             "object_keys": object_keys,  # ✅ tenant-loos
             "square_meters": square_meters,
+            "job_type": form_dict.get("job_type"),
         }
 
         try:

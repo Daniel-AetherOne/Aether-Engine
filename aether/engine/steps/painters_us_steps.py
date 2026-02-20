@@ -494,6 +494,51 @@ def step_store_html_v1(
 def step_needs_review_v1(
     state: PipelineState, step: StepConfig, assets: dict
 ) -> StepResult:
+    # -----------------------------
+    # Manual override: skip review
+    # -----------------------------
+    try:
+        # Prefer lead from assets if available
+        lead = (assets or {}).get("lead")
+        raw = getattr(lead, "intake_payload", None) if lead is not None else None
+
+        # Fallbacks: sometimes pipeline stores payload in state.data
+        if not raw:
+            raw = (state.data or {}).get("lead_intake_payload") or (
+                state.data or {}
+            ).get("intake_payload")
+
+        if isinstance(raw, str) and raw.strip():
+            payload = json.loads(raw)
+            if payload.get("manual_override") is True:
+                return StepResult(
+                    status="OK",
+                    data={
+                        "needs_review": False,
+                        "needs_review_reasons": [],
+                        "needs_review_hard": {"manual_override": True},
+                    },
+                    meta={"reasons": []},
+                )
+        elif isinstance(raw, dict):
+            # If it's already a dict
+            if raw.get("manual_override") is True:
+                return StepResult(
+                    status="OK",
+                    data={
+                        "needs_review": False,
+                        "needs_review_reasons": [],
+                        "needs_review_hard": {"manual_override": True},
+                    },
+                    meta={"reasons": []},
+                )
+    except Exception:
+        # Never block pipeline because of override parsing
+        pass
+
+    # -----------------------------
+    # Existing logic
+    # -----------------------------
     estimate = (state.data.get("steps") or {}).get("output", {}).get(
         "estimate_json"
     ) or {}

@@ -1,0 +1,108 @@
+{% extends "app/layout.html" %}
+{% block content %}
+
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Review</h1>
+      <div class="mt-1 text-sm text-slate-600">
+        Leads that need manual review before an estimate can be generated
+      </div>
+    </div>
+
+    <a class="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50 transition-colors"
+       href="/app/leads">
+      Back to Leads
+    </a>
+  </div>
+
+  <!-- Empty state -->
+  {% if not leads or leads|length == 0 %}
+    <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <div class="max-w-xl">
+        <h2 class="text-lg font-semibold text-slate-900">No leads need review</h2>
+        <p class="mt-1 text-sm text-slate-600">
+          When the AI isn’t confident, leads will show up here for a quick manual check.
+        </p>
+        <div class="mt-4">
+          <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
+             href="/app/leads">
+            View Leads
+          </a>
+        </div>
+      </div>
+    </div>
+  {% else %}
+
+  <!-- Table -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Customer</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Lead</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Updated</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
+            <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 bg-white">
+          {% for lead in leads %}
+          <tr class="hover:bg-slate-50/50">
+            <td class="px-5 py-4 align-top">
+              <div class="font-medium text-slate-900">
+                {{ lead.customer_name or lead.name or "Unknown" }}
+              </div>
+              <div class="mt-0.5 text-sm text-slate-600">
+                {{ lead.customer_email or lead.email or "" }}
+                {% if lead.customer_phone or lead.phone %}
+                  <span class="text-slate-300">•</span> {{ lead.customer_phone or lead.phone }}
+                {% endif %}
+              </div>
+            </td>
+
+            <td class="px-5 py-4 align-top">
+              <div class="text-sm text-slate-900">
+                #{{ lead.id }}
+                {% set raw_notes = (lead.project_notes or lead.notes or "") %}
+{% set safe_notes = (raw_notes.split("VISION_JSON=")[0] | trim) %}
+
+{% if safe_notes %}
+  <div class="mt-1 line-clamp-2 max-w-[520px] text-sm text-slate-600">
+    {{ safe_notes }}
+  </div>
+{% endif %}
+            </td>
+
+            <td class="px-5 py-4 align-top">
+              <div class="text-sm text-slate-700">
+                {{ lead.updated_at or lead.created_at }}
+              </div>
+            </td>
+
+            <td class="px-5 py-4 align-top">
+              <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+                NEEDS_REVIEW
+              </span>
+            </td>
+
+            <td class="px-5 py-4 text-right align-top">
+              <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
+                 href="/app/reviews/{{ lead.id }}">
+                Review
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+{% endblock %}
