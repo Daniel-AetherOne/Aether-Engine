@@ -143,3 +143,68 @@ Future: workflow automation support
 ---
 
 ## Project structure
+
+- **api/** — FastAPI routes  
+- **core/** — configuration & shared utilities  
+- **services/** — orchestration & domain services  
+- **ai/** — AI-related components  
+- **auth/** — authentication & security utilities  
+- **verticals/** — domain-specific implementations  
+
+
+## How AI is used
+
+AI components act as supporting signals rather than opaque decision-makers:
+
+- Lightweight heuristic models and scoring logic  
+- Optional ML/AI outputs influencing decisions  
+- Rule-based final decisions for transparency  
+
+This approach keeps the system inspectable and easy to debug.
+
+---
+
+## Design principles
+
+- Explainability first — decisions must be inspectable  
+- Separation of concerns — AI signals are distinct from final decisions  
+- Extensibility — support for new models and verticals  
+- Safety and control — rule layers enforce constraints  
+- Production mindset — structured, testable, and observable  
+
+---
+
+## Trade-offs and limitations
+
+- Models are intentionally simple  
+- No heavy training pipelines are included  
+- Focus is on system design rather than model performance  
+- Sample and synthetic data are used for demonstration
+
+Possible extensions
+
+Plug-in ML models or external inference services
+
+Feedback loops and model retraining pipelines
+
+Decision audit trails and explainability logs
+
+Feature store integration
+
+A/B testing decision strategies
+
+Multi-tenant decision policy management
+
+Why this project exists
+
+This repository explores how applied AI systems can be:
+
+engineered cleanly
+
+reasoned about and audited
+
+extended safely
+
+integrated into real-world backend services
+
+It is intended as a realistic engineering exercise rather than a polished commercial product.
