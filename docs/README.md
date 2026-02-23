@@ -1,16 +1,27 @@
 # Aether Engine
 
-**Aether Engine** is a Python-based backend system that demonstrates how AI-assisted decision logic can be integrated into a clean, production-style service.
+**A production-style AI decision engine that combines rule-based logic with AI signals to produce explainable, auditable, and controllable outcomes.**
 
-The project focuses on **applied AI engineering**: structuring decision pipelines, combining deterministic rules with AI-derived signals, and keeping outcomes explainable, testable, and extensible.
-
-**Status:** Work in progress — built as a learning and portfolio project.
+Aether Engine demonstrates how real-world AI systems move beyond model outputs by structuring decision pipelines that remain transparent, testable, and production-ready.
 
 ---
 
-## Overview
+## Highlights
 
-Modern AI systems rarely rely on model output alone. Real-world decision systems must be:
+- Hybrid AI + rules decision pipeline  
+- Explainable & auditable decision logic  
+- Async processing & scalable architecture  
+- Modular, vertical-ready system design  
+- Production-oriented structure & observability  
+- Built with FastAPI, Celery, Redis, and Docker  
+
+---
+
+## Why this project exists
+
+In real systems, AI outputs alone are rarely sufficient.
+
+Decisions must be:
 
 - explainable  
 - auditable  
@@ -19,192 +30,152 @@ Modern AI systems rarely rely on model output alone. Real-world decision systems
 
 Aether Engine explores a hybrid approach where **AI provides signals** and **rules provide control**, producing decisions that remain transparent and debuggable.
 
-The system is organized around a decision pipeline that separates:
+This architecture is common in finance, insurance, logistics, and SaaS platforms operating in regulated or high-risk environments.
 
-1. Input validation  
-2. Rule evaluation  
-3. AI-derived signals  
-4. Final decision assembly  
+---
+
+## Architecture Overview
+
+1. Client Request  
+2. API & Validation  
+3. Rule Evaluation  
+4. AI Signals  
+5. Decision Assembly  
+6. Structured Decision Output  
+7. Logging & Metrics
+
+
+The pipeline keeps AI outputs separate from final decisions, ensuring inspectability and safety.
 
 ---
 
 ## What this project demonstrates
 
-- Structuring AI-related logic beyond notebooks and scripts  
-- Combining deterministic business rules with AI-derived signals  
+- Structuring AI-assisted decision systems beyond notebooks and scripts  
+- Combining deterministic rules with AI-derived signals  
 - Designing modular backend services using FastAPI  
-- Keeping AI outputs separate from final decision logic  
+- Keeping AI outputs separate from decision logic  
 - Engineering for explainability, validation, and extensibility  
-- Building systems that remain debuggable in production environments  
+- Building systems that remain debuggable in production  
 
 ---
 
-## Why this matters in real systems
+## Example Use Case: Pricing & Intake Automation
 
-In production environments:
+A vertical included in this repository demonstrates an automated intake and pricing workflow.
 
-- AI outputs alone are rarely sufficient  
-- decisions must be explainable and auditable  
-- rule layers provide control, compliance, and safety  
-- hybrid AI + rules systems are common in finance, insurance, logistics, and SaaS platforms  
+### Flow
 
-This project explores these engineering realities.
-
----
-
-## Example use case: Pricing & intake automation
-
-One vertical implemented in this repository demonstrates an automated pricing and intake workflow.
-
-### High-level flow
-
-1. Structured input is received via an API  
-2. Domain-specific rules and heuristics are applied  
-3. Optional AI-derived signals (e.g., scoring or classification) influence the outcome  
+1. Structured input is received via API  
+2. Domain rules and heuristics are applied  
+3. Optional AI signals influence outcomes  
 4. A structured decision object is returned  
 
-This use case serves as a technical example rather than a finished business product.
+This use case illustrates system design rather than a finished product.
 
 ---
 
-## Real-world application: Paintly
+## Real-World Application: Paintly
 
-**Paintly** is a practical implementation built on top of Aether Engine.  
-It is an AI-assisted intake and quotation engine designed for painting contractors.
+**Paintly** is a practical implementation built on Aether Engine.
 
-Paintly automates the **intake → estimation → quotation** workflow while keeping decisions transparent and rule-driven.
+It is an AI-assisted intake and quotation engine for painting contractors that automates the intake → estimation → quotation workflow while keeping decisions transparent and rule-driven.
 
-### What Paintly does
+### Automated analysis includes
 
-Paintly processes customer requests and generates structured work estimates and quotations.
-
-**Input**
-
-- Customer request form  
-- Uploaded photos of spaces or surfaces  
-
-**Automated analysis includes**
-
-- Estimation of rooms and surfaces using image analysis  
-- Detection of work type (interior, exterior, renovation, new build)  
+- Estimating rooms and surfaces from uploaded photos  
+- Detecting work type (interior, exterior, renovation, new build)  
 - Complexity indicators such as height, edges, and surface condition  
 
-**Combined with**
+Combined with:
 
-- Pricing rules  
-- Labor and material logic  
-- Company-specific settings (rates, margins)  
+- pricing rules  
+- labor & material logic  
+- company-specific settings  
 
-**Output**
+### Output
 
-- Structured work estimate  
-- Price calculation  
-- Professional quotation (HTML/PDF)  
+- structured work estimate  
+- price calculation  
+- professional quotation (HTML/PDF)  
 
-Paintly does not replace skilled craftsmen.  
-It automates administrative and estimation tasks so professionals can focus on their work.
-
----
-
-## Value for painting businesses
-
-### Reduced time spent on quotations
-
-Instead of manually reviewing photos, estimating measurements, calculating pricing, and drafting quotes, the system prepares a structured estimate automatically.
-
-This reduces daily administrative workload for owners, planners, and office staff.
-
-### Faster response times increase win rates
-
-Quotes can be generated within minutes rather than days, increasing the likelihood of securing jobs before competitors respond.
-
-### Consistent and predictable pricing
-
-Rule-based pricing ensures repeatable margins and reduces underpricing, errors, and inconsistencies.
-
-### Reduced dependency on individual expertise
-
-Operational knowledge moves from individuals into system rules, making the business more scalable and resilient.
-
-### Foundation for future automation
-
-Structured intake data enables:
-
-- Job history insights  
-- Pricing analytics  
-- Datasets linking images to work scope  
-- Smarter future estimations  
-- Planning and duration forecasting  
-
-Today: quotation automation  
-Tomorrow: operational intelligence  
-Future: workflow automation support  
+Paintly automates administrative and estimation tasks while preserving professional control.
 
 ---
 
-## Project structure
+## Design Principles
+
+**Explainability first** — decisions must be inspectable  
+**Separation of concerns** — AI signals ≠ final decisions  
+**Extensibility** — supports new models and verticals  
+**Safety & control** — rule layers enforce constraints  
+**Production mindset** — structured, testable, observable  
+
+---
+
+## Tech Stack
+
+**Backend:** FastAPI, Python  
+**Async & Messaging:** Celery, Redis  
+**AI / Data:** PyTorch, NumPy, Pandas  
+**Infrastructure:** Docker, AWS S3  
+**Observability:** Prometheus, Grafana  
+**CI/CD:** GitHub Actions  
+
+---
+
+## Project Structure
 
 - **api/** — FastAPI routes  
-- **core/** — configuration & shared utilities  
+- **core/** — shared configuration & utilities  
 - **services/** — orchestration & domain services  
 - **ai/** — AI-related components  
-- **auth/** — authentication & security utilities  
-- **verticals/** — domain-specific implementations  
+- **auth/** — authentication utilities  
+- **verticals/** — domain-specific implementations
 
+
+---
 
 ## How AI is used
 
-AI components act as supporting signals rather than opaque decision-makers:
+AI components act as **supporting signals**, not opaque decision-makers:
 
-- Lightweight heuristic models and scoring logic  
-- Optional ML/AI outputs influencing decisions  
-- Rule-based final decisions for transparency  
+- lightweight scoring & classification  
+- optional ML outputs influencing decisions  
+- rule-based final decisions for transparency  
 
-This approach keeps the system inspectable and easy to debug.
-
----
-
-## Design principles
-
-- Explainability first — decisions must be inspectable  
-- Separation of concerns — AI signals are distinct from final decisions  
-- Extensibility — support for new models and verticals  
-- Safety and control — rule layers enforce constraints  
-- Production mindset — structured, testable, and observable  
+This keeps the system inspectable and easy to debug.
 
 ---
 
-## Trade-offs and limitations
+## Trade-offs & Scope
 
-- Models are intentionally simple  
+- Models are intentionally lightweight  
 - No heavy training pipelines are included  
-- Focus is on system design rather than model performance  
-- Sample and synthetic data are used for demonstration
+- Focus is system design rather than model performance  
+- Synthetic/sample data used for demonstration  
 
-Possible extensions
+---
 
-Plug-in ML models or external inference services
+## Possible Extensions
 
-Feedback loops and model retraining pipelines
+- external inference services  
+- feedback loops & retraining pipelines  
+- decision audit trails & explainability logs  
+- feature store integration  
+- A/B testing decision strategies  
+- multi-tenant decision policy management  
 
-Decision audit trails and explainability logs
+---
 
-Feature store integration
-
-A/B testing decision strategies
-
-Multi-tenant decision policy management
-
-Why this project exists
+## Purpose
 
 This repository explores how applied AI systems can be:
 
-engineered cleanly
+- engineered cleanly  
+- reasoned about and audited  
+- extended safely  
+- integrated into real-world backend services  
 
-reasoned about and audited
+It is an applied AI engineering project focused on production-ready decision system design.
 
-extended safely
-
-integrated into real-world backend services
-
-It is intended as a realistic engineering exercise rather than a polished commercial product.
