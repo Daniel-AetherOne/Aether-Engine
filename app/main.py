@@ -13,7 +13,7 @@ from fastapi.responses import PlainTextResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.routers.auth import router as auth_router
-from app.verticals.painters_us.router_app import router as painters_us_app_router
+from app.verticals.paintly.router_app import router as paintly_app_router
 from app.routers.public_estimate import router as public_estimate_router
 from app.models.job import Job
 from app.jobs.runner import start_worker
@@ -201,7 +201,7 @@ app.include_router(internal.router)
 app.include_router(auth_router)
 app.include_router(app_me_router)
 # app.include_router(app_dashboard_router)
-app.include_router(painters_us_app_router)
+app.include_router(paintly_app_router)
 app.include_router(public_estimate_router)
 
 # Optional ACE routers

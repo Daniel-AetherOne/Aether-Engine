@@ -14,7 +14,7 @@ class User(Base):
     )
 
     timezone: Mapped[str] = mapped_column(
-        String(64), nullable=False, server_default="America/New_York"
+        String(64), nullable=False, server_default="Europe/Amsterdam"
     )
 
     email: Mapped[str] = mapped_column(

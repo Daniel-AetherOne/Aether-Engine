@@ -7,6 +7,9 @@ from typing import Dict, Optional
 import mimetypes
 from uuid import uuid4
 
+from app.models import LeadFile
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -30,10 +33,9 @@ from app.services.storage import (
 )
 
 # -----------------------------------------------------------------------------
-# Router + globale storage instance
+# Router
 # -----------------------------------------------------------------------------
 router = APIRouter(prefix="/uploads", tags=["uploads"])
-storage: Storage = get_storage()
 
 S3_BUCKET = settings.S3_BUCKET
 S3_REGION = settings.AWS_REGION
@@ -116,6 +118,22 @@ def _lead_and_tenant(db: Session, lead_id: int) -> tuple[Lead, str]:
     return lead, tenant_id
 
 
+def _local_path_if_available(
+    st: Storage, tenant_id: str, key_without_tenant: str
+) -> Optional[str]:
+    # Only for local storage: map storage root to actual file path if available
+    if isinstance(st, LocalStorage):
+        # LocalStorage usually stores under settings.LOCAL_STORAGE_DIR or st.base_dir
+        base_dir = (
+            getattr(st, "base_dir", None)
+            or getattr(st, "root_dir", None)
+            or getattr(st, "root", None)
+        )
+        if base_dir:
+            return str(Path(str(base_dir)) / tenant_id / key_without_tenant)
+    return None
+
+
 # -----------------------------------------------------------------------------
 # PRESIGN: frontend post JSON -> wij geven upload-instructies + keys
 # -----------------------------------------------------------------------------
@@ -128,7 +146,7 @@ async def presign_upload(
     """
     Presign for intake:
     - tenant_id derived from Lead (lead_id) for multi-tenant safety
-    - returns object_key (tenant-prefixed) + {url, fields} for S3 POST
+    - returns object_key (tenant-prefixed) + {url, fields} for S3 POST (of local emulation)
     """
     if not req.filename:
         raise HTTPException(status_code=400, detail="filename_required")
@@ -158,8 +176,10 @@ async def presign_upload(
 
     expires_in = req.expires_in or 60 * 5
 
+    st = get_storage()
+
     # --- S3 backend ---
-    if isinstance(storage, S3Storage):
+    if isinstance(st, S3Storage):
         if not S3_BUCKET:
             raise HTTPException(status_code=500, detail="s3_bucket_not_configured")
 
@@ -195,13 +215,14 @@ async def presign_upload(
         }
 
     # --- Local backend (dev/test) ---
-    if isinstance(storage, LocalStorage):
+    if isinstance(st, LocalStorage):
+        # Emuleer S3 presigned POST: zelfde shape (url + fields)
         post = {
             "url": "/uploads/local",
             "fields": {
                 "key": key_with_tenant,
-                "Content-Type": ctype,
                 "tenant_id": tenant_id,
+                "Content-Type": ctype,
             },
         }
         return {
@@ -217,7 +238,7 @@ async def presign_upload(
 
 
 # -----------------------------------------------------------------------------
-# COMPLETE: frontend calls after successful S3 upload
+# COMPLETE: frontend calls after successful upload
 # -----------------------------------------------------------------------------
 @router.post("/complete")
 async def complete_upload(
@@ -225,8 +246,8 @@ async def complete_upload(
     db: Session = Depends(get_db),
 ) -> Dict:
     """
-    Called by frontend AFTER S3 upload succeeds.
-    Validates object exists + metadata, then writes UploadRecord.
+    Called by frontend AFTER upload succeeds.
+    Validates object exists + metadata, then writes UploadRecord + LeadFile.
     """
     _, tenant_id = _lead_and_tenant(db, int(req.lead_id))
 
@@ -239,13 +260,45 @@ async def complete_upload(
 
     key_without_tenant = req.object_key[len(prefix) :]
 
-    ok, meta, err = head_ok(storage, tenant_id, key_without_tenant)
+    st = get_storage()
+
+    ok, meta, err = head_ok(st, tenant_id, key_without_tenant)
     if not ok:
         raise HTTPException(status_code=400, detail=f"upload_not_verified:{err}")
 
+    # ✅ Always define these (avoid UnboundLocalError)
+    meta = meta or {}
     size_bytes = int(meta.get("ContentLength") or meta.get("size_bytes") or 0)
-    content_type = str(meta.get("ContentType") or meta.get("content_type") or "")
+    content_type = (
+        str(meta.get("ContentType") or meta.get("content_type") or "")
+        or "application/octet-stream"
+    )
 
+    # ✅ Ensure LeadFile exists (engine reads LeadFile, not UploadRecord)
+    from app.models import LeadFile  # local import avoids circulars
+
+    lf = (
+        db.query(LeadFile)
+        .filter(LeadFile.lead_id == int(req.lead_id))
+        .filter(LeadFile.s3_key == key_without_tenant)  # tenant-loos in DB
+        .first()
+    )
+
+    if lf:
+        lf.size_bytes = size_bytes or lf.size_bytes
+        lf.content_type = content_type or lf.content_type
+        db.add(lf)
+    else:
+        db.add(
+            LeadFile(
+                lead_id=int(req.lead_id),
+                s3_key=key_without_tenant,
+                size_bytes=size_bytes,
+                content_type=content_type,
+            )
+        )
+
+    # ✅ Upsert UploadRecord (as you already do)
     existing = (
         db.query(UploadRecord).filter(UploadRecord.object_key == req.object_key).first()
     )
@@ -263,7 +316,7 @@ async def complete_upload(
         lead_id=int(req.lead_id),
         object_key=req.object_key,
         size=size_bytes,
-        mime=content_type or "application/octet-stream",
+        mime=content_type,
         status=UploadStatus.uploaded,
         s3_metadata=meta,
     )
@@ -278,7 +331,7 @@ async def complete_upload(
 # -----------------------------------------------------------------------------
 @router.post("/local")
 async def local_upload(
-    key: str = Form(...),  # VOLLEDIGE key met tenant, bv. "acme/uploads/..."
+    key: str = Form(...),  # VOLLEDIGE key met tenant, bv. "acme/uploads/....jpg"
     tenant_id: str = Form(...),
     content_type: Optional[str] = Form(None),
     file: UploadFile = File(...),
@@ -299,24 +352,29 @@ async def local_upload(
         raise HTTPException(status_code=400, detail="wrong_prefix")
 
     ctype = content_type or file.content_type or "application/octet-stream"
-    _validate_content_type(ctype)
+    try:
+        _validate_content_type(ctype)
+    except HTTPException as e:
+        if e.status_code == 415:
+            raise HTTPException(status_code=400, detail=e.detail)
+        raise
 
     data = await file.read()
     if not data or len(data) > MAX_BYTES:
         raise HTTPException(status_code=413, detail="size_exceeded")
 
-    # strip tenant-prefix voor storage API
     tenant_prefix = f"{tenant_id}/"
     key_without_tenant = key[len(tenant_prefix) :]
 
+    st = get_storage()
+    if not isinstance(st, LocalStorage):
+        raise HTTPException(status_code=400, detail="not_local_storage")
+
     try:
-        assert isinstance(storage, LocalStorage), "local endpoint requires LocalStorage"
-        storage.save_bytes(tenant_id, key_without_tenant, data)
+        st.save_bytes(tenant_id, key_without_tenant, data, content_type=ctype)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"local_upload_failed:{e}")
 
-    # Also write UploadRecord for local flow (lead_id later set via complete/intake if needed)
-    # Here we only know the tenant and key. We'll store object_key with tenant prefix for consistency.
     object_key = f"{tenant_id}/{key_without_tenant}"
 
     existing = (
@@ -325,7 +383,7 @@ async def local_upload(
     if not existing:
         rec = UploadRecord(
             tenant_id=tenant_id,
-            lead_id=0,  # local-only; if your schema requires NOT NULL int. Update later in intake.
+            lead_id=0,  # optioneel: later patchen via /complete of intake
             object_key=object_key,
             size=len(data),
             mime=ctype,

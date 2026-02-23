@@ -172,18 +172,41 @@
     }
 
     async function startPublishOnce() {
-      if (publishStarted) return;
-      publishStarted = true;
-      try {
-        await fetch(`/quotes/publish/${leadId}`, {
-          method: "POST",
-          headers: { "accept": "application/json" },
-          cache: "no-store",
-        });
-      } catch (e) {
-        console.warn("publish failed to start:", e);
-      }
+  if (publishStarted) return;
+  publishStarted = true;
+
+  try {
+    const res = await fetch(`/quotes/publish/${leadId}`, {
+      method: "POST",
+      headers: { "accept": "application/json" },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error("publish failed:", res.status, txt);
+      setStatusPill("PUBLISH_FAILED");
+      setHeadline("Couldn't start processing");
+      setSubhead(`Publish failed: ${res.status}`);
+      setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(txt || "").slice(0, 800)}</pre>`);
+      stopPolling();
+      return;
     }
+
+    // optional: log json
+    try {
+      const data = await res.json();
+      console.log("publish started:", data);
+    } catch (_) {}
+  } catch (e) {
+    console.warn("publish failed to start:", e);
+    setStatusPill("PUBLISH_ERROR");
+    setHeadline("Couldn't start processing");
+    setSubhead("Network error while starting publish");
+    setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(e && e.toString ? e.toString() : e)}</pre>`);
+    stopPolling();
+  }
+}
 
     async function safeJson(res) {
       const ct = (res.headers.get("content-type") || "").toLowerCase();
@@ -424,7 +447,12 @@
     }
 
     // boot
-    poll();
+(async () => {
+  if (autostart === 1) {
+    await startPublishOnce();
+  }
+  poll();
+})();
   </script>
 </body>
 </html>

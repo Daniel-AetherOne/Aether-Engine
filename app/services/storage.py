@@ -25,10 +25,11 @@ TEMP_PREFIX = settings.S3_TEMP_PREFIX
 FINAL_PREFIX = settings.S3_FINAL_PREFIX
 MAX_BYTES = settings.UPLOAD_MAX_BYTES
 
-# Content-typen whitelist (kan via env uitgebreid worden, CSV)
 _default_types = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
 _env_types = {
-    t.strip() for t in settings.UPLOAD_ALLOWED_CONTENT_TYPES.split(",") if t.strip()
+    t.strip()
+    for t in (settings.UPLOAD_ALLOWED_CONTENT_TYPES or "").split(",")
+    if t.strip()
 }
 ALLOWED_CONTENT_TYPES = _default_types.union(_env_types)
 
@@ -41,11 +42,6 @@ class Storage(ABC):
 
     @abstractmethod
     def head(self, tenant_id: str, key: str) -> Dict:
-        """
-        Geef metadata terug voor een object.
-        Moet raise RuntimeError als object niet bestaat of onleesbaar is.
-        Expected keys in dict: {"size_bytes": int, "content_type": str}
-        """
         raise NotImplementedError
 
     @abstractmethod
@@ -57,30 +53,22 @@ class Storage(ABC):
         *,
         content_type: Optional[str] = None,
     ) -> str:
-        """Sla bytes op onder de gegeven key voor een tenant."""
         raise NotImplementedError
 
     @abstractmethod
     def public_url(self, tenant_id: str, key: str) -> str:
-        """Genereer een publieke URL voor een bestand."""
         raise NotImplementedError
 
     @abstractmethod
     def exists(self, tenant_id: str, key: str) -> bool:
-        """Controleer of een bestand bestaat."""
         raise NotImplementedError
 
     @abstractmethod
     def delete(self, tenant_id: str, key: str) -> bool:
-        """Verwijder een bestand."""
         raise NotImplementedError
 
     @abstractmethod
     def download_to_temp_path(self, tenant_id: str, key: str) -> str:
-        """
-        Download object to a local temp file and return absolute path.
-        Must raise RuntimeError if download fails.
-        """
         raise NotImplementedError
 
     def put_text(
@@ -91,25 +79,15 @@ class Storage(ABC):
         content_type: str = "text/html; charset=utf-8",
     ) -> str:
         """
-        Upload plain text (HTML) to S3 at {tenant_id}/{key}.
-        Returns the full S3 key that was written.
+        Backend-agnostic: schrijf text via save_bytes().
+        Werkt voor LocalStorage en S3Storage.
         """
-        tenant_id = str(tenant_id)
-        key = str(key).lstrip("/")
-        s3_key = f"{tenant_id}/{key}"
-
-        try:
-            self.s3.put_object(
-                Bucket=self.bucket_name,  # <— gebruik jouw veldnaam (zie hieronder)
-                Key=s3_key,
-                Body=text.encode("utf-8"),
-                ContentType=content_type,
-                CacheControl="no-store",
-            )
-        except Exception as e:
-            raise RuntimeError(f"s3_upload_failed:{s3_key}:{e}")
-
-        return s3_key
+        return self.save_bytes(
+            tenant_id=tenant_id,
+            key=key,
+            data=text.encode("utf-8"),
+            content_type=content_type,
+        )
 
 
 # =========================
@@ -117,15 +95,6 @@ class Storage(ABC):
 # =========================
 class LocalStorage(Storage):
     """Lokale bestandsopslag implementatie."""
-
-    def head(self, tenant_id: str, key: str) -> Dict:
-        meta = self._head_local(tenant_id, key)
-        if not meta:
-            raise RuntimeError("not_found")
-        return {
-            "size_bytes": int(meta.get("ContentLength", 0) or 0),
-            "content_type": str(meta.get("ContentType") or ""),
-        }
 
     def __init__(self, base_path: str = "data"):
         self.base_path = Path(base_path)
@@ -136,6 +105,15 @@ class LocalStorage(Storage):
         key = (key or "").strip().lstrip("/")
         return self.base_path / tenant_id / key
 
+    def head(self, tenant_id: str, key: str) -> Dict:
+        meta = self._head_local(tenant_id, key)
+        if not meta:
+            raise RuntimeError("not_found")
+        return {
+            "size_bytes": int(meta.get("ContentLength", 0) or 0),
+            "content_type": str(meta.get("ContentType") or ""),
+        }
+
     def save_bytes(
         self,
         tenant_id: str,
@@ -144,12 +122,11 @@ class LocalStorage(Storage):
         *,
         content_type: Optional[str] = None,
     ) -> str:
-        # content_type is irrelevant for local disk; kept for interface parity
         file_path = self._full_path(tenant_id, key)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "wb") as f:
             f.write(data)
-        logger.info(f"Bestand opgeslagen: {file_path}")
+        logger.info("Local opgeslagen: %s", file_path)
         return key
 
     def public_url(self, tenant_id: str, key: str) -> str:
@@ -164,17 +141,14 @@ class LocalStorage(Storage):
             p = self._full_path(tenant_id, key)
             if p.exists():
                 p.unlink()
-                logger.info(f"Bestand verwijderd: {p}")
+                logger.info("Local verwijderd: %s", p)
                 return True
             return False
         except Exception as e:
-            logger.error(f"Fout bij verwijderen van bestand {key}: {e}")
+            logger.error("Local delete error key=%s: %s", key, e)
             return False
 
     def download_to_temp_path(self, tenant_id: str, key: str) -> str:
-        """
-        For local storage we already have a local file. Return its absolute path.
-        """
         p = self._full_path(tenant_id, key)
         if not p.exists() or not p.is_file():
             raise RuntimeError(f"local_not_found:{tenant_id}:{key}")
@@ -182,7 +156,6 @@ class LocalStorage(Storage):
 
     # ====== Extra helpers voor verify/move (local) ======
     def _head_local(self, tenant_id: str, key: str) -> Optional[Dict]:
-        """Simuleer head_object: geef size en content-type terug op basis van bestand."""
         p = self._full_path(tenant_id, key)
         if not p.exists() or not p.is_file():
             return None
@@ -195,7 +168,7 @@ class LocalStorage(Storage):
                 "ContentType": ctype or "application/octet-stream",
             }
         except Exception as e:
-            logger.error(f"Local head error voor {p}: {e}")
+            logger.error("Local head error %s: %s", p, e)
             return None
 
     def _copy_local(self, tenant_id: str, src_key: str, dst_key: str) -> None:
@@ -214,6 +187,89 @@ class LocalStorage(Storage):
 # =========================
 class S3Storage(Storage):
     """Amazon S3 bestandsopslag implementatie."""
+
+    def __init__(
+        self,
+        bucket: str,
+        region: str = "eu-west-1",
+        aws_access_key_id: Optional[str] = None,
+        aws_secret_access_key: Optional[str] = None,
+        aws_session_token: Optional[str] = None,
+        aws_profile: Optional[str] = None,
+        *,
+        verify_bucket_on_startup: bool = True,
+    ):
+        self.bucket = bucket
+
+        # --- Create session (supports AWS_PROFILE + env/instance creds + optional raw creds) ---
+        session_kwargs: dict = {}
+        if aws_profile:
+            session_kwargs["profile_name"] = aws_profile
+
+        # region_name kan je op session zetten, maar client override is ook ok.
+        session = boto3.Session(**session_kwargs)
+
+        client_kwargs: dict = {"region_name": region}
+
+        # Only pass explicit creds if provided (otherwise use profile/env/role chain)
+        if aws_access_key_id and aws_secret_access_key:
+            client_kwargs["aws_access_key_id"] = aws_access_key_id
+            client_kwargs["aws_secret_access_key"] = aws_secret_access_key
+            if aws_session_token:
+                client_kwargs["aws_session_token"] = aws_session_token
+
+        # 1) bootstrap in opgegeven region om bucket-locatie te bepalen
+        bootstrap = session.client("s3", **client_kwargs)
+        try:
+            loc = bootstrap.get_bucket_location(Bucket=bucket).get("LocationConstraint")
+            self.region = loc or "us-east-1"
+        except Exception as e:
+            logger.warning(
+                "Kon bucket location niet bepalen, val terug op region=%s. Error: %s",
+                region,
+                e,
+            )
+            self.region = region
+
+        # 2) definitive client in juiste region
+        client_kwargs["region_name"] = self.region
+        self.s3_client = session.client("s3", **client_kwargs)
+
+        if verify_bucket_on_startup:
+            try:
+                self.s3_client.head_bucket(Bucket=bucket)
+                logger.info(
+                    "S3 bucket %s is toegankelijk (region=%s)", bucket, self.region
+                )
+            except (ClientError, NoCredentialsError) as e:
+                logger.error("Kan geen toegang krijgen tot S3 bucket %s: %s", bucket, e)
+                raise
+
+    def _tenant_key(self, tenant_id: str, key: str) -> str:
+        tenant_id = (tenant_id or "").strip().strip("/")
+        key = (key or "").strip().lstrip("/")
+        if not tenant_id:
+            return key
+        prefix = f"{tenant_id}/"
+        return key if key.startswith(prefix) else prefix + key
+
+    def _guess_content_type(self, key: str) -> str:
+        ext = Path(key).suffix.lower()
+        content_types = {
+            ".html": "text/html; charset=utf-8",
+            ".pdf": "application/pdf",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+            ".gif": "image/gif",
+            ".txt": "text/plain; charset=utf-8",
+            ".json": "application/json; charset=utf-8",
+        }
+        if ext in content_types:
+            return content_types[ext]
+        mt, _ = mimetypes.guess_type(key)
+        return mt or "application/octet-stream"
 
     def head(self, tenant_id: str, key: str) -> Dict:
         meta = self.head_object(tenant_id, key)
@@ -234,80 +290,6 @@ class S3Storage(Storage):
             ExpiresIn=expires_seconds,
         )
 
-    def __init__(
-        self,
-        bucket: str,
-        region: str = "eu-west-1",
-        aws_access_key_id: Optional[str] = None,
-        aws_secret_access_key: Optional[str] = None,
-    ):
-        self.bucket = bucket
-
-        session_kwargs = {}
-        if aws_access_key_id and aws_secret_access_key:
-            session_kwargs.update(
-                {
-                    "aws_access_key_id": aws_access_key_id,
-                    "aws_secret_access_key": aws_secret_access_key,
-                }
-            )
-
-        # 1) bootstrap client (region mag "fout" zijn) om bucket-locatie te bepalen
-        bootstrap = boto3.client("s3", region_name=region, **session_kwargs)
-        try:
-            loc = bootstrap.get_bucket_location(Bucket=bucket).get("LocationConstraint")
-            # AWS geeft None voor us-east-1
-            self.region = loc or "us-east-1"
-        except Exception as e:
-            logger.warning(
-                f"Kon bucket location niet bepalen, val terug op region={region}. Error: {e}"
-            )
-            self.region = region
-
-        # 2) definitive client in juiste region
-        self.s3_client = boto3.client("s3", region_name=self.region, **session_kwargs)
-
-        try:
-            self.s3_client.head_bucket(Bucket=bucket)
-            logger.info(f"S3 bucket {bucket} is toegankelijk (region={self.region})")
-        except (ClientError, NoCredentialsError) as e:
-            logger.error(f"Kan geen toegang krijgen tot S3 bucket {bucket}: {e}")
-            raise
-
-    def _tenant_key(self, tenant_id: str, key: str) -> str:
-        """
-        Normalize safely so callers can pass tenant-less keys (preferred)
-        OR already-prefixed keys without creating double-prefix bugs.
-        """
-        tenant_id = (tenant_id or "").strip().strip("/")
-        key = (key or "").strip().lstrip("/")
-
-        if not tenant_id:
-            return key
-
-        prefix = f"{tenant_id}/"
-        return key if key.startswith(prefix) else prefix + key
-
-    def _guess_content_type(self, key: str) -> str:
-        # Prefer extension map, fallback to mimetypes
-        ext = Path(key).suffix.lower()
-        content_types = {
-            ".html": "text/html; charset=utf-8",
-            ".pdf": "application/pdf",
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".png": "image/png",
-            ".webp": "image/webp",
-            ".gif": "image/gif",
-            ".txt": "text/plain; charset=utf-8",
-            ".json": "application/json; charset=utf-8",
-        }
-        if ext in content_types:
-            return content_types[ext]
-
-        mt, _ = mimetypes.guess_type(key)
-        return mt or "application/octet-stream"
-
     def save_bytes(
         self,
         tenant_id: str,
@@ -324,22 +306,16 @@ class S3Storage(Storage):
                 Body=data,
                 ContentType=content_type or self._guess_content_type(key),
             )
-            logger.info(f"Bestand geüpload naar S3: {s3_key}")
+            logger.info("S3 uploaded: %s", s3_key)
             return key
         except Exception as e:
-            logger.error(f"Fout bij uploaden naar S3: {e}")
-            raise RuntimeError(f"S3 upload mislukt: {e}")
+            logger.error("S3 upload error key=%s: %s", s3_key, e)
+            raise RuntimeError(f"s3_upload_failed:{s3_key}:{type(e).__name__}:{e}")
 
     def download_to_temp_path(self, tenant_id: str, key: str) -> str:
-        """
-        Download S3 object to a local temp file and return its absolute path.
-        """
         s3_key = self._tenant_key(tenant_id, key)
-
         suffix = Path(key).suffix or ".bin"
         fd, tmp_path = tempfile.mkstemp(prefix="aether_", suffix=suffix)
-
-        # Close the fd; boto3 writes the file
         try:
             import os
 
@@ -350,14 +326,12 @@ class S3Storage(Storage):
         try:
             self.s3_client.download_file(self.bucket, s3_key, tmp_path)
             return str(Path(tmp_path).resolve())
-
         except ClientError as e:
             try:
                 Path(tmp_path).unlink(missing_ok=True)
             except Exception:
                 pass
             raise RuntimeError(f"s3_download_failed:{s3_key}:{e}")
-
         except Exception as e:
             try:
                 Path(tmp_path).unlink(missing_ok=True)
@@ -367,11 +341,8 @@ class S3Storage(Storage):
 
     def public_url(self, tenant_id: str, key: str) -> str:
         s3_key = quote(self._tenant_key(tenant_id, key), safe="/")
-
-        # us-east-1 heeft vaak global endpoint
         if self.region == "us-east-1":
             return f"https://{self.bucket}.s3.amazonaws.com/{s3_key}"
-
         return f"https://{self.bucket}.s3.{self.region}.amazonaws.com/{s3_key}"
 
     def exists(self, tenant_id: str, key: str) -> bool:
@@ -382,25 +353,24 @@ class S3Storage(Storage):
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") in {"404", "NotFound"}:
                 return False
-            logger.error(f"Fout bij controleren van S3 object: {e}")
+            logger.error("S3 exists head error key=%s: %s", key, e)
             return False
         except Exception as e:
-            logger.error(f"Onverwachte fout bij controleren van S3 object: {e}")
+            logger.error("S3 exists unexpected key=%s: %s", key, e)
             return False
 
     def delete(self, tenant_id: str, key: str) -> bool:
         try:
             s3_key = self._tenant_key(tenant_id, key)
             self.s3_client.delete_object(Bucket=self.bucket, Key=s3_key)
-            logger.info(f"Bestand verwijderd uit S3: {s3_key}")
+            logger.info("S3 deleted: %s", s3_key)
             return True
         except Exception as e:
-            logger.error(f"Fout bij verwijderen uit S3: {e}")
+            logger.error("S3 delete error key=%s: %s", key, e)
             return False
 
     # ====== Extra helpers voor verify/move (S3) ======
     def head_object(self, tenant_id: str, key: str) -> Optional[Dict]:
-        """Thin wrapper rond S3 HeadObject; retourneert metadata of None."""
         try:
             r = self.s3_client.head_object(
                 Bucket=self.bucket, Key=self._tenant_key(tenant_id, key)
@@ -413,7 +383,7 @@ class S3Storage(Storage):
             code = e.response.get("Error", {}).get("Code")
             if code in {"404", "NotFound"}:
                 return None
-            logger.error(f"S3 head_object error voor key={key}: {e}")
+            logger.error("S3 head_object error key=%s: %s", key, e)
             return None
 
     def copy_object(self, tenant_id: str, src_key: str, dst_key: str) -> None:
@@ -433,25 +403,29 @@ class S3Storage(Storage):
 # Factory
 # =========================
 def get_storage() -> Storage:
-    """Factory functie om de juiste storage backend te retourneren."""
-    storage_backend = settings.STORAGE_BACKEND.lower()
+    storage_backend = (settings.STORAGE_BACKEND or "local").lower().strip()
 
     if storage_backend == "s3":
         bucket = settings.S3_BUCKET
         region = settings.AWS_REGION
-        aws_access_key_id = settings.AWS_ACCESS_KEY_ID
-        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY
 
         if not bucket:
             raise ValueError(
                 "S3_BUCKET environment variable is vereist voor S3 storage"
             )
 
+        # Optional: new settings fields (add to Settings!)
+        aws_profile = getattr(settings, "AWS_PROFILE", None)
+        aws_session_token = getattr(settings, "AWS_SESSION_TOKEN", None)
+
         return S3Storage(
             bucket=bucket,
             region=region,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            aws_session_token=aws_session_token,
+            aws_profile=aws_profile,
+            verify_bucket_on_startup=True,
         )
 
     if storage_backend == "local":
@@ -475,17 +449,12 @@ def put_text(
     text: str,
     content_type: str = "text/plain; charset=utf-8",
 ) -> str:
-    """Schrijf tekst via de gekozen storage backend."""
     return storage.save_bytes(
         tenant_id, key, text.encode("utf-8"), content_type=content_type
     )
 
 
 def get_text(storage: Storage, tenant_id: str, key: str) -> str:
-    """
-    Lees een tekstbestand (html/json/txt) uit storage.
-    Werkt voor S3 én Local via download_to_temp_path.
-    """
     tmp_path = storage.download_to_temp_path(tenant_id, key)
     p = Path(tmp_path)
     try:
@@ -501,7 +470,6 @@ def get_text(storage: Storage, tenant_id: str, key: str) -> str:
 # Verify + finalize helpers
 # =========================
 def _basic_key_checks(key: str) -> Optional[str]:
-    """Basis path-validaties om traversal/misbruik te voorkomen."""
     if not key:
         return "empty_key"
     if key.startswith("/") or key.endswith("/"):
@@ -516,20 +484,10 @@ def _basic_key_checks(key: str) -> Optional[str]:
 def head_ok(
     storage: Storage, tenant_id: str, key: str
 ) -> Tuple[bool, Optional[Dict], Optional[str]]:
-    """
-    Verifieer of een geüploade tijdelijk key in orde is:
-    - correcte prefix (TEMP_PREFIX)
-    - bestaat
-    - size binnen limiet
-    - content-type toegestaan
-    Returns: (ok, meta, error_code)
-    """
-    # 1) basis checks
     err = _basic_key_checks(key)
     if err:
         return False, None, err
 
-    # 2) haal metadata per backend
     meta: Optional[Dict] = None
     if isinstance(storage, S3Storage):
         meta = storage.head_object(tenant_id, key)
@@ -554,13 +512,6 @@ def head_ok(
 
 
 def finalize_move(storage: Storage, tenant_id: str, temp_key: str, lead_id: str) -> str:
-    """
-    Verplaats een temp upload naar de definitieve locatie onder FINAL_PREFIX.
-    Voorbeeld:
-      temp_key = 'uploads/2025-11-01/uuid/photo.jpg'
-      -> 'leads/{lead_id}/photo.jpg'
-    Retourneert de **nieuwe** (finale) key zónder tenant-prefix.
-    """
     filename = temp_key.split("/")[-1]
     final_key = f"{FINAL_PREFIX}{lead_id}/{filename}"
 

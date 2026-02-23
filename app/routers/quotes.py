@@ -135,6 +135,13 @@ def quote_status_page(request: Request, lead_id: int, db: Session = Depends(get_
     lead = _load_lead(db, lead_id)
     autostart = int(request.query_params.get("autostart", "1"))
 
+    logger.info(
+        "STATUS_PAGE autostart=%s lead=%s status=%s",
+        autostart,
+        lead.id,
+        lead.status,
+    )
+
     return templates.TemplateResponse(
         "quote_status.html",
         {
@@ -149,6 +156,22 @@ def quote_status_page(request: Request, lead_id: int, db: Session = Depends(get_
 @router.get("/{lead_id}/status.json")
 def quote_status_json(lead_id: int, db: Session = Depends(get_db)):
     lead = _load_lead(db, lead_id)
+
+    # ✅ server-side autostart: als NEW, start publish
+    if lead.status == "NEW":
+        logger.info("STATUS_JSON autostart publish lead=%s", lead.id)
+        try:
+            publish_quote(lead_id=lead.id, db=db)
+            # publish_quote commits; reload fresh state for response
+            lead = _load_lead(db, lead_id)
+        except Exception as e:
+            logger.exception("STATUS_JSON publish failed lead=%s", lead.id)
+        lead.status = "FAILED"
+        lead.error_message = str(e)
+        lead.updated_at = datetime.utcnow()
+    db.commit()
+    lead = _load_lead(db, lead_id)
+
     return {
         "lead_id": lead.id,
         "status": lead.status,
@@ -156,6 +179,9 @@ def quote_status_json(lead_id: int, db: Session = Depends(get_db)):
         "has_json": bool(getattr(lead, "estimate_json", None)),
         "has_html": bool(getattr(lead, "estimate_html_key", None)),
         "updated_at": getattr(lead, "updated_at", None),
+        "tenant_id": getattr(lead, "tenant_id", None),
+        "vertical": getattr(lead, "vertical", None),
+        "files_count": db.query(LeadFile).filter(LeadFile.lead_id == lead.id).count(),
     }
 
 
@@ -205,24 +231,44 @@ def publish_quote(lead_id: int, db: Session = Depends(get_db)):
     lead.status = "RUNNING"
     lead.error_message = None
     lead.updated_at = datetime.utcnow()
+    print("PUBLISH_SAVE lead.id:", lead.id, "lead.tenant_id:", lead.tenant_id)
+
     db.commit()
+
+    db.refresh(lead)
+    print("PUBLISH_DB lead.estimate_html_key:", lead.estimate_html_key)
 
     inc("quotes_running_total")
     logger.info("LEAD %s status=RUNNING files=%s", lead.id, len(files))
 
     try:
-        vertical_id = (lead.vertical or "painters_us").strip() or "painters_us"
+        vertical_id = (lead.vertical or "paintly").strip() or "paintly"
+        # backward compat:
+        if vertical_id == "painters_us":
+            vertical_id = "paintly"
         lead.vertical = vertical_id
         db.commit()
 
         v = get_vertical(vertical_id)
 
         inc("compute_started_total")
+        logger.info(
+            "LEAD %s compute_quote START vertical=%s tenant=%s",
+            lead.id,
+            lead.vertical,
+            lead.tenant_id,
+        )
         raw_result = v.compute_quote(db, lead.id)
+        logger.info("LEAD %s compute_quote END", lead.id)
+        print("RAW_RESULT:", raw_result)
 
         estimate_dict, html_key, needs_review = _normalize_compute_result(raw_result)
         if not html_key:
             raise RuntimeError("compute_quote did not return an estimate_html_key")
+
+        # ✅ normalize html_key: remove accidental tenant prefix
+        tenant_id = (lead.tenant_id or "").strip() or "default"
+        html_key = _strip_tenant_prefix(tenant_id, html_key)
 
         lead.estimate_json = json.dumps(estimate_dict, ensure_ascii=False, default=str)
         lead.estimate_html_key = html_key
@@ -289,17 +335,20 @@ def quote_html(lead_id: int, db: Session = Depends(get_db)):
     if not key:
         raise HTTPException(status_code=404, detail="No HTML estimate stored")
 
+    tenant_id = str((lead.tenant_id or "").strip() or "default")
+    key = _strip_tenant_prefix(tenant_id, key)
+
     storage = get_storage()
 
     # Prefer presigned (works with private buckets)
     if hasattr(storage, "presigned_get_url"):
         url = storage.presigned_get_url(
-            tenant_id=lead.tenant_id,
+            tenant_id=tenant_id,
             key=key,
             expires_seconds=3600,
         )
     else:
-        url = storage.public_url(tenant_id=lead.tenant_id, key=key)
+        url = storage.public_url(tenant_id=tenant_id, key=key)
 
     inc("quote_html_redirects_total")
     return RedirectResponse(url, status_code=302)

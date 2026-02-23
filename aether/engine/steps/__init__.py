@@ -1,4 +1,4 @@
-from .painters_us_steps import (
+from .paintly_steps import (
     step_photo_quality_v1,
     step_vision_v1,
     step_aggregate_v1,

@@ -27,14 +27,19 @@ def leads_page(
     except Exception:
         return _login_redirect()
 
+    tenant_ids = [user.tenant_id]
+
+    # MVP/dev: ook public leads tonen (jouw intake maakt die aan als public)
+    if "public" not in tenant_ids:
+        tenant_ids.append("public")
+
     leads = (
         db.query(Lead)
-        .filter(Lead.tenant_id == user.tenant_id)
+        .filter(Lead.tenant_id.in_(tenant_ids))
         .order_by(Lead.id.desc())
         .limit(200)
         .all()
     )
-
     rows = ""
     for l in leads:
         open_btn = ""
@@ -151,4 +156,4 @@ def lead_detail_page(
 @router.get("/new")
 def new_estimate(request: Request):
     # MVP: redirect naar jouw intake entrypoint
-    return RedirectResponse(url="/intake/painters-us", status_code=302)
+    return RedirectResponse(url="/intake/paintly", status_code=302)

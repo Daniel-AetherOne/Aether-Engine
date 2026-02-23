@@ -4,12 +4,13 @@ from __future__ import annotations
 import logging
 import uuid
 
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.verticals.registry import get as get_vertical
+from app.verticals.paintly.eu_config import resolve_eu_config  # ✅ ADD
 
 from app.auth.optional_user import get_optional_user
 from app.models.user import User
@@ -17,7 +18,7 @@ from app.models.user import User
 router = APIRouter(prefix="/intake", tags=["intake"])
 logger = logging.getLogger(__name__)
 
-DEFAULT_VERTICAL = "painters_us"
+DEFAULT_VERTICAL = "paintly"
 
 
 def _normalize_vertical_id(vertical: str) -> str:
@@ -56,6 +57,16 @@ def _get_vertical_or_404(vertical: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+# -------------------------
+# EU config (for country dropdown)
+# Put this BEFORE /{vertical} so it won't be captured as "vertical"
+# -------------------------
+@router.get("/eu/config")
+def eu_config(country: str = Query("NL", min_length=2, max_length=2)):
+    country = (country or "NL").strip().upper()
+    return resolve_eu_config(country)
+
+
 async def _create_lead_impl(
     request: Request,
     vertical: str,
@@ -67,7 +78,6 @@ async def _create_lead_impl(
     tenant_id = user.tenant_id if user else "public"
 
     # ✅ Upsert: als lead_id in form zit → update existing lead
-
     if hasattr(v, "upsert_lead_from_form"):
         result = await v.upsert_lead_from_form(
             request,
@@ -110,6 +120,16 @@ async def _create_lead_impl(
 
 
 # -------------------------
+# Backward compatible routes
+# Keep this BEFORE /{vertical} too, otherwise it gets treated as vertical.
+# -------------------------
+@router.get("/painters-us", include_in_schema=False)
+def intake_painters_us_redirect():
+    # ✅ keep old link working, but always use paintly now
+    return RedirectResponse(url="/intake/paintly", status_code=302)
+
+
+# -------------------------
 # New dynamic routes
 # -------------------------
 @router.get("/{vertical}", response_class=HTMLResponse)
@@ -120,7 +140,6 @@ def intake_by_vertical(
 ):
     v = _get_vertical_or_404(vertical)
 
-    # optioneel: tenant_id meegeven aan template (niet security-relevant)
     tenant_id = user.tenant_id if user else "public"
 
     return v.render_intake_form(
@@ -146,32 +165,12 @@ async def create_lead_by_vertical(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# -------------------------
-# Backward compatible routes
-# -------------------------
-@router.get("/painters-us", response_class=HTMLResponse)
-def intake_painters_us(
-    request: Request,
-    user: User | None = Depends(get_optional_user),
-):
-    v = get_vertical(DEFAULT_VERTICAL)
-
-    tenant_id = user.tenant_id if user else "public"
-
-    return v.render_intake_form(
-        request,
-        lead_id=str(uuid.uuid4()),
-        tenant_id=tenant_id,
-    )
-
-
 @router.post("/lead")
 async def create_lead_legacy(
     request: Request,
     db: Session = Depends(get_db),
     user: User | None = Depends(get_optional_user),
 ):
-    # legacy: default vertical, maar wel tenant-aware + dependencies OK
     try:
         return await _create_lead_impl(request, DEFAULT_VERTICAL, db, user)
     except HTTPException:

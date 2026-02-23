@@ -75,7 +75,7 @@ def _resolve_vertical_id_from_quote(quote) -> str:
         return str(v)
 
     # fallback (jij draait nu alleen painters_us)
-    return "painters_us"
+    return "paintly"
 
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])

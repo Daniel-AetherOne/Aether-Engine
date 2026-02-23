@@ -12,7 +12,7 @@ router = APIRouter(prefix="/vision", tags=["vision"])
 def run_vision(lead_id: int, db: Session = Depends(get_db)):
     try:
         # Single-vertical for now, but registry-based
-        v = get_vertical("painters_us")
+        v = get_vertical("paintly")
         vision_output = v.run_vision(db, lead_id)
 
         return {

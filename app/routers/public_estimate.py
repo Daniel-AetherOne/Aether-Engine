@@ -10,7 +10,7 @@ from app.db import get_db
 from app.models.lead import Lead
 from app.services.email import EmailError, send_postmark_email
 from app.services.storage import get_storage, get_text
-from app.verticals.painters_us.email_render import render_estimate_accepted_email
+from app.verticals.paintly.email_render import render_estimate_accepted_email
 from app.workflow.status import apply_workflow
 
 from app.services.workflow import (

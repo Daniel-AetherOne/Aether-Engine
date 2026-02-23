@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     ENABLE_DEV_ROUTES: bool = False
     ENABLE_LLM_PRICING: bool = False
 
+    AWS_PROFILE: Optional[str] = None
+    AWS_SESSION_TOKEN: Optional[str] = None
+
     # Postmark
     POSTMARK_SERVER_TOKEN: str = ""
     POSTMARK_FROM: str = ""

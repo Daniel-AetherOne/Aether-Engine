@@ -6,12 +6,14 @@ from fastapi.templating import Jinja2Templates
 router = APIRouter(prefix="/intake", tags=["intake"])
 templates = Jinja2Templates(directory="app/templates")
 
+
 @router.get("/upload", response_class=HTMLResponse)
 def intake_upload(request: Request, lead_id: str):
     return templates.TemplateResponse(
         "intake_upload.html",
         {"request": request, "lead_id": lead_id},
     )
+
 
 # >>> Laat ALLE andere (interne) imports voorlopig weg <<<
 # from app.models.lead import Lead
@@ -35,6 +37,7 @@ intake_service = IntakeService()
 # Upload page (new)
 # ---------------------------------------------------
 
+
 @router.get("/upload", response_class=HTMLResponse)
 def intake_upload(request: Request, lead_id: str):
     """
@@ -45,9 +48,11 @@ def intake_upload(request: Request, lead_id: str):
         {"request": request, "lead_id": lead_id},
     )
 
+
 # ---------------------------------------------------
 # (andere bestaande intake-routes volgen hieronder)
 # ---------------------------------------------------
+
 
 # -----------------------------
 # HTML intake formulier
@@ -60,7 +65,7 @@ async def get_intake_form(
 ):
     """Render intake form met tenant-specifieke branding."""
     return templates.TemplateResponse(
-        "intake_form.html",
+        "intake_form_nl.html",
         {
             "request": request,
             "tenant_id": tenant_id,

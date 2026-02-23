@@ -1,0 +1,7 @@
+id: paintly
+locale: nl-NL
+currency: EUR
+units: metric
+status: active
+default_country: NL
+default_timezone: Europe/Amsterdam

@@ -102,14 +102,14 @@ def _collect_image_paths(files: List[LeadFile], lead: Lead) -> List[str]:
     return paths
 
 
-def _painters_us_enabled() -> bool:
+def _paintly_enabled() -> bool:
     """
     Prefer settings if present, else fall back to env var.
     Accepts: "1"/"true"/"yes" as enabled.
     """
-    v = getattr(settings, "ENABLE_PAINTERS_US", None)
+    v = getattr(settings, "ENABLE_PAINTLY", None)
     if v is None:
-        v = os.getenv("ENABLE_PAINTERS_US", "0")
+        v = os.getenv("ENABLE_PAINTLY", "0")
     return str(v).strip().lower() in {"1", "true", "yes", "y"}
 
 
@@ -119,7 +119,7 @@ def run_vision_for_lead(db: Session, lead_id: int) -> Dict[str, Any]:
     - loads Lead + LeadFile
     - collects local image paths (local_path OR downloads via storage using s3_key)
     - runs predict_images(local_paths)
-    - aggregates for painters_us if enabled
+    - aggregates for paintly if enabled
     - stores on lead.vision_json or lead.vision_output
     """
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
@@ -141,53 +141,28 @@ def run_vision_for_lead(db: Session, lead_id: int) -> Dict[str, Any]:
 
     image_predictions = predict_images(image_paths)
 
-    # Decide aggregation strategy
-    if _painters_us_enabled():
-        try:
-            from app.verticals.painters_us.vision_aggregate_us import (
-                aggregate_images_to_surfaces,
-            )
-
-            vision_output: Dict[str, Any] = aggregate_images_to_surfaces(
-                image_predictions
-            )
-        except Exception as e:
-            logger.exception(
-                f"PaintersUS aggregation failed for lead_id={lead_id}: {e}"
-            )
-            vision_output = {
-                "mode": "image_predictions_only",
-                "reason": "aggregation_failed",
-                "error": str(e),
-                "image_predictions": image_predictions,
-            }
+    # Decide aggregation strategy (Paintly)
+    if _paintly_enabled():
+        # For now: keep it simple and store raw predictions.
+        # (Later you can add a paintly-specific aggregator here.)
+        vision_output: Dict[str, Any] = {
+            "mode": "image_predictions_only",
+            "reason": "paintly_default",
+            "image_predictions": image_predictions,
+        }
     else:
         vision_output = {
             "mode": "image_predictions_only",
-            "reason": "painters_us_disabled",
+            "reason": "paintly_disabled",
             "image_predictions": image_predictions,
         }
 
-    # Optional validation
+    # Optional validation (only if we ever add surfaces aggregation)
     surfaces = (
         vision_output.get("surfaces") if isinstance(vision_output, dict) else None
     )
-    if _painters_us_enabled() and not surfaces:
+    if surfaces == []:
         logger.warning(
-            f"Vision aggregation produced empty surfaces for lead_id={lead_id}. "
+            f"Vision output has empty surfaces for lead_id={lead_id}. "
             f"images={len(image_paths)} preds={len(image_predictions)}"
         )
-
-    # Store on lead
-    payload = json.dumps(vision_output)
-
-    if hasattr(lead, "vision_json"):
-        lead.vision_json = payload
-    elif hasattr(lead, "vision_output"):
-        lead.vision_output = vision_output
-    else:
-        lead.notes = lead.notes or ""
-        lead.notes += "\n\nVISION_JSON=" + payload
-
-    db.commit()
-    return vision_output

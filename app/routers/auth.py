@@ -14,14 +14,13 @@ from pathlib import Path
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-templates = Jinja2Templates(directory="app/verticals/painters_us/templates")
+templates = Jinja2Templates(directory="app/verticals/paintly/templates")
 
 
 TEMPLATES_DIR = (
-    Path(__file__).resolve().parents[1] / "verticals" / "painters_us" / "templates"
+    Path(__file__).resolve().parents[1] / "verticals" / "paintly" / "templates"
 )
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-print("TEMPLATES_DIR =", TEMPLATES_DIR)
 
 # ---------- HTML pages ----------
 
