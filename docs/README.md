@@ -103,11 +103,11 @@ Paintly automates administrative and estimation tasks while preserving professio
 
 ---
 
-Roadmap & Evolution
+### Roadmap & Evolution
 
 Aether Engine evolves from a configurable decision engine into a governed AI automation platform.
 
-v1–2 · Multi-Vertical & Production Foundation
+- v1–2 · Multi-Vertical & Production Foundation
 
 Config-driven pipelines and rule layers
 
@@ -117,7 +117,7 @@ Async processing & observability
 
 Production readiness & scalability
 
-v3 · Self-Improving Intelligence (No ML Required)
+- v3 · Self-Improving Intelligence (No ML Required)
 
 Outcome & feedback tracking
 
@@ -125,7 +125,7 @@ Confidence scoring & drift detection
 
 Data-driven decision improvement
 
-v4 · Auto-Optimization Layer
+- v4 · Auto-Optimization Layer
 
 Prompt and rule optimization
 
@@ -133,7 +133,7 @@ Anomaly detection & pipeline intelligence
 
 Adaptive decision tuning
 
-v5 · Governed AI Assistance
+- v5 · Governed AI Assistance
 
 Model advisory & controlled tuning
 
