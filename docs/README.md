@@ -103,6 +103,50 @@ Paintly automates administrative and estimation tasks while preserving professio
 
 ---
 
+Roadmap & Evolution
+
+Aether Engine evolves from a configurable decision engine into a governed AI automation platform.
+
+v1–2 · Multi-Vertical & Production Foundation
+
+Config-driven pipelines and rule layers
+
+Multi-tenant, branch-aware architecture
+
+Async processing & observability
+
+Production readiness & scalability
+
+v3 · Self-Improving Intelligence (No ML Required)
+
+Outcome & feedback tracking
+
+Confidence scoring & drift detection
+
+Data-driven decision improvement
+
+v4 · Auto-Optimization Layer
+
+Prompt and rule optimization
+
+Anomaly detection & pipeline intelligence
+
+Adaptive decision tuning
+
+v5 · Governed AI Assistance
+
+Model advisory & controlled tuning
+
+Deterministic experimentation & rollout control
+
+Full decision governance & auditability
+
+The engine continuously improves while keeping decisions explainable, traceable, and human-governed.
+
+Current focus: Multi-vertical engine & production readiness.
+
+---
+
 ## Design Principles
 
 **Explainability first** — decisions must be inspectable  
