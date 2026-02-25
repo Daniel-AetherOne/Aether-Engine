@@ -66,7 +66,7 @@
 
             <td class="px-5 py-4 align-top">
               <div class="text-sm text-slate-900">
-                #{{ lead.id }}
+                #{{ (lead.id|string)[:8] }}
                 {% set raw_notes = (lead.project_notes or lead.notes or "") %}
 {% set safe_notes = (raw_notes.split("VISION_JSON=")[0] | trim) %}
 
@@ -94,7 +94,7 @@
                  href="/app/reviews/{{ lead.id }}">
                 Reviewen
               </a>
-            </td>
+            </td> 
           </tr>
           {% endfor %}
         </tbody>

@@ -45,6 +45,63 @@ def _as_list(val: Any) -> List[str]:
     return [str(val)]
 
 
+def _to_float(v: Any, default: float = 0.0) -> float:
+    if v is None:
+        return default
+    try:
+        return float(v)
+    except Exception:
+        try:
+            s = str(v).strip().replace("€", "").replace(",", ".")
+            return float(s)
+        except Exception:
+            return default
+
+
+def _pick_total_excl_vat(pricing_output: Dict[str, Any]) -> float:
+    """
+    Robust total picker for EU renderer.
+    We accept different shapes:
+      - legacy dicts: total_eur/total/subtotal
+      - schema dicts: totals.pre_tax / totals.grand_total
+      - fallback: labor + materials
+    """
+    # 1) explicit subtotal fields
+    for k in ("subtotal_excl_vat", "subtotal"):
+        if pricing_output.get(k) is not None:
+            f = _to_float(pricing_output.get(k), 0.0)
+            if f > 0:
+                return f
+
+    # 2) common total fields (legacy)
+    for k in ("total_eur", "total", "grand_total", "grand_total_eur"):
+        if pricing_output.get(k) is not None:
+            f = _to_float(pricing_output.get(k), 0.0)
+            if f > 0:
+                return f
+
+    # 3) schema-style nested totals
+    totals = pricing_output.get("totals")
+    if isinstance(totals, dict):
+        for k in ("pre_tax", "grand_total"):
+            if totals.get(k) is not None:
+                f = _to_float(totals.get(k), 0.0)
+                if f > 0:
+                    return f
+
+    # 4) last resort: labor + materials
+    labor = _to_float(
+        pricing_output.get("labor_eur") or pricing_output.get("labor"), 0.0
+    )
+    materials = _to_float(
+        pricing_output.get("materials_eur") or pricing_output.get("materials"), 0.0
+    )
+    if (labor + materials) > 0:
+        return labor + materials
+
+    return 0.0
+
+
 def render_estimate_html_v1(
     *,
     vision_output: Dict[str, Any],
@@ -59,7 +116,6 @@ def render_estimate_html_v1(
       - vision_output contains "surfaces": list[dict]
       - pricing_output contains totals and optionally per-surface items
     """
-
     pricing_ready = bool(pricing_output.get("pricing_ready", True))
 
     # Build line items (mapping may still accept legacy sqft keys; EU cleanup can come later)
@@ -106,14 +162,7 @@ def render_estimate_html_v1(
     exclusions = _as_list(getattr(PAINTLY_ESTIMATE_DISCLAIMER, "bullets", None))
 
     # ---- EU VAT totals ----
-    # Prefer explicit VAT fields; fallback to legacy totals.
-    subtotal_excl_vat = (
-        pricing_output.get("subtotal_excl_vat")
-        or pricing_output.get("subtotal")
-        or pricing_output.get("total_eur")
-        or pricing_output.get("total")
-        or 0
-    )
+    subtotal_excl_vat = _pick_total_excl_vat(pricing_output)
 
     vat_rate = (
         pricing_output.get("vat_rate")
@@ -124,20 +173,28 @@ def render_estimate_html_v1(
         )
         or 0.09  # NL default for now; later: derive from lead.country
     )
+    vat_rate_f = _to_float(vat_rate, 0.09)
 
-    vat = calc_vat(subtotal_excl_vat=subtotal_excl_vat, vat_rate=vat_rate)
-
+    vat_calc = calc_vat(subtotal_excl_vat=subtotal_excl_vat, vat_rate=vat_rate_f)
     vat = {
-        "subtotal_excl_vat": vat.get("subtotal_excl_vat", subtotal_excl_vat),
-        "vat_rate": vat.get("vat_rate", vat_rate),
-        "vat_amount": vat.get("vat_amount", vat.get("amount", 0)),
-        "total_incl_vat": vat.get("total_incl_vat", vat.get("total", 0)),
+        "subtotal_excl_vat": _to_float(
+            vat_calc.get("subtotal_excl_vat", subtotal_excl_vat), subtotal_excl_vat
+        ),
+        "vat_rate": _to_float(vat_calc.get("vat_rate", vat_rate_f), vat_rate_f),
+        "vat_amount": _to_float(
+            vat_calc.get("vat_amount", vat_calc.get("amount", 0.0)), 0.0
+        ),
+        "total_incl_vat": _to_float(
+            vat_calc.get("total_incl_vat", vat_calc.get("total", 0.0)), 0.0
+        ),
     }
 
-    # Optional breakdown buckets if present
-    pricing_labor = pricing_output.get("labor_eur") or pricing_output.get("labor") or 0
-    pricing_materials = (
-        pricing_output.get("materials_eur") or pricing_output.get("materials") or 0
+    # Optional breakdown buckets if present (ensure numeric)
+    pricing_labor = _to_float(
+        pricing_output.get("labor_eur") or pricing_output.get("labor"), 0.0
+    )
+    pricing_materials = _to_float(
+        pricing_output.get("materials_eur") or pricing_output.get("materials"), 0.0
     )
 
     # Jinja env
@@ -161,7 +218,7 @@ def render_estimate_html_v1(
         pricing_materials=pricing_materials,
         pricing=canonical_pricing,
         vat=vat,
-        show_tax=_show_tax(canonical_pricing),  # legacy templates may still check this
+        show_tax=_show_tax(canonical_pricing),
         validity_copy=validity_copy,
         subject_to_verification_copy=subject_to_verification_copy,
         copy=PAINTLY_ESTIMATE_COPY,
@@ -170,7 +227,6 @@ def render_estimate_html_v1(
         company=company,
     )
 
-    # Sanity check: if braces remain, you're not looking at rendered output (or template is wrong)
     if "{{" in html or "{%" in html:
         raise RuntimeError(
             "Estimate HTML still contains Jinja tags. "
@@ -186,9 +242,6 @@ def render_estimate_html_v1(
 def render_estimate_html(estimate: Dict[str, Any]) -> str:
     """
     Pipeline expects: render_estimate_html(estimate_dict) -> html str
-
-    Renderer expects (vision_output, pricing_output, project, company).
-    We derive those from the estimate payload in a resilient way.
     """
     vision_output = (
         estimate.get("vision_output")

@@ -378,7 +378,7 @@ def app_lead_estimate(
 
 @router.post("/leads/{lead_id}/send")
 def send_estimate(
-    lead_id: int,
+    lead_id: str,
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
@@ -944,7 +944,7 @@ def app_reviews_list(
 @router.get("/reviews/{lead_id}", response_class=HTMLResponse)
 def app_review_detail(
     request: Request,
-    lead_id: int,
+    lead_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
 ):
@@ -957,7 +957,14 @@ def app_review_detail(
         .first()
     )
     if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+        # DEBUG: bestaat lead_id überhaupt (los van tenant)?
+        lead_any = db.query(Lead).filter(Lead.id == lead_id).first()
+        if lead_any:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Lead exists but tenant mismatch. lead.tenant_id={lead_any.tenant_id} user.tenant_id={str(current_user.tenant_id)}",
+            )
+        raise HTTPException(status_code=404, detail="Lead id not found in DB")
 
     # reasons MVP: uit estimate_json.meta.needs_review_reasons
     reasons = []
@@ -1058,49 +1065,9 @@ def app_review_detail(
     )
 
 
-@router.post("/app/reviews/{lead_id}/generate-estimate")
-def app_review_generate_estimate(
-    lead_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_user_html),
-):
-    lead = (
-        db.query(Lead)
-        .filter(Lead.id == lead_id, Lead.tenant_id == str(current_user.tenant_id))
-        .first()
-    )
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
-    # Reset -> laat quotes status page opnieuw publishen via autostart JS
-    lead.status = "NEW"
-    lead.error_message = None
-    lead.estimate_json = None
-    lead.estimate_html_key = None
-    lead.updated_at = _utcnow()
-
-    # ✅ Manual override flag
-    payload = {}
-    try:
-        if getattr(lead, "intake_payload", None):
-            payload = json.loads(lead.intake_payload)
-    except Exception:
-        payload = {}
-
-    payload["manual_override"] = True
-    lead.intake_payload = json.dumps(payload, ensure_ascii=False)
-
-    db.add(lead)
-    db.commit()
-
-    return RedirectResponse(
-        url=f"/quotes/{lead_id}/status?autostart=1", status_code=303
-    )
-
-
 @router.post("/reviews/{lead_id}/generate-estimate")
 def app_review_generate_estimate(
-    lead_id: int,
+    lead_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
 ):
@@ -1138,9 +1105,49 @@ def app_review_generate_estimate(
     )
 
 
-@router.post("/app/reviews/{lead_id}/overrides")
+@router.post("/app/reviews/{lead_id}/generate-estimate")
+def app_review_generate_estimate(
+    lead_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    lead = (
+        db.query(Lead)
+        .filter(Lead.id == lead_id, Lead.tenant_id == str(current_user.tenant_id))
+        .first()
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Reset -> laat quotes status page opnieuw publishen via autostart JS
+    lead.status = "NEW"
+    lead.error_message = None
+    lead.estimate_json = None
+    lead.estimate_html_key = None
+    lead.updated_at = _utcnow()
+
+    # ✅ Manual override flag
+    payload = {}
+    try:
+        if getattr(lead, "intake_payload", None):
+            payload = json.loads(lead.intake_payload)
+    except Exception:
+        payload = {}
+
+    payload["manual_override"] = True
+    lead.intake_payload = json.dumps(payload, ensure_ascii=False)
+
+    db.add(lead)
+    db.commit()
+
+    return RedirectResponse(
+        url=f"/quotes/{lead_id}/status?autostart=1", status_code=303
+    )
+
+
+@router.post("/reviews/{lead_id}/overrides")
 def app_review_save_overrides(
-    lead_id: int,
+    lead_id: str,
     square_meters: float | None = Form(default=None),
     job_type: str | None = Form(default=None),
     project_description: str | None = Form(default=None),

@@ -25,10 +25,6 @@ def _val(obj: Any, key: str, default: Any = None) -> Any:
 def _to_decimal(
     val: Any, default: Optional[Decimal] = Decimal("0.00")
 ) -> Optional[Decimal]:
-    """
-    Convert to Decimal. If val is None -> returns `default`.
-    If you want to preserve None, pass default=None.
-    """
     if val is None:
         return default
     try:
@@ -84,7 +80,17 @@ def _guess_category(it: Any) -> str:
 
 
 def _extract_qty(it: Any) -> float:
-    for k in ["quantity", "qty", "sqft", "square_feet", "area_sqft", "count", "units"]:
+    for k in [
+        "quantity",
+        "qty",
+        "sqft",
+        "square_feet",
+        "area_sqft",
+        "count",
+        "units",
+        "sqm",
+        "area_sqm",
+    ]:
         v = _val(it, k)
         if v is None:
             continue
@@ -98,10 +104,6 @@ def _extract_qty(it: Any) -> float:
 
 
 def _extract_total_eur(it: Any) -> Optional[Decimal]:
-    """
-    Canonical helper (lowercase).
-    Output step gebruikt deze indirect via build_pricing_output.
-    """
     for k in [
         "total_EUR",
         "line_total_EUR",
@@ -132,24 +134,18 @@ def _extract_total_eur(it: Any) -> Optional[Decimal]:
     return None
 
 
-# Backward-compatible alias (upper-case name used somewhere older)
 def _extract_total_EUR(it: Any) -> Optional[Decimal]:
     return _extract_total_eur(it)
 
 
 def _coerce_pricing_dict(pricing: Any) -> Dict[str, Any]:
-    """
-    Accept dict OR StepResult-like object with .data dict.
-    """
     if pricing is None:
         return {}
     if isinstance(pricing, dict):
         return pricing
-    # StepResult(status=..., data={...})
     data = getattr(pricing, "data", None)
     if isinstance(data, dict):
         return data
-    # Pydantic models etc.
     if hasattr(pricing, "model_dump"):
         try:
             d = pricing.model_dump()
@@ -163,6 +159,51 @@ def _coerce_pricing_dict(pricing: Any) -> Dict[str, Any]:
         except Exception:
             return {}
     return {}
+
+
+def _lead_area_sqm(lead: Any, vision: Any) -> Optional[float]:
+    # 1) lead.square_meters
+    try:
+        sqm = getattr(lead, "square_meters", None)
+        if sqm is not None:
+            f = float(sqm)
+            if f > 0:
+                return f
+    except Exception:
+        pass
+
+    # 2) lead.intake_payload.square_meters
+    try:
+        raw = getattr(lead, "intake_payload", None)
+        if raw:
+            payload = __import__("json").loads(raw)
+            if isinstance(payload, dict):
+                v = payload.get("square_meters") or payload.get("area_sqm")
+                if v is not None:
+                    f = float(v)
+                    if f > 0:
+                        return f
+    except Exception:
+        pass
+
+    # 3) vision dict/list
+    try:
+        if isinstance(vision, dict):
+            v = vision.get("area_sqm") or vision.get("sqm")
+            if v is not None:
+                f = float(v)
+                if f > 0:
+                    return f
+        if isinstance(vision, list) and vision and isinstance(vision[0], dict):
+            v = vision[0].get("area_sqm") or vision[0].get("sqm")
+            if v is not None:
+                f = float(v)
+                if f > 0:
+                    return f
+    except Exception:
+        pass
+
+    return None
 
 
 # -------------------------
@@ -190,7 +231,6 @@ def build_pricing_output_from_legacy(
             continue
 
         qty = _extract_qty(it)
-        # IMPORTANT: don't drop items just because qty is missing upstream
         if qty <= 0:
             qty = 1.0
 
@@ -228,11 +268,9 @@ def build_pricing_output_from_legacy(
         pricing_output.get("materials_eur"), default=Decimal("0.00")
     ) or Decimal("0.00")
 
-    # IMPORTANT: preserve None if missing, so we can compute from items instead of defaulting to 0.00
     pre_tax_amount = _to_decimal(pricing_output.get("total_eur"), default=None)
 
     if pre_tax_amount is None:
-        # Try compute from items totals
         s = Decimal("0.00")
         any_item = False
         for li in line_items:
@@ -242,7 +280,6 @@ def build_pricing_output_from_legacy(
         if any_item and s != Decimal("0.00"):
             pre_tax_amount = s
         else:
-            # fallback to labor+materials
             if (labor + materials) != Decimal("0.00"):
                 pre_tax_amount = labor + materials
             else:
@@ -266,18 +303,17 @@ def build_pricing_output_from_legacy(
 # -------------------------
 def build_pricing_output(lead: Any, vision: Any, pricing: Any) -> Dict[str, Any]:
     """
-    OPTION 1 (MVP):
-    - If pricing.total_eur is missing but pricing.estimate_range exists,
-      show a provisional total (choose high_eur else low_eur).
-    - If estimate_range exists but is 0/None, still show a minimum provisional total
-      so customer never sees $0.00/TBD.
+    MVP:
+    - Prefer pricing.total_eur
+    - Else sum items
+    - Else estimate_range (high/low)
+    - Else FINAL fallback: minimum provisional total (so never missing_total)
     """
     today = date.today()
+    MIN_PROVISIONAL_TOTAL = Decimal("500.00")  # <-- tweak as you like
 
-    # ✅ Accept dict OR StepResult-like with .data
     pricing = _coerce_pricing_dict(pricing)
 
-    # 1) items from multiple possible keys
     raw_items = (
         pricing.get("line_items")
         or pricing.get("items")
@@ -287,7 +323,6 @@ def build_pricing_output(lead: Any, vision: Any, pricing: Any) -> Dict[str, Any]
     )
     raw_items = _as_list(raw_items)
 
-    # 2) total (normal)
     total_eur = _pick_first(
         pricing, ["total_eur", "grand_total_eur", "grand_total", "total"]
     )
@@ -297,7 +332,7 @@ def build_pricing_output(lead: Any, vision: Any, pricing: Any) -> Dict[str, Any]
         if td and td != Decimal("0.00"):
             total_dec = td
 
-    # 3) fallback: sum items
+    # fallback: sum items
     if total_dec is None and raw_items:
         s = Decimal("0.00")
         any_item = False
@@ -309,7 +344,7 @@ def build_pricing_output(lead: Any, vision: Any, pricing: Any) -> Dict[str, Any]
         if any_item and s != Decimal("0.00"):
             total_dec = s
 
-    # 4) ✅ OPTION 1 fallback: estimate_range (and if 0/None -> minimum)
+    # fallback: estimate_range
     used_estimate_range = False
     if total_dec is None:
         er = pricing.get("estimate_range")
@@ -319,54 +354,45 @@ def build_pricing_output(lead: Any, vision: Any, pricing: Any) -> Dict[str, Any]
                 chosen = er.get("low_eur")
 
             chosen_dec = _to_decimal(chosen, default=None)
-
-            # ✅ If estimate_range exists but is 0/None, still show a provisional minimum (MVP)
             if chosen_dec is None or chosen_dec == Decimal("0.00"):
-                chosen_dec = Decimal("500.00")  # <-- set your minimum here
+                chosen_dec = MIN_PROVISIONAL_TOTAL
 
             total_dec = chosen_dec
             used_estimate_range = True
 
-            # If no items, create 1 provisional item
             if not raw_items:
-                qty = None
-                if isinstance(vision, dict):
-                    qty = vision.get("sqft") or vision.get("count")
-                elif (
-                    isinstance(vision, list) and vision and isinstance(vision[0], dict)
-                ):
-                    qty = vision[0].get("sqft") or vision[0].get("count")
-
-                try:
-                    qty_f = float(qty) if qty is not None else 1.0
-                except Exception:
-                    qty_f = 1.0
-                if qty_f <= 0:
-                    qty_f = 1.0
-
+                sqm = _lead_area_sqm(lead, vision)
+                qty_f = float(sqm) if sqm and sqm > 0 else 1.0
                 raw_items = [
                     {
                         "code": "provisional_estimate",
-                        "label": "Interior painting (estimate)",
-                        "description": "Provisional estimate (Option 1). Final price after quick review.",
+                        "label": "Schilderwerk (indicatie)",
+                        "description": "Indicatie op basis van beperkte input. Definitieve prijs na korte review.",
                         "quantity": qty_f,
-                        "unit": "sqft" if qty is not None else "job",
+                        "unit": "sqm" if sqm else "job",
                         "category": "labor",
                         "total_eur": str(total_dec),
-                        "prep_level": (
-                            vision.get("prep_level")
-                            if isinstance(vision, dict)
-                            else None
-                        ),
-                        "access_risk": (
-                            vision.get("access_risk")
-                            if isinstance(vision, dict)
-                            else None
-                        ),
                     }
                 ]
 
-    # 5) labor/materials
+    # ✅ FINAL fallback: still no total => set minimum provisional
+    if total_dec is None:
+        total_dec = MIN_PROVISIONAL_TOTAL
+        if not raw_items:
+            sqm = _lead_area_sqm(lead, vision)
+            qty_f = float(sqm) if sqm and sqm > 0 else 1.0
+            raw_items = [
+                {
+                    "code": "provisional_minimum",
+                    "label": "Schilderwerk (indicatie)",
+                    "description": "Indicatie (minimum) omdat er nog onvoldoende pricing-data is. Definitieve prijs na review.",
+                    "quantity": qty_f,
+                    "unit": "sqm" if sqm else "job",
+                    "category": "labor",
+                    "total_eur": str(total_dec),
+                }
+            ]
+
     labor_eur = _pick_first(pricing, ["labor_eur", "labor", "labor_total_eur"])
     materials_eur = _pick_first(
         pricing, ["materials_eur", "materials", "materials_total_eur"]
@@ -388,7 +414,6 @@ def build_pricing_output(lead: Any, vision: Any, pricing: Any) -> Dict[str, Any]
             else:
                 labor_dec += t
 
-    # If we have a total but labor/materials are still 0, set labor = total (simple MVP)
     if (
         total_dec is not None
         and labor_dec == Decimal("0.00")
@@ -400,7 +425,6 @@ def build_pricing_output(lead: Any, vision: Any, pricing: Any) -> Dict[str, Any]
         **pricing,
         "labor_eur": str(labor_dec),
         "materials_eur": str(materials_dec),
-        # Persist computed/provisional total as string
         "total_eur": str(total_dec) if total_dec is not None else None,
     }
 
@@ -416,7 +440,6 @@ def build_pricing_output(lead: Any, vision: Any, pricing: Any) -> Dict[str, Any]
         project=project,
     )
 
-    # Optional: add a note if we used estimate_range (if schema allows notes)
     try:
         if (
             used_estimate_range
@@ -424,13 +447,21 @@ def build_pricing_output(lead: Any, vision: Any, pricing: Any) -> Dict[str, Any]
             and isinstance(out.notes, list)
         ):
             out.notes.append(
-                "Estimate shown (Option 1): derived from estimate_range. Final price pending review."
+                "Indicatie: afgeleid van estimate_range. Definitieve prijs na korte review."
             )
     except Exception:
         pass
 
     if hasattr(out, "model_dump"):
-        return out.model_dump()
-    if hasattr(out, "dict"):
-        return out.dict()
-    return {"meta": {}, "line_items": [], "subtotals": {}, "totals": {}}
+        d = out.model_dump()
+    elif hasattr(out, "dict"):
+        d = out.dict()
+    else:
+        d = {"meta": {}, "line_items": [], "subtotals": {}, "totals": {}}
+
+    # ✅ Extra compatibility fields (handig voor oudere UI's)
+    # Als ergens nog op estimate_json["total_eur"] gekeken wordt, werkt dat ook.
+    d["total_eur"] = str(total_dec) if total_dec is not None else None
+    d["currency"] = "EUR"
+
+    return d

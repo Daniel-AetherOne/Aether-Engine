@@ -31,7 +31,6 @@ def load_rules_default() -> Dict[str, Any]:
     Default fallback loader (used if engine does not inject rules).
     Prefer EU/paintly rules as default when you're migrating.
     """
-    # Change this default to your EU rules filename
     return _load_rules_file("paintly_price_rules_eu.json")
 
 
@@ -40,7 +39,6 @@ def load_rules_us() -> Dict[str, Any]:
 
 
 def load_rules_eu() -> Dict[str, Any]:
-    # rename as you like: paintly_price_rules.json, pricing_rules_nl.json, etc.
     return _load_rules_file("paintly_price_rules_eu.json")
 
 
@@ -52,7 +50,6 @@ def _pick_rules_from_lead(lead: Any) -> Optional[Dict[str, Any]]:
     market = None
     locale = None
 
-    # try common shapes without hard dependency
     for attr in ("market", "locale", "region"):
         if hasattr(lead, attr):
             v = getattr(lead, attr)
@@ -77,7 +74,6 @@ def _pick_rules_from_lead(lead: Any) -> Optional[Dict[str, Any]]:
     if not key:
         return None
 
-    # very simple routing
     if "us" in key or "en-us" in key or "usa" in key:
         return load_rules_us()
     if "nl" in key or "eu" in key or "europe" in key or "en-nl" in key:
@@ -86,12 +82,71 @@ def _pick_rules_from_lead(lead: Any) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _safe_float(v: Any) -> Optional[float]:
+    try:
+        if v is None:
+            return None
+        f = float(v)
+        return f
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_intake_payload(lead: Any) -> Dict[str, Any]:
+    raw = getattr(lead, "intake_payload", None)
+    if not raw:
+        return {}
+    try:
+        obj = json.loads(raw)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+
+def _inject_overrides_from_lead(
+    lead: Any, vision_surface: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Make pricing robust during EU migration:
+    - If vision didn't provide area, pull from lead.square_meters or intake_payload overrides.
+    - If vision didn't provide surface_type, default to 'walls' (interior paint baseline).
+    """
+    vs: Dict[str, Any] = dict(vision_surface or {})
+
+    # 1) Area from lead column
+    sqm = _safe_float(getattr(lead, "square_meters", None))
+    if sqm and sqm > 0:
+        vs.setdefault("area_sqm", sqm)
+        vs.setdefault("sqm", sqm)
+
+    # 2) Area + job_type from intake_payload
+    payload = _extract_intake_payload(lead)
+
+    sqm2 = _safe_float(payload.get("square_meters")) or _safe_float(
+        payload.get("area_sqm")
+    )
+    if sqm2 and sqm2 > 0:
+        vs.setdefault("area_sqm", sqm2)
+        vs.setdefault("sqm", sqm2)
+
+    # 3) Surface type fallback (critical: base_rates lookup)
+    if not vs.get("surface_type"):
+        # If you have more job types later, map them here.
+        jt = (payload.get("job_type") or "").lower().strip()
+        if jt:
+            # For now: interior defaults to walls pricing baseline
+            vs["surface_type"] = "walls"
+        else:
+            vs["surface_type"] = "walls"
+
+    return vs
+
+
 def _get_area_sqm(vision_surface: Dict[str, Any]) -> float:
     """
     Canonical area for EU: sqm.
     Supports multiple possible keys from your vision/metrics pipeline.
     """
-    # direct
     for k in ("area_sqm", "total_area_sqm", "wall_area_sqm", "ceiling_area_sqm", "sqm"):
         v = vision_surface.get(k)
         if v is not None:
@@ -100,7 +155,6 @@ def _get_area_sqm(vision_surface: Dict[str, Any]) -> float:
             except (TypeError, ValueError):
                 pass
 
-    # nested common shapes (optional)
     m = (
         vision_surface.get("surface_metrics")
         or vision_surface.get("measurements")
@@ -143,7 +197,6 @@ def _get_quantity_for_rate(
                 return float(sqft or 0)
             except (TypeError, ValueError):
                 return 0.0
-        # fallback: convert sqm -> sqft
         return _get_area_sqm(vision_surface) * SQM_TO_SQFT
 
     if unit in ("per_item", "item", "items"):
@@ -155,7 +208,6 @@ def _get_quantity_for_rate(
     if unit == "fixed":
         return 1.0
 
-    # Unknown unit => quantity 0
     return 0.0
 
 
@@ -180,8 +232,6 @@ def price_from_vision(
     # -------------------------
     gates = rules.get("gates", {})
 
-    # optional: if you want EU migration to not hard-block on pricing_ready,
-    # set require_pricing_ready=false in EU rules.
     pricing_ready = bool(vision_surface.get("pricing_ready", False))
     require_pricing_ready = bool(gates.get("require_pricing_ready", False))
 
@@ -222,7 +272,6 @@ def price_from_vision(
         low_factor = float(rng_cfg.get("low_factor", 0.85))
         high_factor = float(rng_cfg.get("high_factor", 1.15))
 
-        # If area exists, we can still compute a meaningful base estimate.
         qty = _get_quantity_for_rate(rate_cfg, vision_surface)
         base_estimate = 0.0
 
@@ -411,9 +460,13 @@ def run_pricing_engine(
 
     if isinstance(vision, list):
         vision_surface = vision[0] if vision else {}
-        return price_from_vision(vision_surface, rules=rules)
+    else:
+        vision_surface = vision if isinstance(vision, dict) else {}
 
-    return price_from_vision(vision if isinstance(vision, dict) else {}, rules=rules)
+    # ✅ Inject area + surface_type from lead/intake overrides (EU migration safety net)
+    vision_surface = _inject_overrides_from_lead(lead, vision_surface)
+
+    return price_from_vision(vision_surface, rules=rules)
 
 
 __all__ = [
