@@ -28,13 +28,6 @@ def _tmp_dir_for_lead(lead_id: int) -> Path:
 
 
 def _collect_image_paths(files: List[LeadFile], lead: Lead) -> List[str]:
-    """
-    Prefer LeadFile.local_path; otherwise download from storage using LeadFile.s3_key.
-
-    IMPORTANT:
-    - LeadFile.s3_key is stored tenant-less in DB.
-    - Storage backend is responsible for tenant-prefixing (S3) if needed.
-    """
     paths: List[str] = []
 
     # 1) local_path if present and exists
@@ -46,7 +39,6 @@ def _collect_image_paths(files: List[LeadFile], lead: Lead) -> List[str]:
                 if p.exists() and p.is_file() and p.stat().st_size > 0:
                     paths.append(str(p))
             except Exception:
-                # ignore broken local paths
                 pass
 
     if paths:
@@ -57,11 +49,32 @@ def _collect_image_paths(files: List[LeadFile], lead: Lead) -> List[str]:
     tenant_id = str(getattr(lead, "tenant_id", "") or "").strip()
     lead_id = int(getattr(lead, "id"))
 
-    # Keep stable per-lead tmp dir (useful for debugging)
+    logger.info(
+        "VISION collect_image_paths: backend=%s tenant_id=%r lead_id=%s files=%s",
+        storage.__class__.__name__,
+        tenant_id,
+        lead_id,
+        len(files),
+    )
+
+    if not tenant_id:
+        raise RuntimeError(f"tenant_id_missing lead_id={lead_id}")
+
     tmp_dir = _tmp_dir_for_lead(lead_id)
+
+    import shutil
+    from uuid import uuid4
 
     for f in files:
         key = getattr(f, "s3_key", None)
+
+        logger.info(
+            "VISION file id=%s s3_key=%r local_path=%r",
+            getattr(f, "id", None),
+            key,
+            getattr(f, "local_path", None),
+        )
+
         if not key:
             continue
 
@@ -70,33 +83,29 @@ def _collect_image_paths(files: List[LeadFile], lead: Lead) -> List[str]:
             continue
 
         try:
-            # Preferred: use storage helper (handles tenant prefixing for S3)
             local_path = storage.download_to_temp_path(tenant_id=tenant_id, key=key_str)
 
-            # Optionally copy into our lead tmp dir (so file name is nice/predictable)
-            # but only if download path isn't already within tmp_dir
-            try:
-                p = Path(local_path)
-                if p.exists() and p.is_file() and p.stat().st_size > 0:
-                    # If file already in our lead tmp folder, keep it
-                    if tmp_dir in p.parents:
-                        paths.append(str(p))
-                    else:
-                        # copy to stable location
-                        dst = tmp_dir / (Path(key_str).name or p.name)
-                        if not dst.exists() or dst.stat().st_size == 0:
-                            dst.write_bytes(p.read_bytes())
-                        paths.append(str(dst))
-                else:
-                    raise RuntimeError("download_returned_empty_file")
-            except Exception as e:
-                logger.warning(
-                    f"Downloaded but could not validate/copy file for key={key_str} lead_id={lead_id}: {e}"
-                )
+            p = Path(local_path)
+            if not (p.exists() and p.is_file() and p.stat().st_size > 0):
+                raise RuntimeError("download_returned_empty_file")
+
+            # Always copy to stable name to avoid spaces/collisions
+            suffix = p.suffix or (Path(key_str).suffix or ".jpg")
+            safe_name = f"{getattr(f, 'id', 'file')}_{uuid4().hex}{suffix}"
+            dst = tmp_dir / safe_name
+
+            if not dst.exists() or dst.stat().st_size == 0:
+                shutil.copyfile(p, dst)
+
+            paths.append(str(dst))
 
         except Exception as e:
             logger.warning(
-                f"Failed to download key={key_str} tenant_id={tenant_id} lead_id={lead_id}: {e}"
+                "Failed to download/prepare file key=%r tenant_id=%r lead_id=%s err=%s",
+                key_str,
+                tenant_id,
+                lead_id,
+                e,
             )
 
     return paths

@@ -7,7 +7,7 @@
   <div class="flex flex-wrap items-start justify-between gap-4">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
-      <div class="mt-1 text-sm text-slate-600">Jobs & Leads overview</div>
+      <div class="mt-1 text-sm text-slate-600">Overzicht klussen & leads</div>
     </div>
 
     <!-- Timezone (dev) -->
@@ -18,7 +18,7 @@
         </div>
         <input
           name="tz"
-          value="America/Chicago"
+          value="Europe/Amsterdam"
           class="h-9 w-56 rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-colors"
         />
       </div>
@@ -26,7 +26,7 @@
         class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
         type="submit"
       >
-        Set timezone
+        Tijdzone instellen
       </button>
     </form>
   </div>
@@ -41,7 +41,7 @@
         </div>
         <div>
           <div class="text-2xl font-bold text-slate-900">{{ kpis.NEW }}</div>
-          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">New</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Nieuw</div>
         </div>
       </div>
     </div>
@@ -54,7 +54,7 @@
         </div>
         <div>
           <div class="text-2xl font-bold text-slate-900">{{ kpis.SCHEDULED }}</div>
-          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Scheduled</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Ingepland</div>
         </div>
       </div>
     </div>
@@ -67,7 +67,7 @@
         </div>
         <div>
           <div class="text-2xl font-bold text-slate-900">{{ kpis.IN_PROGRESS }}</div>
-          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">In Progress</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Bezig</div>
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@
         </div>
         <div>
           <div class="text-2xl font-bold text-slate-900">{{ kpis.DONE }}</div>
-          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Done</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Afgerond</div>
         </div>
       </div>
     </div>
@@ -93,7 +93,7 @@
         </div>
         <div>
           <div class="text-2xl font-bold text-slate-900">{{ kpis.CANCELLED }}</div>
-          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Cancelled</div>
+          <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Geannuleerd</div>
         </div>
       </div>
     </div>
@@ -110,20 +110,20 @@
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
           </div>
           <div>
-            <div class="text-sm font-semibold text-slate-900">Recent Jobs</div>
-            <div class="text-xs text-slate-500">Latest activity</div>
+            <div class="text-sm font-semibold text-slate-900">Recente Klussen</div>
+            <div class="text-xs text-slate-500">Laatste activiteit</div>
           </div>
         </div>
-        <a href="/app/jobs" class="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">View all →</a>
+        <a href="/app/jobs" class="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">Alles bekijken →</a>
       </div>
 
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200">
           <thead class="bg-slate-50">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Job</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Klus</th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Customer</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Klant</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 bg-white">
@@ -131,14 +131,19 @@
               {% set st = (j.status or '').upper() %}
               {% if st == 'DONE' %}
                 {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
+                {% set status_text = 'Afgerond' %}
               {% elif st == 'IN_PROGRESS' %}
                 {% set badge_color = 'bg-violet-50 text-violet-700 ring-violet-600/20' %}
+                {% set status_text = 'Bezig' %}
               {% elif st == 'SCHEDULED' %}
                 {% set badge_color = 'bg-blue-50 text-blue-700 ring-blue-600/20' %}
+                {% set status_text = 'Ingepland' %}
               {% elif st == 'CANCELLED' %}
                 {% set badge_color = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
+                {% set status_text = 'Geannuleerd' %}
               {% else %}
                 {% set badge_color = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
+                {% set status_text = 'Nieuw' %}
               {% endif %}
 
               <tr class="hover:bg-slate-50/80 transition-colors">
@@ -147,7 +152,7 @@
                 </td>
                 <td class="px-4 py-3">
                   <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
-                    {{ st or 'NEW' }}
+                    {{ status_text }}
                   </span>
                 </td>
                 <td class="px-4 py-3 text-sm text-slate-600">
@@ -167,7 +172,7 @@
                     <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-2">
                       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     </div>
-                    <p class="text-sm text-slate-600">No jobs yet</p>
+                    <p class="text-sm text-slate-600">Nog geen klussen</p>
                   </div>
                 </td>
               </tr>
@@ -185,11 +190,11 @@
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
           </div>
           <div>
-            <div class="text-sm font-semibold text-slate-900">Recent Leads</div>
-            <div class="text-xs text-slate-500">Latest inquiries</div>
+            <div class="text-sm font-semibold text-slate-900">Recente Leads</div>
+            <div class="text-xs text-slate-500">Laatste aanvragen</div>
           </div>
         </div>
-        <a href="/app/leads" class="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">View all →</a>
+        <a href="/app/leads" class="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors">Alles bekijken →</a>
       </div>
 
       <div class="overflow-x-auto">
@@ -197,7 +202,7 @@
           <thead class="bg-slate-50">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Lead</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Customer</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Klant</th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
             </tr>
           </thead>
@@ -206,12 +211,16 @@
               {% set lst = (l.status or '').upper() %}
               {% if lst in ['ACCEPTED','DONE','COMPLETED'] %}
                 {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
+                {% set status_text = 'Geaccepteerd' %}
               {% elif lst in ['SENT','VIEWED'] %}
                 {% set badge_color = 'bg-amber-50 text-amber-700 ring-amber-600/20' %}
+                {% set status_text = 'Verstuurd' if lst == 'SENT' else 'Bekeken' %}
               {% elif lst in ['CANCELLED'] %}
                 {% set badge_color = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
+                {% set status_text = 'Geannuleerd' %}
               {% else %}
                 {% set badge_color = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
+                {% set status_text = 'Nieuw' %}
               {% endif %}
 
               <tr class="hover:bg-slate-50/80 transition-colors">
@@ -221,7 +230,7 @@
                 <td class="px-4 py-3 text-sm text-slate-600">{{ l.name or '—' }}</td>
                 <td class="px-4 py-3">
                   <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
-                    {{ lst or 'NEW' }}
+                    {{ status_text }}
                   </span>
                 </td>
               </tr>
@@ -232,7 +241,7 @@
                     <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-2">
                       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     </div>
-                    <p class="text-sm text-slate-600">No leads yet</p>
+                    <p class="text-sm text-slate-600">Nog geen leads</p>
                   </div>
                 </td>
               </tr>

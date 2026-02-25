@@ -402,21 +402,56 @@ class S3Storage(Storage):
 # =========================
 # Factory
 # =========================
+from typing import Optional
+
+
 def get_storage() -> Storage:
-    storage_backend = (settings.STORAGE_BACKEND or "local").lower().strip()
+    """
+    Select storage backend based on settings.STORAGE_BACKEND.
+
+    IMPORTANT:
+    - We do NOT silently default to local in production-like environments.
+    - If STORAGE_BACKEND is missing, we either:
+      - default to local only in explicit local/dev environments, OR
+      - raise loudly (recommended).
+    """
+    backend_raw = (settings.STORAGE_BACKEND or "").strip().lower()
+
+    # Detect environment (best-effort; supports common names)
+    env_raw = (
+        (
+            (getattr(settings, "ENVIRONMENT", None) or "")
+            or (getattr(settings, "APP_ENV", None) or "")
+            or (getattr(settings, "ENV", None) or "")
+        )
+        .strip()
+        .lower()
+    )
+
+    # If STORAGE_BACKEND not set, be strict.
+    # Default to local ONLY when clearly running locally/dev.
+    if not backend_raw:
+        if env_raw in ("prod", "production", "staging"):
+            raise ValueError(
+                "STORAGE_BACKEND must be set to 's3' in production/staging"
+            )
+        # If env isn't provided, still prefer to fail loudly to avoid surprises.
+        # If you *really* want a fallback in dev, set ENVIRONMENT=local or STORAGE_BACKEND=local.
+        raise ValueError("STORAGE_BACKEND is required (set to 'local' or 's3')")
+
+    storage_backend = backend_raw
 
     if storage_backend == "s3":
-        bucket = settings.S3_BUCKET
-        region = settings.AWS_REGION
+        bucket = (settings.S3_BUCKET or "").strip()
+        region = (settings.AWS_REGION or "").strip() or None
 
         if not bucket:
             raise ValueError(
                 "S3_BUCKET environment variable is vereist voor S3 storage"
             )
 
-        # Optional: new settings fields (add to Settings!)
-        aws_profile = getattr(settings, "AWS_PROFILE", None)
-        aws_session_token = getattr(settings, "AWS_SESSION_TOKEN", None)
+        aws_profile: Optional[str] = getattr(settings, "AWS_PROFILE", None)
+        aws_session_token: Optional[str] = getattr(settings, "AWS_SESSION_TOKEN", None)
 
         return S3Storage(
             bucket=bucket,
@@ -425,18 +460,20 @@ def get_storage() -> Storage:
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             aws_session_token=aws_session_token,
             aws_profile=aws_profile,
-            verify_bucket_on_startup=True,
+            verify_bucket_on_startup=False,
         )
 
     if storage_backend == "local":
-        base_path = (
-            getattr(settings, "LOCAL_STORAGE_PATH", None)
-            or getattr(settings, "LOCAL_STORAGE_ROOT", None)
-            or "data"
+        base_path = getattr(settings, "LOCAL_STORAGE_PATH", None) or getattr(
+            settings, "LOCAL_STORAGE_ROOT", None
         )
+        if not base_path:
+            raise ValueError(
+                "LOCAL_STORAGE_PATH (of LOCAL_STORAGE_ROOT) is vereist voor local storage"
+            )
         return LocalStorage(base_path=base_path)
 
-    raise ValueError(f"Onbekende storage backend: {storage_backend}")
+    raise ValueError(f"Onbekende storage backend: {storage_backend!r}")
 
 
 # =========================

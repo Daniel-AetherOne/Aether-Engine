@@ -1,13 +1,13 @@
 <!-- app/templates/quote_status.html -->
 <!doctype html>
-<html lang="en">
+<html lang="nl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Estimate Status — Paintly</title>
+  <title>Offerte Status — Paintly</title>
   
-  <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico ">
+  <script src="https://cdn.tailwindcss.com "></script>
   
   <style>
     @keyframes pulse-ring {
@@ -43,8 +43,8 @@
       <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-5">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 class="text-xl font-bold text-slate-900" id="headline">We're processing your estimate…</h1>
-            <p class="text-sm text-slate-500 mt-1" id="subhead">This page updates automatically. You can keep it open.</p>
+            <h1 class="text-xl font-bold text-slate-900" id="headline">We verwerken uw offerte…</h1>
+            <p class="text-sm text-slate-500 mt-1" id="subhead">Deze pagina wordt automatisch bijgewerkt. U kunt deze open laten staan.</p>
           </div>
           
           <!-- Status Pill -->
@@ -53,7 +53,7 @@
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" id="statusPing"></span>
               <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" id="statusDot"></span>
             </span>
-            <span id="statusText">Processing</span>
+            <span id="statusText">Bezig met verwerken</span>
           </div>
         </div>
       </div>
@@ -87,7 +87,7 @@
             
             <div class="flex items-center gap-2 flex-1">
               <div id="step2" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs font-bold transition-colors">2</div>
-              <div class="hidden sm:block text-xs font-medium text-slate-500">Photos</div>
+              <div class="hidden sm:block text-xs font-medium text-slate-500">Foto's</div>
             </div>
             
             <div class="h-px flex-1 bg-slate-200 relative">
@@ -96,7 +96,7 @@
             
             <div class="flex items-center gap-2 flex-1">
               <div id="step3" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs font-bold transition-colors">3</div>
-              <div class="hidden sm:block text-xs font-medium text-slate-500">Estimate</div>
+              <div class="hidden sm:block text-xs font-medium text-slate-500">Offerte</div>
             </div>
           </div>
 
@@ -105,7 +105,7 @@
             <div class="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
               <div id="barFill" class="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500" style="width: 10%"></div>
             </div>
-            <p class="text-xs text-slate-500" id="progressHint">Preparing…</p>
+            <p class="text-xs text-slate-500" id="progressHint">Voorbereiden…</p>
           </div>
         </div>
 
@@ -113,7 +113,7 @@
         <div id="actions" class="flex flex-wrap gap-3">
           <span class="inline-flex items-center gap-2 text-sm text-slate-500">
             <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            Processing…
+            Bezig met verwerken…
           </span>
         </div>
 
@@ -125,7 +125,7 @@
 
     <!-- Footer -->
     <div class="text-center mt-6">
-      <p class="text-xs text-slate-400">Paintly • AI-Powered Estimates</p>
+      <p class="text-xs text-slate-400">Paintly • AI-gestuurde Offertes</p>
     </div>
 
   </div>
@@ -172,47 +172,47 @@
     }
 
     async function startPublishOnce() {
-  if (publishStarted) return;
-  publishStarted = true;
+      if (publishStarted) return;
+      publishStarted = true;
 
-  try {
-    const res = await fetch(`/quotes/publish/${leadId}`, {
-      method: "POST",
-      headers: { "accept": "application/json" },
-      cache: "no-store",
-    });
+      try {
+        const res = await fetch(`/quotes/publish/${leadId}`, {
+          method: "POST",
+          headers: { "accept": "application/json" },
+          cache: "no-store",
+        });
 
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error("publish failed:", res.status, txt);
-      setStatusPill("PUBLISH_FAILED");
-      setHeadline("Couldn't start processing");
-      setSubhead(`Publish failed: ${res.status}`);
-      setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(txt || "").slice(0, 800)}</pre>`);
-      stopPolling();
-      return;
+        if (!res.ok) {
+          const txt = await res.text();
+          console.error("publish failed:", res.status, txt);
+          setStatusPill("PUBLISH_FAILED");
+          setHeadline("Kon verwerking niet starten");
+          setSubhead(`Publiceren mislukt: ${res.status}`);
+          setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(txt || "").slice(0, 800)}</pre>`);
+          stopPolling();
+          return;
+        }
+
+        // optional: log json
+        try {
+          const data = await res.json();
+          console.log("publish started:", data);
+        } catch (_) {}
+      } catch (e) {
+        console.warn("publish failed to start:", e);
+        setStatusPill("PUBLISH_ERROR");
+        setHeadline("Kon verwerking niet starten");
+        setSubhead("Netwerkfout bij het starten van publicatie");
+        setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(e && e.toString ? e.toString() : e)}</pre>`);
+        stopPolling();
+      }
     }
-
-    // optional: log json
-    try {
-      const data = await res.json();
-      console.log("publish started:", data);
-    } catch (_) {}
-  } catch (e) {
-    console.warn("publish failed to start:", e);
-    setStatusPill("PUBLISH_ERROR");
-    setHeadline("Couldn't start processing");
-    setSubhead("Network error while starting publish");
-    setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(e && e.toString ? e.toString() : e)}</pre>`);
-    stopPolling();
-  }
-}
 
     async function safeJson(res) {
       const ct = (res.headers.get("content-type") || "").toLowerCase();
       if (!ct.includes("application/json")) {
         const text = await res.text();
-        throw new Error(`Expected JSON but got: ${ct || "unknown"} :: ${text.slice(0, 200)}`);
+        throw new Error(`Verwachtte JSON maar kreeg: ${ct || "onbekend"} :: ${text.slice(0, 200)}`);
       }
       return await res.json();
     }
@@ -279,12 +279,12 @@
     }
 
     function renderRunning(status) {
-      setHeadline("We're processing your estimate…");
-      setSubhead("This page updates automatically. You can keep it open.");
+      setHeadline("We verwerken uw offerte…");
+      setSubhead("Deze pagina wordt automatisch bijgewerkt. U kunt deze open laten staan.");
       setActions(`
         <span class="inline-flex items-center gap-2 text-sm text-slate-500">
           <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-          Processing…
+          Bezig met verwerken…
         </span>
       `);
       setMessage("");
@@ -292,25 +292,25 @@
 
       if (status === "NEW") {
         setProgress(1);
-        progressHint.textContent = "Starting…";
+        progressHint.textContent = "Starten…";
       } else if (status === "RUNNING") {
         setProgress(3);
-        progressHint.textContent = "Generating estimate with AI…";
+        progressHint.textContent = "Offerte genereren met AI…";
       } else {
         setProgress(2);
-        progressHint.textContent = "Analyzing photos…";
+        progressHint.textContent = "Foto's analyseren…";
       }
     }
 
     function renderSucceeded() {
-      setHeadline("Your estimate is ready!");
-      setSubhead("You can view and accept your estimate now.");
+      setHeadline("Uw offerte is gereed!");
+      setSubhead("U kunt uw offerte nu bekijken en accepteren.");
       progressBox.style.display = "none";
 
       setActions(`
         <a href="/quotes/${leadId}/html" class="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors">
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-          View Estimate
+          Bekijk offerte
         </a>
       `);
 
@@ -321,8 +321,8 @@
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             </div>
             <div>
-              <div class="text-sm font-semibold text-emerald-900">Success!</div>
-              <div class="text-xs text-emerald-700 mt-0.5">Your estimate has been generated and is ready for review.</div>
+              <div class="text-sm font-semibold text-emerald-900">Gelukt!</div>
+              <div class="text-xs text-emerald-700 mt-0.5">Uw offerte is gegenereerd en klaar voor review.</div>
             </div>
           </div>
         </div>
@@ -330,13 +330,13 @@
     }
 
     function renderNeedsReview() {
-      setHeadline("We'll review this and get back to you");
-      setSubhead("Your project needs a quick manual check to ensure accuracy.");
+      setHeadline("We reviewen dit en nemen contact met u op");
+      setSubhead("Uw project heeft een snelle handmatige controle nodig om nauwkeurigheid te garanderen.");
       progressBox.style.display = "none";
 
       setActions(`
         <a href="/intake/painters-us" class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
-          Start a new request
+          Start een nieuwe aanvraag
         </a>
       `);
 
@@ -347,8 +347,8 @@
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
             <div>
-              <div class="text-sm font-semibold text-amber-900">Manual review needed</div>
-              <div class="text-xs text-amber-700 mt-0.5">We'll review your photos and scope details and follow up with the final estimate. You don't need to do anything right now.</div>
+              <div class="text-sm font-semibold text-amber-900">Handmatige review nodig</div>
+              <div class="text-xs text-amber-700 mt-0.5">We reviewen uw foto's en werkgebied details en volgen op met de definitieve offerte. U hoeft nu niets te doen.</div>
             </div>
           </div>
         </div>
@@ -356,17 +356,17 @@
     }
 
     function renderFailed(msg) {
-      setHeadline("Something went wrong");
-      setSubhead("Please retry, or start a new request.");
+      setHeadline("Er is iets misgegaan");
+      setSubhead("Probeer het opnieuw, of start een nieuwe aanvraag.");
       progressBox.style.display = "none";
 
       setActions(`
         <a href="/quotes/${leadId}/status?autostart=1" class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          Retry
+          Opnieuw proberen
         </a>
         <a href="/intake/painters-us" class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
-          Start new request
+          Start nieuwe aanvraag
         </a>
       `);
 
@@ -377,9 +377,9 @@
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div class="flex-1">
-              <div class="text-sm font-semibold text-rose-900">Error</div>
-              <div class="text-xs text-rose-700 mt-0.5">If this keeps happening, we'll need to take a quick look internally.</div>
-              <pre class="mt-2 max-h-32 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(msg || "Unknown error").toString()}</pre>
+              <div class="text-sm font-semibold text-rose-900">Fout</div>
+              <div class="text-xs text-rose-700 mt-0.5">Als dit blijft gebeuren, moeten we er intern even naar kijken.</div>
+              <pre class="mt-2 max-h-32 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(msg || "Onbekende fout").toString()}</pre>
             </div>
           </div>
         </div>
@@ -397,7 +397,7 @@
         const status = (data.status || "UNKNOWN").toString();
 
         setStatusPill(status);
-        elUpdated.textContent = data.updated_at ? `Updated ${data.updated_at}` : "";
+        elUpdated.textContent = data.updated_at ? `Bijgewerkt ${data.updated_at}` : "";
 
         // ✅ autostart: start publish once als niet-terminal
         if (autostart === 1) {
@@ -430,29 +430,29 @@
       } catch (err) {
         console.error(err);
         setStatusPill("CONNECTING");
-        setHeadline("Reconnecting…");
-        setSubhead("Trying again in a moment…");
+        setHeadline("Opnieuw verbinden…");
+        setSubhead("We proberen het over een moment opnieuw…");
         setActions(`
           <span class="inline-flex items-center gap-2 text-sm text-slate-500">
             <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            Reconnecting…
+            Opnieuw verbinden…
           </span>
         `);
         setMessage("");
         progressBox.style.display = "block";
         setProgress(2);
-        progressHint.textContent = "Reconnecting…";
+        progressHint.textContent = "Opnieuw verbinden…";
         pollTimer = setTimeout(poll, 2000);
       }
     }
 
     // boot
-(async () => {
-  if (autostart === 1) {
-    await startPublishOnce();
-  }
-  poll();
-})();
+    (async () => {
+      if (autostart === 1) {
+        await startPublishOnce();
+      }
+      poll();
+    })();
   </script>
 </body>
 </html>

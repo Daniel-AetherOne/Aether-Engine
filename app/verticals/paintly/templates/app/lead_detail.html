@@ -14,8 +14,8 @@
         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
       </div>
       <div>
-        <div class="text-sm font-semibold text-slate-900">Link copied</div>
-        <div class="text-xs text-slate-500">Copied to clipboard</div>
+        <div class="text-sm font-semibold text-slate-900">Link gekopieerd</div>
+        <div class="text-xs text-slate-500">Gekopieerd naar klembord</div>
       </div>
     </div>
   </div>
@@ -25,7 +25,7 @@
     <a href="/app/leads"
        class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
       <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-      Back to leads
+      Terug naar leads
     </a>
 
     <div class="flex flex-wrap items-center gap-2">
@@ -33,13 +33,13 @@
         <a class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
            href="/e/{{ lead.public_token }}" target="_blank">
           <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-          View public
+          Publiek bekijken
         </a>
 
         <button class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
                 type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
           <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-          Copy link
+          Link kopiëren
         </button>
       {% endif %}
 
@@ -47,7 +47,7 @@
         <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
            href="/app/leads/{{ lead.id }}/estimate" target="_blank">
           <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          Open estimate
+          Offerte openen
         </a>
 		
 		{% if lead.estimate_html_key %}
@@ -57,7 +57,7 @@
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M11 5h2M12 7v10m-7 0h14M5 17V9a2 2 0 012-2h10a2 2 0 012 2v8"/>
     </svg>
-    Edit estimate
+    Offerte bewerken
   </a>
 {% endif %}
 
@@ -66,7 +66,7 @@
                   class="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                   type="submit">
             <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-            Send estimate
+            Offerte versturen
           </button>
         </form>
       {% endif %}
@@ -81,8 +81,8 @@
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         </div>
         <div>
-          <div class="text-sm font-semibold text-emerald-900">Estimate sent</div>
-          <div class="text-xs text-emerald-700 mt-0.5">The customer will receive the email shortly</div>
+          <div class="text-sm font-semibold text-emerald-900">Offerte verstuurd</div>
+          <div class="text-xs text-emerald-700 mt-0.5">De klant ontvangt de e-mail binnenkort</div>
         </div>
       </div>
     </div>
@@ -95,13 +95,13 @@
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
         <div>
-          <div class="text-sm font-semibold text-amber-900">Email sending not active yet</div>
+          <div class="text-sm font-semibold text-amber-900">E-mail verzending nog niet actief</div>
           <div class="text-xs text-amber-700 mt-1">
-            Postmark is pending approval. While pending, you can only send to recipients on the same domain as your From address
+            Postmark is in afwachting van goedkeuring. Tijdens deze periode kun je alleen versturen naar ontvangers op hetzelfde domein als je From adres
             (<code class="rounded bg-white/60 px-1 py-0.5 font-mono">getpaintly.com</code>).
           </div>
           <div class="text-xs text-amber-600 mt-2">
-            Tip: for testing, use <code class="rounded bg-white/60 px-1 py-0.5 font-mono">you@getpaintly.com</code>
+            Tip: voor testen, gebruik <code class="rounded bg-white/60 px-1 py-0.5 font-mono">jij@getpaintly.com</code>
           </div>
         </div>
       </div>
@@ -115,8 +115,8 @@
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
         <div>
-          <div class="text-sm font-semibold text-rose-900">Could not send estimate</div>
-          <div class="text-xs text-rose-700 mt-0.5">Please try again</div>
+          <div class="text-sm font-semibold text-rose-900">Kon offerte niet versturen</div>
+          <div class="text-xs text-rose-700 mt-0.5">Probeer het opnieuw</div>
         </div>
       </div>
     </div>
@@ -136,11 +136,20 @@
             </div>
             <div>
               <div class="text-sm font-semibold text-slate-900">Lead #{{ lead.id }}</div>
-              <div class="text-xs text-slate-500">Customer details</div>
+              <div class="text-xs text-slate-500">Klantgegevens</div>
             </div>
           </div>
           
           {% set st = (lead.status or '').upper() %}
+          {% set status_labels = {
+            'ACCEPTED': 'Geaccepteerd',
+            'DONE': 'Afgerond',
+            'COMPLETED': 'Compleet',
+            'SENT': 'Verstuurd',
+            'VIEWED': 'Bekeken',
+            'CANCELLED': 'Geannuleerd',
+            'NEW': 'Nieuw'
+          } %}
           {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
             {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
           {% elif st in ['SENT','VIEWED'] %}
@@ -152,7 +161,7 @@
           {% endif %}
 
           <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
-            {{ st or 'NEW' }}
+            {{ status_labels.get(st, 'Nieuw') }}
           </span>
         </div>
 
@@ -160,28 +169,28 @@
           <!-- Customer info -->
           <div class="grid gap-4 sm:grid-cols-2">
             <div>
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Customer</div>
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Klant</div>
               <div class="mt-1 text-sm font-semibold text-slate-900">{{ lead.customer_name or "—" }}</div>
             </div>
             
             <div>
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Address</div>
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Adres</div>
               <div class="mt-1 text-sm text-slate-700">{{ lead.address or "—" }}</div>
             </div>
           </div>
 
           <!-- Description -->
           <div>
-            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Project description</div>
+            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Projectomschrijving</div>
             <div class="mt-1 text-sm text-slate-700 bg-slate-50 rounded-lg p-3 border border-slate-100">
-              {{ lead.project_description or "No description provided" }}
+              {{ lead.project_description or "Geen omschrijving opgegeven" }}
             </div>
           </div>
 
           <!-- Estimate key -->
           {% if lead.estimate_html_key %}
             <div class="pt-4 border-t border-slate-100">
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Estimate key</div>
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Offerte sleutel</div>
               <code class="mt-1 block text-xs font-mono text-slate-600 bg-slate-100 rounded px-2 py-1 break-all">{{ lead.estimate_html_key }}</code>
             </div>
           {% endif %}
@@ -189,15 +198,15 @@
           <!-- Public URL -->
           {% if lead.public_token %}
             <div class="pt-4 border-t border-slate-100">
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Public URL</div>
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Publieke URL</div>
               <div class="mt-2 flex flex-wrap items-center gap-2">
                 <code class="text-xs font-mono text-slate-600 bg-slate-100 rounded px-2 py-1">/e/{{ lead.public_token }}</code>
                 <button class="inline-flex h-7 items-center justify-center rounded-md bg-white px-2 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
                         type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
-                  Copy
+                  Kopiëren
                 </button>
               </div>
-              <p class="mt-2 text-xs text-slate-500">Share this link with the customer to view and accept the estimate</p>
+              <p class="mt-2 text-xs text-slate-500">Deel deze link met de klant om de offerte te bekijken en accepteren</p>
             </div>
           {% endif %}
 
@@ -206,7 +215,7 @@
             <div class="pt-4 border-t border-slate-100">
               <div class="text-xs font-medium text-amber-600 uppercase tracking-wide flex items-center gap-1">
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                Needs review
+                Review nodig
               </div>
               <pre class="mt-2 max-h-40 overflow-auto rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200">{{ lead.needs_review_reasons }}</pre>
             </div>
@@ -223,12 +232,19 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
               </div>
               <div>
-                <div class="text-sm font-semibold text-slate-900">Job #{{ job.id }}</div>
-                <div class="text-xs text-slate-500">Scheduling & status</div>
+                <div class="text-sm font-semibold text-slate-900">Klus #{{ job.id }}</div>
+                <div class="text-xs text-slate-500">Planning & status</div>
               </div>
             </div>
 
             {% set jst = (job.status or '').upper() %}
+            {% set job_status_labels = {
+              'DONE': 'Afgerond',
+              'IN_PROGRESS': 'Bezig',
+              'SCHEDULED': 'Ingepland',
+              'CANCELLED': 'Geannuleerd',
+              'NEW': 'Nieuw'
+            } %}
             {% if jst == 'DONE' %}
               {% set jbadge = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
             {% elif jst == 'IN_PROGRESS' %}
@@ -242,7 +258,7 @@
             {% endif %}
 
             <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ jbadge }}">
-              {{ jst or 'NEW' }}
+              {{ job_status_labels.get(jst, 'Nieuw') }}
             </span>
           </div>
 
@@ -254,12 +270,12 @@
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
                 <div class="flex-1">
-                  <div class="text-sm font-medium text-slate-900">Scheduled</div>
+                  <div class="text-sm font-medium text-slate-900">Ingepland</div>
                   <div class="text-xs text-slate-500">
                     {% if job.scheduled_at %}
                       {{ scheduled_display }} <span class="text-slate-400">({{ tz_name }})</span>
                     {% else %}
-                      Not scheduled yet
+                      Nog niet ingepland
                     {% endif %}
                   </div>
                 </div>
@@ -271,7 +287,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   </div>
                   <div class="flex-1">
-                    <div class="text-sm font-medium text-slate-900">Started</div>
+                    <div class="text-sm font-medium text-slate-900">Gestart</div>
                     <div class="text-xs text-slate-500">{{ started_display }} <span class="text-slate-400">({{ tz_name }})</span></div>
                   </div>
                 </div>
@@ -283,7 +299,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   </div>
                   <div class="flex-1">
-                    <div class="text-sm font-medium text-slate-900">Completed</div>
+                    <div class="text-sm font-medium text-slate-900">Afgerond</div>
                     <div class="text-xs text-slate-500">{{ done_display }} <span class="text-slate-400">({{ tz_name }})</span></div>
                   </div>
                 </div>
@@ -292,13 +308,13 @@
 
             <!-- Status update -->
             <div class="pt-4 border-t border-slate-100">
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Update status</div>
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Status bijwerken</div>
               <div class="flex flex-wrap items-center gap-2">
                 {% if job.status == "SCHEDULED" %}
                   <form method="post" action="/app/jobs/{{ job.id }}/start" class="m-0">
                     <button class="inline-flex h-8 items-center justify-center rounded-md bg-violet-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-violet-700 transition-colors" type="submit">
                       <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                      Start job
+                      Klus starten
                     </button>
                   </form>
                 {% endif %}
@@ -307,7 +323,7 @@
                   <form method="post" action="/app/jobs/{{ job.id }}/done" class="m-0">
                     <button class="inline-flex h-8 items-center justify-center rounded-md bg-emerald-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors" type="submit">
                       <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                      Mark done
+                      Afronden
                     </button>
                   </form>
                 {% endif %}
@@ -316,11 +332,18 @@
                   <select name="status"
                           class="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900">
                     {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
-                      <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s|replace('_', ' ') }}</option>
+                      {% set status_display = {
+                        'NEW': 'Nieuw',
+                        'SCHEDULED': 'Ingepland',
+                        'IN_PROGRESS': 'Bezig',
+                        'DONE': 'Afgerond',
+                        'CANCELLED': 'Geannuleerd'
+                      } %}
+                      <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ status_display[s] }}</option>
                     {% endfor %}
                   </select>
                   <button class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors" type="submit">
-                    Update
+                    Bijwerken
                   </button>
                 </form>
               </div>
@@ -340,7 +363,7 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </div>
               <div>
-                <div class="text-sm font-semibold text-slate-900">Scheduling</div>
+                <div class="text-sm font-semibold text-slate-900">Planning</div>
                 <div class="text-xs text-slate-500">{{ tz_name }}</div>
               </div>
             </div>
@@ -348,7 +371,7 @@
             {% if job.scheduled_at %}
               <div class="text-right">
                 <div class="text-sm font-semibold text-slate-900">{{ scheduled_display }}</div>
-                <div class="text-xs text-slate-500">Currently scheduled</div>
+                <div class="text-xs text-slate-500">Momenteel ingepland</div>
               </div>
             {% endif %}
           </div>
@@ -357,45 +380,45 @@
             <!-- Date/time input -->
             <form id="scheduleForm" method="post" action="/app/jobs/{{ job.id }}/schedule" class="space-y-3">
               <div>
-                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Date & time</label>
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Datum & tijd</label>
                 <div class="flex gap-2">
                   <input id="dtInput" type="datetime-local" name="scheduled_at_local" value="{{ scheduled_input_value }}" required
                          class="flex-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900" />
                   <button class="inline-flex h-9 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors" type="submit">
-                    {% if job.scheduled_at %}Update{% else %}Schedule{% endif %}
+                    {% if job.scheduled_at %}Bijwerken{% else %}Inplannen{% endif %}
                   </button>
                 </div>
               </div>
 
               <!-- Quick dates -->
               <div>
-                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Quick select</label>
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Snel selecteren</label>
                 <div class="flex flex-wrap gap-2">
-                  <button type="button" onclick="setDayOffset(0)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Today</button>
-                  <button type="button" onclick="setDayOffset(1)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Tomorrow</button>
-                  <button type="button" onclick="setDayOffset(2)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">+2 days</button>
+                  <button type="button" onclick="setDayOffset(0)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Vandaag</button>
+                  <button type="button" onclick="setDayOffset(1)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Morgen</button>
+                  <button type="button" onclick="setDayOffset(2)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Overmorgen</button>
                 </div>
               </div>
 
               <!-- Quick times -->
               <div>
-                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Common times</label>
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Gebruikelijke tijden</label>
                 <div class="grid grid-cols-2 gap-2">
-                  <button type="button" onclick="setTime('09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">9:00 AM</button>
-                  <button type="button" onclick="setTime('11:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">11:00 AM</button>
-                  <button type="button" onclick="setTime('13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">1:00 PM</button>
-                  <button type="button" onclick="setTime('15:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">3:00 PM</button>
+                  <button type="button" onclick="setTime('09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">09:00</button>
+                  <button type="button" onclick="setTime('11:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">11:00</button>
+                  <button type="button" onclick="setTime('13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">13:00</button>
+                  <button type="button" onclick="setTime('15:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">15:00</button>
                 </div>
               </div>
 
               <!-- One-click -->
               <div class="pt-3 border-t border-slate-100">
-                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">One-click schedule</label>
+                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Direct inplannen</label>
                 <div class="grid grid-cols-2 gap-2">
-                  <button type="button" onclick="quickSchedule(0,'09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Today 9am</button>
-                  <button type="button" onclick="quickSchedule(0,'13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Today 1pm</button>
-                  <button type="button" onclick="quickSchedule(1,'09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Tomorrow 9am</button>
-                  <button type="button" onclick="quickSchedule(1,'13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Tomorrow 1pm</button>
+                  <button type="button" onclick="quickSchedule(0,'09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Vandaag 9:00</button>
+                  <button type="button" onclick="quickSchedule(0,'13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Vandaag 13:00</button>
+                  <button type="button" onclick="quickSchedule(1,'09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Morgen 9:00</button>
+                  <button type="button" onclick="quickSchedule(1,'13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Morgen 13:00</button>
                 </div>
               </div>
             </form>
@@ -405,7 +428,7 @@
               <form id="unscheduleForm" method="post" action="/app/jobs/{{ job.id }}/unschedule" class="pt-3 border-t border-slate-100">
                 <button type="submit" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-rose-600 shadow-sm ring-1 ring-rose-200 hover:bg-rose-50 transition-colors">
                   <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                  Clear schedule
+                  Planning wissen
                 </button>
               </form>
             {% endif %}
@@ -433,10 +456,10 @@
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(showToast).catch(() => {
-        prompt("Copy this:", text);
+        prompt("Kopieer dit:", text);
       });
     } else {
-      prompt("Copy this:", text);
+      prompt("Kopieer dit:", text);
     }
   }
 
@@ -448,7 +471,7 @@
 
     form.addEventListener('submit', () => {
       btn.disabled = true;
-      btn.innerHTML = '<svg class="mr-1.5 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Sending...';
+      btn.innerHTML = '<svg class="mr-1.5 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Bezig met versturen...';
     });
   })();
 

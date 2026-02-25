@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, Query
@@ -22,8 +21,8 @@ from app.models.lead import Lead
 from app.models.job import Job
 from app.models.user import User
 from app.services.storage import get_storage, get_text
-from fastapi import BackgroundTasks
 from app.models.lead import LeadFile
+from app.models.upload_record import UploadRecord, UploadStatus
 
 from app.core.settings import settings
 from app.services.email import send_postmark_email, EmailError
@@ -951,7 +950,10 @@ def app_review_detail(
 ):
     lead = (
         db.query(Lead)
-        .filter(Lead.id == lead_id, Lead.tenant_id == str(current_user.tenant_id))
+        .filter(
+            Lead.id == lead_id,
+            Lead.tenant_id == str(current_user.tenant_id),
+        )
         .first()
     )
     if not lead:
@@ -966,42 +968,71 @@ def app_review_detail(
     except Exception:
         reasons = []
 
+    # uploads (upload_records) voor debug/preview
+    uploads = (
+        db.query(UploadRecord)
+        .filter(
+            UploadRecord.tenant_id == lead.tenant_id,
+            UploadRecord.lead_id == lead.id,
+            UploadRecord.status.in_([UploadStatus.uploaded, "uploaded"]),
+        )
+        .order_by(UploadRecord.id.desc())
+        .all()
+    )
+
     storage = get_storage()
 
-    # photo previews
-    files = db.query(LeadFile).filter(LeadFile.lead_id == lead.id).all()
+    # photo preview urls (uit upload_records.object_key)
     photo_urls = []
-    for f in files:
-        key = (f.s3_key or "").strip()
-        if not key:
+    for u in uploads:
+        object_key = (getattr(u, "object_key", "") or "").strip()
+        if not object_key:
             continue
 
-        if hasattr(storage, "presigned_get_url"):
-            url = storage.presigned_get_url(
-                tenant_id=str(current_user.tenant_id),
-                key=key,
-                expires_seconds=3600,
-            )
-        else:
-            url = storage.public_url(tenant_id=str(current_user.tenant_id), key=key)
+        # object_key staat bij jou als "public/uploads/...."
+        # storage verwacht meestal key ZONDER tenant prefix:
+        tenant_prefix = f"{lead.tenant_id}/"
+        key = (
+            object_key[len(tenant_prefix) :]
+            if object_key.startswith(tenant_prefix)
+            else object_key
+        )
 
-        photo_urls.append(url)
+        try:
+            if hasattr(storage, "presigned_get_url"):
+                url = storage.presigned_get_url(
+                    tenant_id=str(lead.tenant_id),
+                    key=key,
+                    expires_seconds=3600,
+                )
+            else:
+                url = storage.public_url(
+                    tenant_id=str(lead.tenant_id),
+                    key=key,
+                )
+            photo_urls.append(url)
+        except Exception:
+            # nooit hard failen op preview
+            continue
 
-    # ✅ Estimate preview URL (presigned, always fresh)
+    # estimate preview url
     estimate_preview_url = None
     html_key = (getattr(lead, "estimate_html_key", None) or "").strip()
     if html_key:
-        if hasattr(storage, "presigned_get_url"):
-            estimate_preview_url = storage.presigned_get_url(
-                tenant_id=str(current_user.tenant_id),
-                key=html_key,
-                expires_seconds=300,
-            )
-        else:
-            estimate_preview_url = storage.public_url(
-                tenant_id=str(current_user.tenant_id),
-                key=html_key,
-            )
+        try:
+            if hasattr(storage, "presigned_get_url"):
+                estimate_preview_url = storage.presigned_get_url(
+                    tenant_id=str(lead.tenant_id),
+                    key=html_key,
+                    expires_seconds=300,
+                )
+            else:
+                estimate_preview_url = storage.public_url(
+                    tenant_id=str(lead.tenant_id),
+                    key=html_key,
+                )
+        except Exception:
+            estimate_preview_url = None
 
     can_preview = bool(html_key)
 
@@ -1018,11 +1049,52 @@ def app_review_detail(
             "request": request,
             "lead": lead,
             "reasons": reasons,
+            "uploads": uploads,
             "photo_urls": photo_urls,
             "can_preview": can_preview,
-            "estimate_preview_url": estimate_preview_url,  # ✅ NEW
+            "estimate_preview_url": estimate_preview_url,
             "intake": intake,
         },
+    )
+
+
+@router.post("/app/reviews/{lead_id}/generate-estimate")
+def app_review_generate_estimate(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    lead = (
+        db.query(Lead)
+        .filter(Lead.id == lead_id, Lead.tenant_id == str(current_user.tenant_id))
+        .first()
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Reset -> laat quotes status page opnieuw publishen via autostart JS
+    lead.status = "NEW"
+    lead.error_message = None
+    lead.estimate_json = None
+    lead.estimate_html_key = None
+    lead.updated_at = _utcnow()
+
+    # ✅ Manual override flag
+    payload = {}
+    try:
+        if getattr(lead, "intake_payload", None):
+            payload = json.loads(lead.intake_payload)
+    except Exception:
+        payload = {}
+
+    payload["manual_override"] = True
+    lead.intake_payload = json.dumps(payload, ensure_ascii=False)
+
+    db.add(lead)
+    db.commit()
+
+    return RedirectResponse(
+        url=f"/quotes/{lead_id}/status?autostart=1", status_code=303
     )
 
 
@@ -1066,7 +1138,7 @@ def app_review_generate_estimate(
     )
 
 
-@router.post("/reviews/{lead_id}/overrides")
+@router.post("/app/reviews/{lead_id}/overrides")
 def app_review_save_overrides(
     lead_id: int,
     square_meters: float | None = Form(default=None),
@@ -1092,17 +1164,20 @@ def app_review_save_overrides(
 
     # -------------------------
     # ✅ Area override (EU: m²)
-    # Store square_meters and update lead column if exists.
     # -------------------------
     if square_meters is not None:
         sqm = float(square_meters)
+
+        # keep both keys for compatibility
         payload["square_meters"] = sqm
+        payload["area_sqm"] = sqm
 
         if hasattr(lead, "square_meters"):
             lead.square_meters = sqm
 
-            # backward cleanup (optional)
-        payload.pop("square_meters", None)
+        # cleanup old/US keys (do NOT remove square_meters)
+        payload.pop("sqft", None)
+        payload.pop("sqm", None)
 
     # -------------------------
     # Job type override
@@ -1125,12 +1200,14 @@ def app_review_save_overrides(
     # -------------------------
     payload["manual_override"] = True
 
+    # Persist updated payload
     lead.intake_payload = json.dumps(payload, ensure_ascii=False)
 
     db.add(lead)
     db.commit()
+    db.refresh(lead)
 
-    return RedirectResponse(url=f"/app/reviews/{lead_id}", status_code=303)
+    return RedirectResponse(url=f"/app/reviews/{lead.id}", status_code=303)
 
 
 @router.get("/leads/{lead_id}/edit-estimate", response_class=HTMLResponse)

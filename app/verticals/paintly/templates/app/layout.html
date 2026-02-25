@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="nl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ title or "Paintly" }}</title>
 
   <!-- Tailwind (CDN for now) -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com "></script>
 
   <!-- Optional: keep legacy css if you still use it somewhere -->
   <link rel="stylesheet" href="/static/app.css">
@@ -67,7 +67,7 @@
           </div>
           <div>
             <div class="text-sm font-bold leading-tight">Paintly</div>
-            <div class="text-xs text-slate-400">AI Estimates</div>
+            <div class="text-xs text-slate-400">AI Offertes</div>
           </div>
         </div>
       </div>
@@ -98,7 +98,7 @@
           'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
           path.startswith('/app/leads')) }}
 
-        {{ nav_link('/app/jobs', 'Jobs', 
+        {{ nav_link('/app/jobs', 'Klussen', 
           'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
           path.startswith('/app/jobs')) }}
 		  
@@ -106,7 +106,7 @@
 		'M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l2 2h3a2 2 0 012 2v10a2 2 0 01-2 2z',
 		path.startswith('/app/reviews')) }}
 
-        {{ nav_link('/app/calendar', 'Calendar', 
+        {{ nav_link('/app/calendar', 'Agenda', 
           'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
           path.startswith('/app/calendar')) }}
       </nav>
@@ -116,7 +116,7 @@
         <div class="rounded-lg bg-slate-800/50 p-3 mb-3">
           <div class="flex items-center gap-2">
             <div class="h-2 w-2 rounded-full bg-emerald-500"></div>
-            <span class="text-xs font-medium text-slate-300">System online</span>
+            <span class="text-xs font-medium text-slate-300">Systeem online</span>
           </div>
         </div>
         
@@ -124,7 +124,7 @@
           <button type="submit"
             class="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            Logout
+            Uitloggen
           </button>
         </form>
       </div>
@@ -167,7 +167,7 @@
               
               <a href="/app/leads/new" class="inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                <span class="hidden sm:inline">New Lead</span>
+                <span class="hidden sm:inline">Nieuwe Lead</span>
               </a>
             </div>
           </div>
@@ -191,8 +191,8 @@
           
           {{ mobile_nav_link('/app/dashboard', 'Dashboard', path.startswith('/app/dashboard')) }}
           {{ mobile_nav_link('/app/leads', 'Leads', path.startswith('/app/leads')) }}
-          {{ mobile_nav_link('/app/jobs', 'Jobs', path.startswith('/app/jobs')) }}
-          {{ mobile_nav_link('/app/calendar', 'Calendar', path.startswith('/app/calendar')) }}
+          {{ mobile_nav_link('/app/jobs', 'Klussen', path.startswith('/app/jobs')) }}
+          {{ mobile_nav_link('/app/calendar', 'Agenda', path.startswith('/app/calendar')) }}
         </nav>
       </div>
 

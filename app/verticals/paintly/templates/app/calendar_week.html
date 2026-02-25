@@ -6,14 +6,14 @@
   <!-- Header -->
   <div class="flex flex-wrap items-start justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Week Overview</h1>
+      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Weekoverzicht</h1>
       <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
         <span class="font-medium text-slate-900">{{ week_label }}</span>
         <span class="text-slate-300">·</span>
-        <span>Timezone: <span class="font-medium text-slate-900">{{ tz_name }}</span></span>
+        <span>Tijdzone: <span class="font-medium text-slate-900">{{ tz_name }}</span></span>
 
         <span class="ml-2 inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">
-          Today · {{ now_chip }}
+          Vandaag · {{ now_chip }}
         </span>
       </div>
     </div>
@@ -22,22 +22,22 @@
       <a class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
          href="/app/calendar?week={{ prev_week }}">
          <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-         Prev
+         Vorige
       </a>
 
       <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
-         href="/app/calendar">This week</a>
+         href="/app/calendar">Deze week</a>
 
       <a class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
          href="/app/calendar?week={{ next_week }}">
-         Next
+         Volgende
          <svg class="ml-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
       </a>
 
       <div class="h-6 w-px bg-slate-200 mx-1"></div>
 
       <a class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
-         href="/app/jobs">All Jobs</a>
+         href="/app/jobs">Alle Klussen</a>
     </div>
   </div>
 
@@ -52,8 +52,8 @@
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
           <div>
-            <div class="text-sm font-semibold text-slate-900">Unscheduled</div>
-            <div class="text-xs text-slate-500">New requests pending</div>
+            <div class="text-sm font-semibold text-slate-900">Niet ingepland</div>
+            <div class="text-xs text-slate-500">Nieuwe aanvragen in afwachting</div>
           </div>
         </div>
         <span class="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-slate-900 px-2 text-xs font-medium text-white">
@@ -65,8 +65,8 @@
         {% if unscheduled|length == 0 %}
           <div class="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 py-8 text-center">
             <svg class="h-8 w-8 text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <p class="text-sm text-slate-600">All caught up!</p>
-            <p class="text-xs text-slate-400 mt-1">No pending requests</p>
+            <p class="text-sm text-slate-600">Alles bijgewerkt!</p>
+            <p class="text-xs text-slate-400 mt-1">Geen openstaande aanvragen</p>
           </div>
         {% else %}
           <div class="space-y-3">
@@ -86,7 +86,7 @@
                       </div>
                     </div>
                     <span class="shrink-0 inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                      NEW
+                      NIEUW
                     </span>
                   </div>
                 </a>
@@ -98,7 +98,7 @@
                     <input type="hidden" name="hhmm" value="09:00">
                     <input type="hidden" name="return_to" value="/app/calendar">
                     <button class="inline-flex items-center justify-center rounded-md bg-white px-2 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors" type="submit">
-                      Today 9:00
+                      Vandaag 9:00
                     </button>
                   </form>
 
@@ -107,7 +107,7 @@
                     <input type="hidden" name="hhmm" value="13:00">
                     <input type="hidden" name="return_to" value="/app/calendar">
                     <button class="inline-flex items-center justify-center rounded-md bg-white px-2 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors" type="submit">
-                      Today 1:00
+                      Vandaag 13:00
                     </button>
                   </form>
 
@@ -116,7 +116,7 @@
                     <input type="hidden" name="hhmm" value="09:00">
                     <input type="hidden" name="return_to" value="/app/calendar">
                     <button class="inline-flex items-center justify-center rounded-md bg-white px-2 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors" type="submit">
-                      Tomorrow 9:00
+                      Morgen 9:00
                     </button>
                   </form>
 
@@ -125,7 +125,7 @@
                     <input type="hidden" name="hhmm" value="13:00">
                     <input type="hidden" name="return_to" value="/app/calendar">
                     <button class="inline-flex items-center justify-center rounded-md bg-white px-2 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors" type="submit">
-                      Tomorrow 1:00
+                      Morgen 13:00
                     </button>
                   </form>
                 </div>
@@ -144,8 +144,8 @@
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           </div>
           <div>
-            <div class="text-sm font-semibold text-slate-900">Week Overview</div>
-            <div class="text-xs text-slate-500">Click a job for details</div>
+            <div class="text-sm font-semibold text-slate-900">Weekoverzicht</div>
+            <div class="text-xs text-slate-500">Klik op een klus voor details</div>
           </div>
         </div>
       </div>
@@ -161,7 +161,7 @@
                   <div class="text-sm font-semibold {% if day.is_today %}text-blue-900{% else %}text-slate-700{% endif %}">{{ day.title }}</div>
                   {% if day.is_today %}
                     <span class="inline-flex items-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
-                      Today
+                      Vandaag
                     </span>
                   {% endif %}
                 </div>
@@ -173,21 +173,26 @@
                 {% if day["items"]|length == 0 %}
                   <div class="flex flex-col items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50 py-6 text-center">
                     <svg class="h-5 w-5 text-slate-300 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-                    <p class="text-xs text-slate-400">No jobs</p>
+                    <p class="text-xs text-slate-400">Geen klussen</p>
                   </div>
                 {% else %}
                   {% for it in day["items"] %}
                     {% set st = (it.status or '').upper() %}
                     {% if st == 'DONE' %}
                       {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
+                      {% set status_text = 'Afgerond' %}
                     {% elif st == 'IN_PROGRESS' %}
                       {% set badge_color = 'bg-violet-50 text-violet-700 ring-violet-600/20' %}
+                      {% set status_text = 'Bezig' %}
                     {% elif st == 'SCHEDULED' %}
                       {% set badge_color = 'bg-blue-50 text-blue-700 ring-blue-600/20' %}
+                      {% set status_text = 'Ingepland' %}
                     {% elif st == 'CANCELLED' %}
                       {% set badge_color = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
+                      {% set status_text = 'Geannuleerd' %}
                     {% else %}
                       {% set badge_color = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
+                      {% set status_text = st|replace('_', ' ')|title %}
                     {% endif %}
 
                     <a href="/app/leads/{{ it.lead_id }}#job" class="block group">
@@ -198,7 +203,7 @@
                             {{ it.time }}
                           </div>
                           <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset {{ badge_color }}">
-                            {{ st|replace('_', ' ') }}
+                            {{ status_text }}
                           </span>
                         </div>
 

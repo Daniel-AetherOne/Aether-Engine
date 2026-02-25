@@ -7,13 +7,13 @@
   <div class="flex flex-wrap items-end justify-between gap-4">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Leads</h1>
-      <div class="mt-1 text-sm text-slate-600">Manage customer requests and send estimates</div>
+      <div class="mt-1 text-sm text-slate-600">Beheer klantaanvragen en verstuur offertes</div>
     </div>
     
     <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
        href="/app/leads/new">
       <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-      New Lead
+      Nieuwe Lead
     </a>
   </div>
 
@@ -25,8 +25,8 @@
         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
       </div>
       <div>
-        <div class="text-sm font-semibold text-slate-900">Link copied</div>
-        <div class="text-xs text-slate-500">Public estimate link copied to clipboard</div>
+        <div class="text-sm font-semibold text-slate-900">Link gekopieerd</div>
+        <div class="text-xs text-slate-500">Publieke offerte-link gekopieerd naar klembord</div>
       </div>
     </div>
   </div>
@@ -52,7 +52,7 @@
         </div>
         <div>
           <div class="text-2xl font-bold text-slate-900">{{ counts.total }}</div>
-          <div class="text-xs text-slate-500">Total leads</div>
+          <div class="text-xs text-slate-500">Totaal leads</div>
         </div>
       </div>
     </div>
@@ -64,7 +64,7 @@
         </div>
         <div>
           <div class="text-2xl font-bold text-slate-900">{{ counts.new }}</div>
-          <div class="text-xs text-slate-500">New / Draft</div>
+          <div class="text-xs text-slate-500">Nieuw / Concept</div>
         </div>
       </div>
     </div>
@@ -76,7 +76,7 @@
         </div>
         <div>
           <div class="text-2xl font-bold text-slate-900">{{ counts.pending }}</div>
-          <div class="text-xs text-slate-500">Estimate sent</div>
+          <div class="text-xs text-slate-500">Offerte verstuurd</div>
         </div>
       </div>
     </div>
@@ -88,7 +88,7 @@
         </div>
         <div>
           <div class="text-2xl font-bold text-slate-900">{{ counts.accepted }}</div>
-          <div class="text-xs text-slate-500">Accepted</div>
+          <div class="text-xs text-slate-500">Geaccepteerd</div>
         </div>
       </div>
     </div>
@@ -102,8 +102,8 @@
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
         </div>
         <div>
-          <div class="text-sm font-semibold text-slate-900">All leads</div>
-          <div class="text-xs text-slate-500">Click a lead to view details</div>
+          <div class="text-sm font-semibold text-slate-900">Alle leads</div>
+          <div class="text-xs text-slate-500">Klik op een lead voor details</div>
         </div>
       </div>
     </div>
@@ -112,16 +112,26 @@
       <table class="min-w-full divide-y divide-slate-200">
         <thead class="bg-slate-50">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Customer</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Klant</th>
             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Estimate</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Actions</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Offerte</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Acties</th>
           </tr>
         </thead>
 
         <tbody class="divide-y divide-slate-200 bg-white">
           {% for lead in leads %}
             {% set st = (lead.status or '').upper() %}
+            {% set status_labels = {
+              'ACCEPTED': 'Geaccepteerd',
+              'DONE': 'Afgerond',
+              'COMPLETED': 'Compleet',
+              'SENT': 'Verstuurd',
+              'VIEWED': 'Bekeken',
+              'CANCELLED': 'Geannuleerd',
+              'NEW': 'Nieuw',
+              'DRAFT': 'Concept'
+            } %}
             {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
               {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
             {% elif st in ['SENT','VIEWED'] %}
@@ -153,7 +163,7 @@
               <!-- Status -->
               <td class="px-4 py-3 align-top">
                 <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
-                  {{ st or "NEW" }}
+                  {{ status_labels.get(st, "Nieuw") }}
                 </span>
               </td>
 
@@ -163,18 +173,18 @@
                   {% if lead.estimate_html_key %}
                     <span class="inline-flex w-fit items-center gap-1.5 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
                       <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                      Ready
+                      Gereed
                     </span>
                   {% else %}
                     <span class="inline-flex w-fit items-center gap-1.5 rounded-md bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/20">
                       <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                      Pending
+                      In behandeling
                     </span>
                   {% endif %}
 
                   {% if total is not none %}
                     <div class="text-sm font-semibold text-slate-900">
-                      ${{ "%.2f"|format(total) }}
+                      €{{ "%.2f"|format(total) }}
                     </div>
                   {% endif %}
                 </div>
@@ -209,7 +219,7 @@
                       onclick="copyText('{{ lead.public_url }}')"
                     >
                       <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                      Copy link
+                      Link kopiëren
                     </button>
                   {% endif %}
                 </div>
@@ -222,10 +232,10 @@
                   <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                   </div>
-                  <p class="text-sm font-medium text-slate-900">No leads yet</p>
-                  <p class="text-xs text-slate-500 mt-1">Create your first lead to get started</p>
+                  <p class="text-sm font-medium text-slate-900">Nog geen leads</p>
+                  <p class="text-xs text-slate-500 mt-1">Maak je eerste lead aan om te beginnen</p>
                   <a href="/app/leads/new" class="mt-3 inline-flex h-8 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors">
-                    Create lead
+                    Lead aanmaken
                   </a>
                 </div>
               </td>
@@ -254,10 +264,10 @@
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(showToast).catch(() => {
-        prompt("Copy this:", text);
+        prompt("Kopieer dit:", text);
       });
     } else {
-      prompt("Copy this:", text);
+      prompt("Kopieer dit:", text);
     }
   }
 </script>

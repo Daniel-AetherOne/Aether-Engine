@@ -333,6 +333,7 @@ async def complete_upload(
 async def local_upload(
     key: str = Form(...),  # VOLLEDIGE key met tenant, bv. "acme/uploads/....jpg"
     tenant_id: str = Form(...),
+    lead_id: Optional[int] = Form(None),
     content_type: Optional[str] = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -366,6 +367,12 @@ async def local_upload(
     tenant_prefix = f"{tenant_id}/"
     key_without_tenant = key[len(tenant_prefix) :]
 
+    # ✅ als lead_id meegegeven is: check dat lead bestaat + tenant matcht
+    if lead_id is not None:
+        lead, t = _lead_and_tenant(db, int(lead_id))
+    if str(t) != str(tenant_id):
+        raise HTTPException(status_code=403, detail="tenant_mismatch")
+
     st = get_storage()
     if not isinstance(st, LocalStorage):
         raise HTTPException(status_code=400, detail="not_local_storage")
@@ -383,7 +390,9 @@ async def local_upload(
     if not existing:
         rec = UploadRecord(
             tenant_id=tenant_id,
-            lead_id=0,  # optioneel: later patchen via /complete of intake
+            lead_id=(
+                int(lead_id) if lead_id is not None else 0
+            ),  # optioneel: later patchen via /complete of intake
             object_key=object_key,
             size=len(data),
             mime=ctype,

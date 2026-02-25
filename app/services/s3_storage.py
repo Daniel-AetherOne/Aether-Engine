@@ -54,8 +54,6 @@ def create_presigned_post_for_image_upload(prefix: str = "uploads/") -> dict:
     presigned = _s3_client.generate_presigned_post(
         Bucket=AWS_S3_BUCKET_NAME,
         Key=key,
-        Fields=fields,
-        Conditions=conditions,
         ExpiresIn=PRESIGNED_EXPIRES_IN,
     )
 

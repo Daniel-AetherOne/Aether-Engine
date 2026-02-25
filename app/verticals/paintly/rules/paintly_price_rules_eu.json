@@ -1,9 +1,9 @@
 {
-    "vertical_id": "painters_us",
-    "version": "0.1",
-    "currency": "USD",
+    "vertical_id": "painters_eu",
+    "version": "1.0",
+    "currency": "EUR",
     "units": {
-        "area": "sqft",
+        "area": "sqm",
         "discrete": "per_item"
     },
     "surface_types": [
@@ -22,29 +22,29 @@
         "includes_labor": false
     },
     "gates": {
-        "require_pricing_ready": true,
-        "min_confidence": 0.7
+        "require_pricing_ready": false,
+        "min_confidence": 0.6
     },
     "base_rates": {
         "walls": {
-            "unit": "sqft",
-            "rate_usd": 2.75
+            "unit": "sqm",
+            "rate_eur": 18
         },
         "ceilings": {
-            "unit": "sqft",
-            "rate_usd": 3.25
+            "unit": "sqm",
+            "rate_eur": 20
         },
         "exterior_siding": {
-            "unit": "sqft",
-            "rate_usd": 4.50
+            "unit": "sqm",
+            "rate_eur": 28
         },
         "trim": {
             "unit": "fixed",
-            "base_usd": 300
+            "base_eur": 250
         },
         "doors": {
             "unit": "per_item",
-            "rate_usd": 120
+            "rate_eur": 95
         }
     },
     "multipliers": {
@@ -69,8 +69,8 @@
         "materials_ratio": 0.3
     },
     "margin": {
-        "target": 0.25,
-        "minimum": 0.15
+        "target": 0.30,
+        "minimum": 0.18
     },
     "estimate_range": {
         "low_factor": 0.85,

@@ -518,46 +518,63 @@
     }
 
     async function uploadFileToS3(file) {
-      const ctype = normalizeType(file);
-      if (file.size <= 0 || file.size > MAX_BYTES) throw new Error("file_too_large");
-      if (!ALLOWED_TYPES.has(ctype)) throw new Error("unsupported_type");
+  const ctype = normalizeType(file);
+  if (file.size <= 0 || file.size > MAX_BYTES) throw new Error("file_too_large");
+  if (!ALLOWED_TYPES.has(ctype)) throw new Error("unsupported_type");
 
-      const id = await ensureLeadId();
+  const id = await ensureLeadId();
 
-      const res = await fetch('/uploads/presign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer demo' },
-        body: JSON.stringify({ filename: file.name, content_type: ctype, size: file.size, lead_id: String(id) })
-      });
+  // 1) Presign ophalen bij je API
+  const res = await fetch('/uploads/presign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer demo' },
+    body: JSON.stringify({
+      filename: file.name,
+      content_type: ctype,
+      size: file.size,
+      lead_id: String(id),
+    }),
+  });
 
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error("presign_failed: " + t);
-      }
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error("presign_failed: " + t);
+  }
 
-      const data = await res.json();
-      const formData = new FormData();
-      Object.entries(data.fields).forEach(([k, v]) => formData.append(k, v));
-      formData.append('file', file);
+  const data = await res.json();
 
-      const s3Res = await fetch(data.url, { method: 'POST', body: formData });
-      if (!s3Res.ok) {
-        const txt = await s3Res.text().catch(() => "");
-        throw new Error("s3_upload_failed: " + txt);
-      }
+  // 2) Upload naar S3 via presigned POST
+  // IMPORTANT: alleen presign fields + file; geen extra velden toevoegen
+  const formData = new FormData();
+  Object.entries(data.fields || {}).forEach(([k, v]) => formData.append(k, v));
+  formData.append("file", file);
 
-      const cRes = await fetch('/uploads/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lead_id: Number(id), object_key: data.object_key })
-      });
-      if (!cRes.ok) {
-        const t = await cRes.text();
-        throw new Error("complete_failed: " + t);
-      }
+  const s3Res = await fetch(data.url, { method: "POST", body: formData });
+  if (!s3Res.ok) {
+    const txt = await s3Res.text().catch(() => "");
+    throw new Error("s3_upload_failed: " + s3Res.status + " " + txt);
+  }
 
-      return data.object_key;
-    }
+  // 3) Key bepalen (backend kan 'object_key' of 'key' teruggeven)
+  const objectKey = data.object_key || data.key || data.objectKey;
+  if (!objectKey) {
+    throw new Error("presign_failed: missing object_key/key in response");
+  }
+
+  // 4) Server vertellen dat upload klaar is (DB record maken)
+  const cRes = await fetch('/uploads/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lead_id: Number(id), object_key: objectKey }),
+  });
+
+  if (!cRes.ok) {
+    const t = await cRes.text().catch(() => "");
+    throw new Error("complete_failed: " + t);
+  }
+
+  return objectKey;
+}
 
     fileInput.addEventListener('change', async function() {
       clearMsgs();
