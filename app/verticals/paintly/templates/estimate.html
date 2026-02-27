@@ -205,7 +205,7 @@
         {% if show_prices %}
           <div class="flex flex-wrap items-baseline gap-2">
             <span class="text-4xl font-black tracking-tight text-slate-900">
-              {{ fmt_eur(vat.total_incl_vat if vat and vat.total_incl_vat is not none else pricing.totals.grand_total) }}
+              {{ fmt_eur(vat.total_incl_vat if vat and vat.total_incl_vat is not none else 0) }}
             </span>
             {% if is_provisional %}
               <span class="text-sm font-medium text-amber-600">ruwe schatting</span>
@@ -492,12 +492,17 @@
                 <div class="space-y-2">
                   <div class="flex justify-between text-sm">
                     <span class="text-slate-600">{{ copy.labor_label if copy and copy.labor_label else "Arbeid" }}</span>
-                    <span class="font-medium text-slate-900">{{ fmt_eur(pricing.subtotals.labor) }}</span>
-                  </div>
+                    <span class="font-medium text-slate-900">
+					  {{ fmt_eur(pricing.subtotals.labor if pricing and pricing.subtotals and pricing.subtotals.labor is not none else pricing_labor) }}
+					</span>
+					
+					</div>
 
                   <div class="flex justify-between text-sm">
                     <span class="text-slate-600">{{ copy.materials_label if copy and copy.materials_label else "Materialen" }}</span>
-                    <span class="font-medium text-slate-900">{{ fmt_eur(pricing.subtotals.materials) }}</span>
+                    <span class="font-medium text-slate-900">
+					  {{ fmt_eur(pricing.subtotals.materials if pricing and pricing.subtotals and pricing.subtotals.materials is not none else pricing_materials) }}
+					</span>
                   </div>
 
                   <div class="flex justify-between text-sm pt-2">

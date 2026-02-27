@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.5;">
+    <h2 style="margin:0 0 12px;">Nieuwe lead 🎉</h2>
+
+    <p style="margin:0 0 8px;"><strong>Naam:</strong> {{ lead_name }}</p>
+    <p style="margin:0 0 8px;"><strong>Email:</strong> {{ lead_email }}</p>
+    <p style="margin:0 0 16px;"><strong>Lead ID:</strong> {{ lead_id }}</p>
+
+    {% if admin_url %}
+      <p style="margin: 0 0 24px;">
+        <a href="{{ admin_url }}"
+           style="display:inline-block; padding:12px 18px; text-decoration:none; border-radius:8px; background:#111; color:#fff;">
+          Open lead
+        </a>
+      </p>
+    {% endif %}
+
+    <p style="margin:0; color:#666; font-size:13px;">
+      Tenant: {{ tenant_name }}
+    </p>
+  </body>
+</html>

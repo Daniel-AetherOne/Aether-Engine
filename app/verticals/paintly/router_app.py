@@ -4,6 +4,8 @@ from __future__ import annotations
 import secrets
 from zoneinfo import ZoneInfo
 
+from fastapi import BackgroundTasks
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, Query
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -25,7 +27,7 @@ from app.models.lead import LeadFile
 from app.models.upload_record import UploadRecord, UploadStatus
 
 from app.core.settings import settings
-from app.services.email import send_postmark_email, EmailError
+from app.services.email import send_postmark_email
 from app.verticals.paintly.email_render import render_estimate_ready_email
 
 
@@ -376,10 +378,14 @@ def app_lead_estimate(
     return resp
 
 
+from fastapi import BackgroundTasks
+
+
 @router.post("/leads/{lead_id}/send")
 def send_estimate(
-    lead_id: str,
+    lead_id: int,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
 ):
@@ -398,7 +404,7 @@ def send_estimate(
     if not lead.public_token:
         lead.public_token = secrets.token_hex(16)
 
-    # build public url (use env base url so it works behind proxies too)
+    # build public url
     base = (settings.APP_PUBLIC_BASE_URL or str(request.base_url)).rstrip("/")
     public_url = f"{base}/e/{lead.public_token}"
 
@@ -407,7 +413,7 @@ def send_estimate(
     if not to_email:
         raise HTTPException(status_code=400, detail="Lead has no email address")
 
-    # render email html
+    # render email html (existing renderer)
     company_name = "Paintly"
     customer_name = getattr(lead, "name", "") or ""
     email_html = render_estimate_ready_email(
@@ -416,40 +422,32 @@ def send_estimate(
         company_name=company_name,
     )
 
-    # send
-    try:
-        message_id = send_postmark_email(
-            to=to_email,
-            subject="Your estimate is ready",
-            html_body=email_html,
-            metadata={"lead_id": str(lead.id), "tenant_id": str(lead.tenant_id)},
-        )
-
-    except EmailError as e:
-        logger.exception("estimate_email_send_failed lead_id=%s err=%s", lead.id, e)
-        msg = str(e)
-
-        # Postmark pending approval (domain restriction)
-        if "ErrorCode': 412" in msg or 'ErrorCode": 412' in msg:
-            return RedirectResponse(
-                url=f"/app/leads/{lead_id}?send_error=postmark_pending",
-                status_code=303,
+    # background send task
+    def _send_email_task():
+        logger.info("EMAIL_TASK_START lead_id=%s to=%s", lead.id, to_email)
+        try:
+            send_postmark_email(
+                to=to_email,
+                subject="Je offerte van Paintly staat klaar",
+                html_body=email_html,
+                metadata={"lead_id": str(lead.id), "tenant_id": str(lead.tenant_id)},
             )
+            logger.info("EMAIL_TASK_DONE lead_id=%s to=%s", lead.id, to_email)
+        except Exception:
+            logger.exception("estimate_email_send_failed lead_id=%s", lead.id)
 
-        return RedirectResponse(
-            url=f"/app/leads/{lead_id}?send_error=send_failed",
-            status_code=303,
-        )
-    # mark sent
+    background_tasks.add_task(_send_email_task)
+
+    # mark sent (queued)
     lead.status = "SENT"
     lead.sent_at = _utcnow()
-    # optional: store message id if you add a column later
-    # lead.last_email_message_id = message_id
-
     db.add(lead)
     db.commit()
 
-    return RedirectResponse(url=f"/app/leads/{lead_id}?sent=1", status_code=303)
+    # ✅ IMPORTANT: attach background tasks to the RedirectResponse explicitly
+    resp = RedirectResponse(url=f"/app/leads/{lead_id}?sent=1", status_code=303)
+    resp.background = background_tasks
+    return resp
 
 
 # -------------------------

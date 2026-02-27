@@ -1,71 +1,191 @@
 # app/services/email_service.py
 
-import smtplib
-from email.message import EmailMessage
-from typing import Optional
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+from typing import Optional, Any
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from postmarker.core import PostmarkClient  # pip install postmarker
 
 from app.core.settings import settings
 
+logger = logging.getLogger(__name__)
 
-def send_quote_email(
-    to_email: str,
-    to_name: Optional[str],
-    public_url: str,
-    lead_id: int,
-) -> None:
-    """
-    Stuur een e-mail naar de klant met de public_url van de offerte.
-    Als SMTP niet is geconfigureerd, loggen we de mail alleen naar de console.
-    """
 
-    if not to_email:
-        # Geen e-mailadres, dan kunnen we niks sturen
-        print(f"[email] Geen e-mailadres voor lead {lead_id}, sla e-mail over.")
-        return
+class EmailService:
+    def __init__(self) -> None:
+        self.enabled = bool(getattr(settings, "EMAILS_ENABLED", True))
+        self.server_token = getattr(settings, "POSTMARK_SERVER_TOKEN", "")
+        self.message_stream = getattr(
+            settings, "POSTMARK_MESSAGE_STREAM", "transactional"
+        )
+        self.from_email = getattr(
+            settings, "POSTMARK_FROM_EMAIL", "Paintly <info@getpaintly.com>"
+        )
+        self.reply_to_default = getattr(settings, "POSTMARK_REPLY_TO", None)
 
-    subject = f"Je offerte is klaar (lead #{lead_id})"
-    display_name = to_name or "klant"
+        if self.enabled and not self.server_token:
+            raise RuntimeError(
+                "POSTMARK_SERVER_TOKEN ontbreekt terwijl EMAILS_ENABLED=true"
+            )
 
-    text_body = (
-        f"Beste {display_name},\n\n"
-        f"Je offerte is klaar. Je kunt hem hier bekijken:\n"
-        f"{public_url}\n\n"
-        f"Met vriendelijke groet,\n"
-        f"{settings.SMTP_FROM_NAME}"
-    )
+        # templates/emails/...
+        templates_dir = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "verticals",
+                "paintly",
+                "templates",
+                "email",
+            )
+        )
+        self.jinja = Environment(
+            loader=FileSystemLoader(templates_dir),
+            autoescape=select_autoescape(["html", "xml"]),
+        )
 
-    html_body = f"""
-    <p>Beste {display_name},</p>
-    <p>Je offerte is klaar. Je kunt hem hier bekijken:<br>
-       <a href="{public_url}">{public_url}</a>
-    </p>
-    <p>Met vriendelijke groet,<br>
-       {settings.SMTP_FROM_NAME}
-    </p>
-    """
+        self.client = PostmarkClient(server_token=self.server_token)
 
-    # Als er geen SMTP-host staat → alleen printen (dev mode)
-    if not settings.SMTP_HOST:
-        print("=== [DEV EMAIL - GEEN SMTP_HOST] ===")
-        print("To:", to_email)
-        print("Subject:", subject)
-        print(text_body)
-        print("=== [/DEV EMAIL] ===")
-        return
+    def render(self, template_name: str, **ctx: Any) -> str:
+        return self.jinja.get_template(template_name).render(**ctx)
 
-    msg = EmailMessage()
-    from_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USER
+    async def send_email(
+        self,
+        *,
+        to: str,
+        subject: str,
+        html_body: str,
+        text_body: Optional[str] = None,
+        reply_to: Optional[str] = None,
+        tag: Optional[str] = None,
+        metadata: Optional[dict[str, str]] = None,
+        message_stream: Optional[str] = None,
+    ) -> bool:
+        """
+        Best-effort: return True/False. No raise (pipeline-safe).
+        """
+        if not self.enabled:
+            logger.info("Emails disabled; skip to=%s subject=%s", to, subject)
+            return True
 
-    msg["Subject"] = subject
-    msg["From"] = from_email
-    msg["To"] = to_email
-    msg.set_content(text_body)
-    msg.add_alternative(html_body, subtype="html")
+        payload: dict[str, Any] = {
+            "From": self.from_email,
+            "To": to,
+            "Subject": subject,
+            "HtmlBody": html_body,
+        }
+        if text_body:
+            payload["TextBody"] = text_body
+        if reply_to or self.reply_to_default:
+            payload["ReplyTo"] = reply_to or self.reply_to_default
+        if tag:
+            payload["Tag"] = tag
+        if metadata:
+            payload["Metadata"] = metadata
 
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-        server.starttls()
-        if settings.SMTP_USER and settings.SMTP_PASSWORD:
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.send_message(msg)
+        try:
+            # Postmarker is sync → run in thread
+            result = await asyncio.to_thread(self.client.emails.send, **payload)
+            logger.info("Postmark sent to=%s subject=%s result=%s", to, subject, result)
+            return True
+        except Exception as e:
+            logger.exception(
+                "Postmark send failed to=%s subject=%s err=%s", to, subject, e
+            )
+            return False
 
-    print(f"[email] Offerte-mail verstuurd naar {to_email} voor lead {lead_id}")
+    # ---- Event helpers ----
+
+    async def send_lead_notification(
+        self,
+        *,
+        painter_email: str,
+        tenant_name: str,
+        lead_id: int | str,
+        lead_name: str,
+        lead_email: str,
+        admin_url: Optional[str] = None,
+    ) -> bool:
+        subject = f"Nieuwe lead: {lead_name}"
+        html = self.render(
+            "lead_notification.html",
+            tenant_name=tenant_name,
+            lead_id=lead_id,
+            lead_name=lead_name,
+            lead_email=lead_email,
+            admin_url=admin_url,
+        )
+        text = f"Nieuwe lead: {lead_name} ({lead_email}) — lead_id={lead_id}"
+        return await self.send_email(
+            to=painter_email,
+            subject=subject,
+            html_body=html,
+            text_body=text,
+            tag="new_lead",
+            metadata={"lead_id": str(lead_id)},
+        )
+
+    async def send_quote_ready(
+        self,
+        *,
+        lead_email: str,
+        lead_name: str,
+        tenant_name: str,
+        quote_url: str,
+        lead_id: int | str,
+        tenant_reply_to: Optional[str] = None,
+    ) -> bool:
+        subject = f"Je offerte van {tenant_name} staat klaar"
+        html = self.render(
+            "estimate_ready.html",
+            lead_name=lead_name,
+            tenant_name=tenant_name,
+            quote_url=quote_url,
+        )
+        text = f"Hoi {lead_name}, je offerte staat klaar: {quote_url}"
+        return await self.send_email(
+            to=lead_email,
+            subject=subject,
+            html_body=html,
+            text_body=text,
+            reply_to=tenant_reply_to,
+            tag="quote_ready",
+            metadata={"lead_id": str(lead_id)},
+        )
+
+    async def send_quote_accepted(
+        self,
+        *,
+        painter_email: str,
+        tenant_name: str,
+        lead_id: int | str,
+        lead_name: str,
+        lead_email: str,
+        quote_url: Optional[str] = None,
+        admin_url: Optional[str] = None,
+    ) -> bool:
+        subject = f"Offerte geaccepteerd: {lead_name}"
+        html = self.render(
+            "estimate_accepted.html",
+            tenant_name=tenant_name,
+            lead_id=lead_id,
+            lead_name=lead_name,
+            lead_email=lead_email,
+            quote_url=quote_url,
+            admin_url=admin_url,
+        )
+        text = (
+            f"Offerte geaccepteerd door {lead_name} ({lead_email}) — lead_id={lead_id}"
+        )
+        return await self.send_email(
+            to=painter_email,
+            subject=subject,
+            html_body=html,
+            text_body=text,
+            tag="quote_accepted",
+            metadata={"lead_id": str(lead_id)},
+        )

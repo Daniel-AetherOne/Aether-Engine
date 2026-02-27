@@ -12,6 +12,8 @@ from app.services.email import EmailError, send_postmark_email
 from app.services.storage import get_storage, get_text
 from app.verticals.paintly.email_render import render_estimate_accepted_email
 from app.workflow.status import apply_workflow
+from app.models.user import User
+from app.services.email_service import EmailService
 
 from app.services.workflow import (
     mark_lead_viewed,
@@ -189,6 +191,43 @@ def public_accept(
         ensure_job_for_lead(db, lead)
         apply_workflow(db, lead)
         db.commit()
+
+        # ✅ notify painter/tenant (best-effort)
+        try:
+            painter = (
+                db.query(User)
+                .filter(User.tenant_id == lead.tenant_id)
+                .order_by(User.id.asc())
+                .first()
+            )
+            painter_email = (getattr(painter, "email", "") or "").strip()
+        except Exception:
+            painter_email = ""
+
+        if painter_email:
+            base = (
+                settings.APP_PUBLIC_BASE_URL
+                or str(getattr(settings, "APP_PUBLIC_BASE_URL", ""))
+                or ""
+            ).rstrip("/")
+            if not base:
+                # fallback to relative; still useful internally, but prefer absolute in prod
+                quote_url = f"/e/{lead.public_token}"
+                admin_url = f"/app/leads/{lead.id}"
+            else:
+                quote_url = f"{base}/e/{lead.public_token}"
+                admin_url = f"{base}/app/leads/{lead.id}"
+
+            background.add_task(
+                email_svc.send_quote_accepted,
+                painter_email=painter_email,
+                tenant_name="Paintly",
+                lead_id=lead.id,
+                lead_name=getattr(lead, "name", "") or "—",
+                lead_email=getattr(lead, "email", "") or "",
+                quote_url=quote_url,
+                admin_url=admin_url,
+            )
 
         # optional: send confirmation email (best-effort)
         if getattr(settings, "SEND_ACCEPT_CONFIRMATION_EMAIL", True):

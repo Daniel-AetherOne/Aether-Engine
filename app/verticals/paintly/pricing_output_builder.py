@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional
 
 from app.verticals.paintly.pricing_output_schema import (
@@ -12,6 +12,8 @@ from app.verticals.paintly.pricing_output_schema import (
     PricingTotals,
 )
 
+MONEY_Q = Decimal("0.01")
+
 
 # -------------------------
 # Helpers
@@ -20,6 +22,13 @@ def _val(obj: Any, key: str, default: Any = None) -> Any:
     if isinstance(obj, dict):
         return obj.get(key, default)
     return getattr(obj, key, default)
+
+
+def _money(val: Any, default: Decimal = Decimal("0.00")) -> Decimal:
+    d = _to_decimal(val, default=default)
+    if d is None:
+        d = default
+    return d.quantize(MONEY_Q, rounding=ROUND_HALF_UP)
 
 
 def _to_decimal(
@@ -226,23 +235,25 @@ def build_pricing_output_from_legacy(
 
     line_items: List[PricingLineItem] = []
     for idx, it in enumerate(items, start=1):
-        total_dec = _extract_total_eur(it)
-        if total_dec is None:
+        total_raw = _extract_total_eur(it)
+        if total_raw is None:
             continue
+
+        # ✅ ensure money-safe total (2 decimals)
+        total_dec = _money(total_raw)
 
         qty = _extract_qty(it)
         if qty <= 0:
             qty = 1.0
 
-        qty_dec = _to_decimal(qty, default=Decimal("0.00")) or Decimal("0.00")
+        qty_dec = _to_decimal(qty, default=Decimal("1.00")) or Decimal("1.00")
         if qty_dec == 0:
             qty_dec = Decimal("1.00")
 
-        unit_price = total_dec / qty_dec
+        # ✅ critical: quantize unit_price to money (prevents repeating decimals)
+        unit_price = _money(total_dec / qty_dec)
 
-        desc = _val(it, "notes")
-        if desc is None:
-            desc = _val(it, "description")
+        desc = _val(it, "notes") or _val(it, "description")
 
         line_items.append(
             PricingLineItem(
@@ -261,14 +272,13 @@ def build_pricing_output_from_legacy(
             )
         )
 
-    labor = _to_decimal(
-        pricing_output.get("labor_eur"), default=Decimal("0.00")
-    ) or Decimal("0.00")
-    materials = _to_decimal(
-        pricing_output.get("materials_eur"), default=Decimal("0.00")
-    ) or Decimal("0.00")
+    # ✅ keep buckets money-safe too
+    labor = _money(pricing_output.get("labor_eur"))
+    materials = _money(pricing_output.get("materials_eur"))
 
     pre_tax_amount = _to_decimal(pricing_output.get("total_eur"), default=None)
+    if pre_tax_amount is not None:
+        pre_tax_amount = _money(pre_tax_amount)
 
     if pre_tax_amount is None:
         s = Decimal("0.00")
@@ -276,14 +286,17 @@ def build_pricing_output_from_legacy(
         for li in line_items:
             if li.total is not None:
                 any_item = True
-                s += li.total
+                s += _money(li.total)
         if any_item and s != Decimal("0.00"):
-            pre_tax_amount = s
+            pre_tax_amount = _money(s)
         else:
             if (labor + materials) != Decimal("0.00"):
-                pre_tax_amount = labor + materials
+                pre_tax_amount = _money(labor + materials)
             else:
                 pre_tax_amount = Decimal("0.00")
+
+    # ✅ totals money-safe (even if already quantized, this guarantees schema constraints)
+    pre_tax_amount = _money(pre_tax_amount)
 
     totals = PricingTotals(pre_tax=pre_tax_amount, grand_total=pre_tax_amount)
     subtotals = PricingSubtotals(labor=labor, materials=materials)

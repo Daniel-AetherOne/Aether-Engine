@@ -274,12 +274,6 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
     template_path = assets["template_path"]
     template = env.get_template(template_path)
 
-
-def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> StepResult:
-    env = assets["jinja_env"]
-    template_path = assets["template_path"]
-    template = env.get_template(template_path)
-
     def fmt_eur(v: Any) -> str:
         if v is None:
             return "€0"
@@ -310,9 +304,6 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
             return {}
 
     def _clean_text(s: Any, max_len: int = 240) -> str:
-        """
-        Clean intake text so it never shows injected debug blobs / appended JSON.
-        """
         if not isinstance(s, str):
             s = "" if s is None else str(s)
 
@@ -320,11 +311,9 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
         if not s:
             return ""
 
-        # Normalize whitespace
         s = re.sub(r"\s+", " ", s).strip()
         lower = s.lower()
 
-        # Cut on common injected/debug blobs (case-insensitive)
         cut_markers = [
             "vision_json",
             "vision json",
@@ -343,7 +332,6 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
                 s = s[:idx].strip()
                 lower = s.lower()
 
-        # If JSON still got appended without marker, cut at first "{"
         if "{" in s and not s.lstrip().startswith("{"):
             s = s.split("{", 1)[0].strip()
 
@@ -371,7 +359,7 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
     if not isinstance(pricing_raw, dict):
         pricing_raw = {}
 
-    # ✅ needs_review step runs AFTER render_html. Read reasons from estimate meta.
+    # meta / reasons (needs_review runs after render step)
     meta = pricing.get("meta") if isinstance(pricing.get("meta"), dict) else {}
     reasons = meta.get("needs_review_reasons") or []
     if not isinstance(reasons, list):
@@ -385,17 +373,15 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
     except Exception:
         grand_total = None
 
-    # ✅ FINAL pricing only if non-zero AND not provisional
     pricing_ready = _is_nonzero_money(grand_total) and (not is_provisional)
 
     # -------------------------
-    # ✅ Intake payload → context (US market)
+    # Intake payload → context
     # -------------------------
     lead_payload = (
         _safe_json_dict(getattr(lead, "intake_payload", None)) if lead else {}
     )
 
-    # --- helpers ---
     def _to_float(x: Any) -> float | None:
         try:
             if x is None:
@@ -435,49 +421,39 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
     project_desc = _clean_text(project_desc_raw)
     address = _clean_text(address_raw)
 
-    # Remove duplicate "Address:" prefix if present
     if address and project_desc.lower().startswith("address:"):
         tmp = project_desc[len("address:") :].strip()
         if address.lower() in tmp.lower():
             tmp = re.sub(re.escape(address), "", tmp, flags=re.IGNORECASE).strip()
         project_desc = tmp.strip(" -:;|,").strip()
 
-    # Location: prefer address, else short description
     location = (
         address or (project_desc[:80] + ("…" if len(project_desc) > 80 else "")) or None
     )
 
     # -------------------------
-    # ✅ Area (sqft) selection logic
-    # Priority:
-    # 1) payload.square_feet (manual review UI override should set this)
-    # 2) payload.square_meters -> sqft
-    # 3) lead.square_meters -> sqft (if your model has it)
+    # Area (sqft) selection (kept as-is)
     # -------------------------
     sqft: int | None = None
     source = None
 
-    # 1) explicit sqft
     payload_sqft = _to_int(lead_payload.get("square_feet"))
     if payload_sqft is not None and payload_sqft > 0:
         sqft = payload_sqft
         source = "payload.square_feet"
 
-    # 2) meters from payload
     if sqft is None:
         sqm = _to_float(lead_payload.get("square_meters"))
         if sqm is not None and sqm > 0:
             sqft = int(round(sqm * 10.7639))
             source = "payload.square_meters"
 
-    # 3) meters from lead column
     if sqft is None:
         lead_sqm = _to_float(getattr(lead, "square_meters", None)) if lead else None
         if lead_sqm is not None and lead_sqm > 0:
             sqft = int(round(lead_sqm * 10.7639))
             source = "lead.square_meters"
 
-    # DEBUG (leave for now, remove later)
     try:
         logger.warning(
             "RENDER lead_id=%s sqft=%s source=%s payload_sqft=%s payload_sqm=%s lead_sqm=%s",
@@ -504,13 +480,12 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
         "date": str(meta.get("date") or dt.date.today().isoformat()),
         "valid_until": meta.get("valid_until"),
         "location": location,
-        "square_feet": sqft,  # ✅ US native
+        "square_feet": sqft,
         "description": project_desc or None,
     }
 
     # -------------------------
-    # VAT (NL MVP default)
-    # Template expects `vat` and/or `vat_rate`
+    # ✅ VAT + totals (FIXED)
     # -------------------------
     def _to_float_safe(x: Any) -> float | None:
         try:
@@ -522,18 +497,46 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
         except Exception:
             return None
 
+    def _sum_line_items_total(pr: Dict[str, Any]) -> Decimal:
+        s = Decimal("0.00")
+        for li in pr.get("line_items") or []:
+            if not isinstance(li, dict):
+                continue
+            try:
+                s += Decimal(str(li.get("total") or 0))
+            except Exception:
+                pass
+        return s
+
     vat_rate = _to_float_safe(lead_payload.get("vat_rate"))
     if vat_rate is None:
         vat_rate = 0.09  # MVP: altijd 9%
 
+    subtotal_excl = None
+    try:
+        subtotal_excl = (pricing.get("totals") or {}).get("pre_tax")
+    except Exception:
+        subtotal_excl = None
+
+    if subtotal_excl is None:
+        subtotal_excl = _sum_line_items_total(pricing)
+
+    subtotal_excl_dec = Decimal(str(subtotal_excl or 0)).quantize(Decimal("0.01"))
+    vat_rate_dec = Decimal(str(vat_rate)).quantize(Decimal("0.0001"))
+
+    vat_amount_dec = (subtotal_excl_dec * vat_rate_dec).quantize(Decimal("0.01"))
+    total_incl_dec = (subtotal_excl_dec + vat_amount_dec).quantize(Decimal("0.01"))
+
     vat = {
-        # ✅ aliases for templates (covers vat.vat_rate, vat.rate, vat.percent, etc.)
-        "vat_rate": vat_rate,
-        "rate": vat_rate,
-        "percent": int(round(vat_rate * 100)),
-        "percentage": int(round(vat_rate * 100)),
-        # optional fields some templates reference
-        "amount": None,
+        "subtotal_excl_vat": float(subtotal_excl_dec),
+        "vat_rate": float(vat_rate_dec),
+        "vat_amount": float(vat_amount_dec),
+        "total_incl_vat": float(total_incl_dec),
+        # aliases for templates
+        "rate": float(vat_rate_dec),
+        "percent": int(round(float(vat_rate_dec) * 100)),
+        "percentage": int(round(float(vat_rate_dec) * 100)),
+        "amount": float(vat_amount_dec),
         "included": True,
     }
 
@@ -557,7 +560,7 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
         "exclusions": _default_exclusions(),
         "show_tax": False,
         "vat": vat,
-        "vat_rate": vat_rate,
+        "vat_rate": float(vat_rate_dec),
         "subject_to_verification_copy": "Final price may adjust after on-site verification.",
         "validity_copy": "This estimate is valid for 30 days.",
     }
