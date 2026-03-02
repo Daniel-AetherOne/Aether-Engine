@@ -3,6 +3,8 @@
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-API-green)
 ![Docker](https://img.shields.io/badge/Docker-ready-blue)
+![Architecture](https://img.shields.io/badge/Architecture-Hybrid%20AI-orange)
+![Status](https://img.shields.io/badge/status-active-success)
 
 **A production-style AI decision engine that combines rule-based logic with AI signals to produce explainable, auditable, and controllable outcomes.**
 
