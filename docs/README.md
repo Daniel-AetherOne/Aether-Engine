@@ -8,7 +8,7 @@
 ![Celery](https://img.shields.io/badge/Celery-async-green)
 ![Redis](https://img.shields.io/badge/Redis-cache-red)
 
-**A production-style AI decision engine that combines rule-based logic with AI signals to produce explainable, auditable, and controllable outcomes.**
+**A production-style decision engine combining rule-based control with AI signals to produce explainable, auditable outcomes.**
 
 Aether Engine demonstrates how real-world AI systems move beyond model outputs by structuring decision pipelines that remain transparent, testable, and production-ready.
 
@@ -154,7 +154,7 @@ Aether Engine evolves from a configurable decision engine into a governed AI aut
 - Async processing & observability  
 - Production readiness & scalability  
 
-### v3 · Self-Improving Intelligence (No ML Required)
+### v3 · Self-Improving Intelligence (No Model Retraining Required)
 - Outcome & feedback tracking  
 - Confidence scoring & drift detection  
 - Data-driven decision improvement  
