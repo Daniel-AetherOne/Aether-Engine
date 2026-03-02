@@ -53,43 +53,34 @@ The pipeline keeps AI outputs separate from final decisions, ensuring inspectabi
 
 Aether Engine is designed to evolve into an AI-native decision platform.
 
-To support intelligent automation across multiple industries, the engine includes a foundation for decision agents and domain skill packs.
+To support intelligent automation across multiple industries, the engine includes a foundation for **decision agents** and **domain skill packs**.
 
-Decision Agents
+### Decision Agents
 
 Decision agents represent reusable reasoning roles within the decision pipeline, such as:
 
-intake interpretation
-
-decision validation
-
-exception detection
-
-workflow routing
-
-compliance & policy enforcement
+- intake interpretation
+- decision validation
+- exception detection
+- workflow routing
+- compliance & policy enforcement
 
 These agents orchestrate workflows while preserving explainability, auditability, and human control.
 
-Domain Skill Packs
+### Domain Skill Packs
 
 Domain skill packs provide domain-specific knowledge without modifying the core engine.
 
-Examples:
+**Examples:**
 
-Paintly → surface interpretation, painting scope logic, upsell suggestions
-
-Finance & Risk → risk policies, fraud signals, compliance rules
-
-Logistics → routing priorities and disruption handling
-
-Healthcare operations → protocol validation and claims workflows
+- **Paintly** → surface interpretation, painting scope logic, upsell suggestions  
+- **Finance & Risk** → risk policies, fraud signals, compliance rules  
+- **Logistics** → routing priorities and disruption handling  
+- **Healthcare operations** → protocol validation and claims workflows  
 
 This separation allows Aether Engine to scale across verticals while maintaining governance, transparency, and control.
 
-The agent framework is introduced incrementally and does not add runtime complexity to current workflows.
-
----
+> The agent framework is introduced incrementally and does not add runtime complexity to current workflows.
 
 ## What this project demonstrates
 
