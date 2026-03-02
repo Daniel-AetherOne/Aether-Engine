@@ -1,5 +1,9 @@
 # Aether Engine
 
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-API-green)
+![Docker](https://img.shields.io/badge/Docker-ready-blue)
+
 **A production-style AI decision engine that combines rule-based logic with AI signals to produce explainable, auditable, and controllable outcomes.**
 
 Aether Engine demonstrates how real-world AI systems move beyond model outputs by structuring decision pipelines that remain transparent, testable, and production-ready.
