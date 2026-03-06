@@ -18,6 +18,9 @@ from app.routers.public_estimate import router as public_estimate_router
 from app.models.job import Job
 from app.jobs.runner import start_worker
 from app.routers.quote_debug import router as quote_router
+from app.routers import tenant_pricing
+from app.routers import onboarding
+from app.routers import public_intake
 
 from app.security.basic_auth import BasicAuthMiddleware
 from app.security.rate_limit import SimpleRateLimitMiddleware
@@ -29,6 +32,8 @@ from app import models  # noqa: F401  (registreert SQLAlchemy modellen)
 from app.middleware.request_id import RequestIdMiddleware
 from app.verticals import register_verticals
 from app.routers.app_me import router as app_me_router
+from app.routers import settings_pricing_page
+from fastapi.templating import Jinja2Templates
 
 from fastapi.staticfiles import StaticFiles
 
@@ -113,6 +118,8 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 logger.info("startup", service=getattr(settings, "SERVICE_NAME", "aether-api"))
 
+
+app.state.templates = Jinja2Templates(directory="app/templates")
 
 # ----------------------------------------------------
 # Middleware
@@ -201,10 +208,14 @@ app.include_router(metrics_router)  # /metrics
 app.include_router(internal.router)
 app.include_router(auth_router)
 app.include_router(app_me_router)
+app.include_router(tenant_pricing.router)
+app.include_router(settings_pricing_page.router)
+app.include_router(public_intake.router)
 # app.include_router(app_dashboard_router)
 app.include_router(paintly_app_router)
 app.include_router(public_estimate_router)
 app.include_router(quote_router)
+app.include_router(onboarding.router)
 
 # Optional ACE routers
 ACE_ENABLED = _env_truthy("ACE_ENABLED", "false")

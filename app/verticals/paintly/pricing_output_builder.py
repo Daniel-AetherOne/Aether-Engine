@@ -239,7 +239,6 @@ def build_pricing_output_from_legacy(
         if total_raw is None:
             continue
 
-        # ✅ ensure money-safe total (2 decimals)
         total_dec = _money(total_raw)
 
         qty = _extract_qty(it)
@@ -250,26 +249,26 @@ def build_pricing_output_from_legacy(
         if qty_dec == 0:
             qty_dec = Decimal("1.00")
 
-        # ✅ critical: quantize unit_price to money (prevents repeating decimals)
         unit_price = _money(total_dec / qty_dec)
 
         desc = _val(it, "notes") or _val(it, "description")
 
         surface_type = _val(it, "surface_type")
-    if surface_type and not _val(it, "label"):
-        labels = {
-            "walls": "Wanden schilderen",
-            "ceilings": "Plafond schilderen",
-            "trim": "Plinten & aftimmering",
-            "doors": "Deuren schilderen",
-            "exterior_siding": "Buitengevel schilderen",
-        }
-        it = {**it, "label": labels.get(str(surface_type), "Schilderwerk")}
+        label = _val(it, "label") or _val(it, "name")
+        if surface_type and not label:
+            labels = {
+                "walls": "Wanden schilderen",
+                "ceilings": "Plafond schilderen",
+                "trim": "Plinten & aftimmering",
+                "doors": "Deuren schilderen",
+                "exterior_siding": "Buitengevel schilderen",
+            }
+            label = labels.get(str(surface_type), "Schilderwerk")
 
         line_items.append(
             PricingLineItem(
                 code=str(_val(it, "code") or _val(it, "id") or f"item_{idx}"),
-                label=str(_val(it, "label") or _val(it, "name") or f"Item {idx}"),
+                label=str(label or f"Item {idx}"),
                 description=str(desc) if desc else None,
                 quantity=float(qty),
                 unit=str(_val(it, "unit") or _val(it, "uom") or "job"),
@@ -283,7 +282,6 @@ def build_pricing_output_from_legacy(
             )
         )
 
-    # ✅ keep buckets money-safe too
     labor = _money(pricing_output.get("labor_eur"))
     materials = _money(pricing_output.get("materials_eur"))
 
@@ -306,7 +304,6 @@ def build_pricing_output_from_legacy(
             else:
                 pre_tax_amount = Decimal("0.00")
 
-    # ✅ totals money-safe (even if already quantized, this guarantees schema constraints)
     pre_tax_amount = _money(pre_tax_amount)
 
     totals = PricingTotals(pre_tax=pre_tax_amount, grand_total=pre_tax_amount)

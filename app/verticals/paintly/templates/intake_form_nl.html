@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Vraag je schilderofferte aan — {{ tenant_id or "Paintly" }}</title>
+  <title>Vraag je schilderofferte aan — {{ tenant.company_name or tenant.name or "Paintly" }}</title>
 
   <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico ">
   <script src="https://cdn.tailwindcss.com "></script>
@@ -29,25 +29,60 @@
 <body class="bg-slate-50 text-slate-900 antialiased min-h-screen">
   
   <!-- Header -->
-  <div class="bg-white border-b border-slate-200">
-    <div class="mx-auto max-w-6xl px-4 py-4">
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-          </div>
-          <div>
-            <h1 class="text-lg font-bold text-slate-900">Vraag je gratis offerte aan</h1>
-            <p class="text-xs text-slate-500">Snelle, gedetailleerde prijsopgave op basis van je foto's</p>
-          </div>
+<div class="bg-white border-b border-slate-200">
+  <div class="mx-auto max-w-6xl px-4 py-4">
+    <div class="flex items-center justify-between gap-4">
+
+      <!-- Logo + Title -->
+      <div class="flex items-center gap-3">
+
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+          </svg>
         </div>
-        
-        <div class="hidden sm:flex items-center gap-2 text-xs text-slate-500">
-          <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-medium">Reactie binnen 5-10 min</span>
+
+        <div>
+          <h1 class="text-lg font-bold text-slate-900">
+            Vraag je gratis offerte aan
+          </h1>
+
+          <p class="text-xs text-slate-500">
+            Snelle prijsopgave op basis van je foto's
+          </p>
+
+          {% if tenant %}
+          <div class="mt-1 flex items-center gap-2 text-xs text-slate-600">
+            
+            <span>Offerteaanvraag voor</span>
+
+            <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 font-semibold text-blue-700">
+              {{ tenant.company_name or tenant.name }}
+            </span>
+
+          </div>
+          {% endif %}
         </div>
+
       </div>
+
+      <!-- Trust badge -->
+      <div class="hidden sm:flex items-center gap-2 text-xs text-slate-500">
+
+        <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-medium">
+          Reactie binnen 5-10 min
+        </span>
+
+        <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
+          AI offerte
+        </span>
+
+      </div>
+
     </div>
   </div>
+</div>
 
   <!-- Progress steps -->
   <div class="bg-white border-b border-slate-200">
@@ -98,11 +133,11 @@
 		
 
         <form id="intakeForm" enctype="multipart/form-data" class="space-y-6">
-          <input type="hidden" name="tenant_id" value="{{ tenant_id or 'paintly' }}" />
+          <input type="hidden" name="tenant_id" value="{{ tenant.id }}" />
           <input type="hidden" name="vertical" value="{{ vertical or 'paintly' }}" />
           <input type="hidden" name="area_unit" value="sqm" />
           <input type="hidden" name="lead_id" id="lead_id" value="" />
-		    <label class="block text-sm font-medium text-slate-700 mt-4" for="country">Land</label>
+		  <!--   <label class="block text-sm font-medium text-slate-700 mt-4" for="country">Land</label>
   <select id="country" name="country" required class="mt-1 w-full rounded-md border border-slate-300 p-2">
     <option value="NL" selected>Nederland</option>
     <option value="BE">België</option>
@@ -123,7 +158,7 @@
 
 <input type="hidden" name="vat_rate" id="vat_rate" value="" />
 <input type="hidden" name="currency" id="currency" value="" />
-<input type="hidden" name="timezone" id="timezone" value="" />
+<input type="hidden" name="timezone" id="timezone" value="" /> -->
 
           <!-- Contact section -->
           <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -388,7 +423,7 @@
 
   <!-- JavaScript (unchanged functionality) -->
   <script>
-    const TENANT_ID = "{{ tenant_id or 'paintly' }}";
+    const TENANT_ID = "{{ tenant.id }}";
     const VERTICAL_SLUG = "paintly";
 
     const MAX_FILES = 5;

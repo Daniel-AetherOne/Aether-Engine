@@ -7,7 +7,9 @@
     <!-- Logo -->
     <div class="flex justify-center mb-8">
       <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-600/20">
-        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+        </svg>
       </div>
     </div>
 
@@ -17,7 +19,7 @@
       <!-- Header -->
       <div class="border-b border-slate-100 bg-slate-50/50 px-8 py-6 text-center">
         <h1 class="text-xl font-bold text-slate-900">Create your account</h1>
-        <p class="text-sm text-slate-500 mt-1">Start generating AI-powered estimates</p>
+        <p class="text-sm text-slate-500 mt-1">Set up your company and pricing</p>
       </div>
 
       <!-- Form -->
@@ -31,10 +33,18 @@
             </label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
               </div>
-              <input id="company_name" name="company_name" type="text" required placeholder="Acme Painting Co."
-                class="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
+              <input
+                id="company_name"
+                name="company_name"
+                type="text"
+                required
+                placeholder="Acme Painting Co."
+                class="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              >
             </div>
           </div>
 
@@ -45,10 +55,63 @@
             </label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/></svg>
+                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+                </svg>
               </div>
-              <input id="email" name="email" type="email" required placeholder="you@company.com"
-                class="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                placeholder="you@company.com"
+                class="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              >
+            </div>
+          </div>
+
+          <!-- Phone -->
+          <div>
+            <label for="phone" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+              Phone
+            </label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.95.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.129a11.042 11.042 0 005.516 5.516l1.129-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.95V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                </svg>
+              </div>
+              <input
+                id="phone"
+                name="phone"
+                type="text"
+                placeholder="+31 6 12345678"
+                class="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              >
+            </div>
+          </div>
+
+          <!-- Wall Rate -->
+          <div>
+            <label for="walls_rate_eur_per_sqm" class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+              Wall Rate (€ per m²)
+            </label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2.21 0-4 .895-4 2s1.79 2 4 2 4 .895 4 2-1.79 2-4 2m0-10v12m0-12c1.657 0 3 .672 3 1.5M12 8c-1.657 0-3 .672-3 1.5"/>
+                </svg>
+              </div>
+              <input
+                id="walls_rate_eur_per_sqm"
+                name="walls_rate_eur_per_sqm"
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                placeholder="40"
+                class="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              >
             </div>
           </div>
 
@@ -59,17 +122,27 @@
             </label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
               </div>
-              <input id="password" name="password" type="password" required placeholder="••••••••"
-                class="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                placeholder="••••••••"
+                class="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              >
             </div>
             <p class="mt-1.5 text-xs text-slate-500">Must be at least 8 characters</p>
           </div>
 
           <!-- Submit -->
-          <button type="submit"
-            class="w-full h-11 rounded-lg bg-blue-600 px-4 text-sm font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all">
+          <button
+            type="submit"
+            class="w-full h-11 rounded-lg bg-blue-600 px-4 text-sm font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
+          >
             Create Account
           </button>
         </form>
@@ -96,8 +169,8 @@
 
     <!-- Footer -->
     <p class="mt-8 text-center text-xs text-slate-400">
-      By creating an account, you agree to our 
-      <a href="#" class="underline hover:text-slate-600">Terms</a> and 
+      By creating an account, you agree to our
+      <a href="#" class="underline hover:text-slate-600">Terms</a> and
       <a href="#" class="underline hover:text-slate-600">Privacy Policy</a>
     </p>
 

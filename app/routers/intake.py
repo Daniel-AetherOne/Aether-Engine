@@ -75,7 +75,15 @@ async def _create_lead_impl(
 ):
     v = _get_vertical_or_404(vertical)
 
-    tenant_id = str(user.tenant_id) if user else "dev-tenant"
+    form = await request.form()
+    form_tenant_id = (form.get("tenant_id") or "").strip()
+
+    if form_tenant_id:
+        tenant_id = form_tenant_id
+    elif user and user.tenant_id:
+        tenant_id = str(user.tenant_id)
+    else:
+        tenant_id = "dev-tenant"
 
     # ✅ Upsert: als lead_id in form zit → update existing lead
     if hasattr(v, "upsert_lead_from_form"):

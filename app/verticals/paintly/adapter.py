@@ -100,15 +100,25 @@ def _resolve_eu_cfg_from_form(form_dict: dict, payload_data: dict) -> dict:
 class PaintlyAdapter(VerticalAdapter):
     vertical_id = "paintly"
 
-    def render_intake_form(self, request, lead_id: str, tenant_id: str = "public"):
+    def render_intake_form(
+        self,
+        request,
+        lead_id: str,
+        tenant_id: str = "public",
+        extra_context: dict | None = None,
+    ):
+        context = {
+            "request": request,
+            "lead_id": lead_id,
+            "tenant_id": tenant_id,
+            "vertical": self.vertical_id,
+        }
+        if extra_context:
+            context.update(extra_context)
+
         return paintly_templates.TemplateResponse(
             "intake_form_nl.html",
-            {
-                "request": request,
-                "lead_id": lead_id,
-                "tenant_id": tenant_id,
-                "vertical": self.vertical_id,
-            },
+            context,
         )
 
     def run_vision(self, db: Session, lead_id: int) -> dict:

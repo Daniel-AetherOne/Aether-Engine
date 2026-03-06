@@ -15,13 +15,17 @@ from aether.engine.context import PipelineState, StepResult
 
 from decimal import Decimal, InvalidOperation
 
-from app.models import Lead
+from app.models import Lead, Tenant
 from app.models.upload_record import UploadRecord, UploadStatus
 from app.services.photo_quality.inference import predict_photo_quality
+from app.services.tenant_pricing import apply_paintly_tenant_pricing_overrides
 from app.services.storage import get_storage
 from app.tasks.vision_task import run_vision_for_lead
 from app.verticals.paintly.needs_review import needs_review_from_output
-from app.verticals.paintly.pricing_engine_us import run_pricing_engine
+from app.verticals.paintly.pricing_engine_us import (
+    run_pricing_engine,
+    load_rules_default,
+)
 from app.verticals.paintly.pricing_output_builder import build_pricing_output
 from app.verticals.paintly.vision_aggregate_us import (
     aggregate_images_to_surfaces as aggregate_vision,
@@ -270,12 +274,46 @@ def step_aggregate_v1(
 # -------------------------
 def step_pricing_v1(state: PipelineState, step: StepConfig, assets: dict) -> StepResult:
     lead: Lead = assets["lead"]
+    db: Session = assets["db"]
     rules = assets.get("rules") if isinstance(assets, dict) else None
 
     vision = (state.data.get("steps") or {}).get("aggregate", {}).get("vision")
     vision = _ensure_obj(vision)
 
-    pricing = run_pricing_engine(lead, vision, rules=rules)
+    # Always make sure rules is a dict
+    base_rules = _ensure_obj(rules) if rules is not None else load_rules_default()
+    if not isinstance(base_rules, dict):
+        base_rules = load_rules_default()
+
+    # Load tenant explicitly from DB (do not rely on lead.tenant relationship)
+    tenant = None
+    try:
+        tenant = (
+            db.query(Tenant)
+            .filter(Tenant.id == getattr(lead, "tenant_id", None))
+            .first()
+        )
+    except Exception:
+        tenant = None
+
+    effective_rules = apply_paintly_tenant_pricing_overrides(base_rules, tenant)
+
+    try:
+        logger.info(
+            "PAINTLY_PRICING tenant_id=%s tenant_pricing=%s default_walls_rate=%s effective_walls_rate=%s",
+            getattr(lead, "tenant_id", None),
+            getattr(tenant, "pricing_json", None) if tenant else None,
+            ((base_rules or {}).get("base_rates") or {})
+            .get("walls", {})
+            .get("rate_eur"),
+            ((effective_rules or {}).get("base_rates") or {})
+            .get("walls", {})
+            .get("rate_eur"),
+        )
+    except Exception:
+        pass
+
+    pricing = run_pricing_engine(lead, vision, rules=effective_rules)
     pricing = _ensure_obj(pricing)
 
     return StepResult(status="OK", data={"pricing": pricing})
@@ -291,6 +329,15 @@ def step_output_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
     pricing = (state.data.get("steps") or {}).get("pricing", {}).get("pricing")
     vision = _ensure_obj(vision)
     pricing = _ensure_obj(pricing)
+
+    try:
+        logger.info(
+            "PRICING_RAW_FOR_OUTPUT lead_id=%s pricing=%s",
+            getattr(lead, "id", None),
+            pricing,
+        )
+    except Exception:
+        pass
 
     estimate = build_pricing_output(lead, vision, pricing)
     estimate = _ensure_obj(estimate)
@@ -549,8 +596,12 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
         return s
 
     vat_rate = _to_float_safe(lead_payload.get("vat_rate"))
+
     if vat_rate is None:
-        vat_rate = 0.21  # MVP: altijd 9%
+        if lead_payload.get("home_older_than_2_years") is False:
+            vat_rate = 0.21
+    else:
+        vat_rate = 0.09
 
     subtotal_excl = None
     try:
@@ -699,7 +750,22 @@ def step_needs_review_v1(
     ) or {}
     estimate = _ensure_obj(estimate)
 
+    # also inspect aggregate output directly
+    aggregate_data = (state.data.get("steps") or {}).get("aggregate", {}).get(
+        "vision"
+    ) or {}
+    aggregate_data = _ensure_obj(aggregate_data)
+
     reasons = needs_review_from_output(estimate) or []
+
+    aggregate_needs_review = False
+    aggregate_reasons = []
+
+    if isinstance(aggregate_data, dict):
+        aggregate_needs_review = bool(aggregate_data.get("needs_review", False))
+        aggregate_reasons = aggregate_data.get("review_reasons") or []
+        if not isinstance(aggregate_reasons, list):
+            aggregate_reasons = [str(aggregate_reasons)]
 
     pq = (
         (state.data.get("steps") or {})
@@ -715,7 +781,11 @@ def step_needs_review_v1(
         if pq_bad and not prior_reasons:
             prior_reasons = ["photo_quality_bad"]
 
-    merged_reasons = list(dict.fromkeys((prior_reasons or []) + (reasons or [])))
+        merged_reasons = list(
+            dict.fromkeys(
+                (prior_reasons or []) + (aggregate_reasons or []) + (reasons or [])
+            )
+        )
 
     PRICING_BLOCKERS = {
         "no_pricing_match",
@@ -724,7 +794,7 @@ def step_needs_review_v1(
     }
 
     pricing_blocked = any(r in PRICING_BLOCKERS for r in (reasons or []))
-    needs_review = bool(pq_bad or pricing_blocked)
+    needs_review = bool(pq_bad or pricing_blocked or aggregate_needs_review)
 
     if isinstance(estimate, dict):
         meta = estimate.get("meta") if isinstance(estimate.get("meta"), dict) else {}
@@ -734,6 +804,16 @@ def step_needs_review_v1(
             "pricing_blocked": pricing_blocked,
         }
         estimate["meta"] = meta
+
+    print(
+        "NEEDS_REVIEW DEBUG:",
+        {
+            "pq_bad": pq_bad,
+            "pricing_blocked": pricing_blocked,
+            "aggregate_needs_review": aggregate_needs_review,
+            "merged_reasons": merged_reasons,
+        },
+    )
 
     return StepResult(
         status="NEEDS_REVIEW" if needs_review else "OK",

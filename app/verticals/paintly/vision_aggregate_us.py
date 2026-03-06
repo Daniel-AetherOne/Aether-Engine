@@ -49,6 +49,63 @@ def _bool_any(preds: List[Dict[str, Any]], issue: str) -> bool:
     return False
 
 
+def _wall_repair_or_wallpaper_likely(preds: List[Dict[str, Any]]) -> bool:
+    """
+    MVP heuristic:
+    detect obvious heavy prep / wallpaper removal / damaged substrate situations
+    from loosely structured issue labels coming from vision.
+    """
+    repair_keywords = {
+        "scheuren",
+        "vocht",
+        "behang",
+        "behang_verwijderen",
+        "wallpaper",
+        "wallpaper_removal",
+        "loslatend",
+        "afbladderen",
+        "peeling",
+        "schade",
+        "damage",
+        "repair",
+        "plamuur",
+        "filler",
+        "rough_wall",
+        "ruwe_muur",
+        "exposed_plaster",
+        "stuc_zichtbaar",
+    }
+
+    for p in preds:
+        issues = p.get("issues") or []
+        if isinstance(issues, str):
+            issues = [issues]
+
+        # direct issue match
+        for issue in issues:
+            try:
+                s = str(issue).strip().lower()
+            except Exception:
+                continue
+            if s in repair_keywords:
+                return True
+
+        # optional free-text fields if your predictor emits them
+        for key in ("label", "description", "notes", "summary"):
+            val = p.get(key)
+            if not val:
+                continue
+            try:
+                s = str(val).strip().lower()
+            except Exception:
+                continue
+            for kw in repair_keywords:
+                if kw in s:
+                    return True
+
+    return False
+
+
 def _collect_issue_evidence(
     preds: List[Dict[str, Any]],
 ) -> Tuple[Dict[str, bool], List[Dict[str, Any]]]:
@@ -276,6 +333,7 @@ def aggregate_images_to_quote_inputs(
 
     flags, evidences = _collect_issue_evidence(preds)
     decision_vars = _derive_decision_vars(flags, scope)
+    heavy_prep_likely = _wall_repair_or_wallpaper_likely(preds)
 
     # Per-variable confidence (MVP): evidence-based; defaults conservative
     prep_conf = _confidence_from_evidence(
@@ -301,14 +359,27 @@ def aggregate_images_to_quote_inputs(
         review_reasons.append(sanity["reason"])
 
     # Image count sanity
-    if len(preds) < 3:
+    if len(preds) == 0:
         needs_review = True
-        review_reasons.append("few_images")
+        review_reasons.append("no_images")
+
+    elif len(preds) == 1 and overall < 0.55:
+        needs_review = True
+        review_reasons.append("few_images_low_confidence")
+
+    # MVP guardrail: obvious heavy prep / wallpaper removal / damaged wall
+    if heavy_prep_likely:
+        needs_review = True
+        review_reasons.append("wall_repair_or_wallpaper_likely")
 
     # Confidence-based review (new, explicit)
     if overall < 0.55:
         needs_review = True
         review_reasons.append("low_overall_confidence")
+
+    if heavy_prep_likely:
+        decision_vars["prep_level"] = "high"
+        decision_vars["complexity_level"] = "high"
 
     # Keep old guardrail behavior: if vision signal is weak, bias complexity upward (prevents underquotes)
     legacy_mods = _legacy_modifiers_from_levels(decision_vars, flags)
@@ -319,6 +390,9 @@ def aggregate_images_to_quote_inputs(
 
     # pricing_ready: area must exist & not obviously nonsense
     pricing_ready = (estimated_area_m2 is not None) and (estimated_area_m2 >= 8)
+
+    # dedupe reasons
+    review_reasons = list(dict.fromkeys(review_reasons))
 
     return {
         "area": {

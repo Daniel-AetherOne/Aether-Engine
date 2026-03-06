@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pricing Settings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 0 16px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 24px;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        input[type="number"] {
+            width: 100%;
+            max-width: 240px;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+        button {
+            padding: 10px 16px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .success {
+            background: #eefaf0;
+            border: 1px solid #b7e3c0;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        .hint {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Pricing instellingen</h1>
+
+        {% if saved %}
+        <div class="success">
+            Opgeslagen.
+        </div>
+        {% endif %}
+
+        <form method="post" action="/settings/pricing">
+            <label for="walls_rate_eur_per_sqm">Prijs per m² muren (€)</label>
+            <input
+                id="walls_rate_eur_per_sqm"
+                name="walls_rate_eur_per_sqm"
+                type="number"
+                step="0.01"
+                min="5"
+                max="100"
+                required
+                value="{{ walls_rate_eur_per_sqm if walls_rate_eur_per_sqm is not none else '' }}"
+            />
+
+            <button type="submit">Opslaan</button>
+        </form>
+
+        <p class="hint">
+            Deze prijs wordt gebruikt voor nieuwe Paintly offertes voor muren.
+        </p>
+    </div>
+</body>
+</html>

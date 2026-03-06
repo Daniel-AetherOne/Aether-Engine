@@ -84,15 +84,30 @@ def login_form(
 def register_form(
     company_name: str = Form(...),
     email: str = Form(...),
+    phone: str = Form(None),
+    walls_rate_eur_per_sqm: float = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
+    company_name_clean = company_name.strip()
     email_norm = email.lower().strip()
+    phone_clean = phone.strip() if phone else None
+
     existing = db.query(User).filter(User.email == email_norm).first()
     if existing:
         return RedirectResponse(url="/auth/login", status_code=302)
 
-    tenant = Tenant(id=str(uuid4()), name=company_name.strip())
+    tenant = Tenant(
+        id=str(uuid4()),
+        name=company_name_clean,
+        company_name=company_name_clean,
+        email=email_norm,
+        phone=phone_clean,
+        pricing_json={
+            "walls_rate_eur_per_sqm": float(walls_rate_eur_per_sqm),
+        },
+    )
+
     user = User(
         id=str(uuid4()),
         tenant_id=tenant.id,
@@ -104,12 +119,14 @@ def register_form(
     db.add(tenant)
     db.add(user)
     db.commit()
+    db.refresh(tenant)
+    db.refresh(user)
 
     token = create_access_token(
         user_id=user.id, tenant_id=user.tenant_id, email=user.email
     )
 
-    resp = RedirectResponse(url="/app/leads", status_code=302)
+    resp = RedirectResponse(url="/app/leads", status_code=303)
     resp.set_cookie(
         key="access_token",
         value=token,

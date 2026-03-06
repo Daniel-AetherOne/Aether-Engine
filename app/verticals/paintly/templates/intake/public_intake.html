@@ -1,0 +1,42 @@
+{% extends "app/layout.html" %}
+{% block content %}
+
+<div class="max-w-2xl mx-auto py-16 px-4">
+
+  <h1 class="text-2xl font-bold text-slate-900 mb-4">
+    Request a Painting Quote
+  </h1>
+
+  <p class="text-slate-600 mb-8">
+    You are requesting a quote from <strong>{{ tenant.company_name or tenant.name }}</strong>.
+  </p>
+
+  <form class="space-y-4">
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700">Your Name</label>
+      <input type="text" class="mt-1 w-full border rounded-lg px-3 py-2">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700">Email</label>
+      <input type="email" class="mt-1 w-full border rounded-lg px-3 py-2">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700">Upload Photos</label>
+      <input type="file" multiple class="mt-1">
+    </div>
+
+    <button
+      type="submit"
+      class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+    >
+      Submit request
+    </button>
+
+  </form>
+
+</div>
+
+{% endblock %}
