@@ -12,6 +12,11 @@ US_PAINTERS_NEEDS_REVIEW_COPY = {
     ),
 }
 
+PAINTLY_NEEDS_REVIEW_COPY = {
+    "intro": "We hebben nog een korte handmatige check nodig om de prijs 100% zeker te maken.",
+    "range_explanation": "We bevestigen oppervlakken, voorbereiding en bereikbaarheid. Daarna ontvang je de definitieve prijs.",
+}
+
 
 def _get(d: Dict[str, Any], path: str, default=None):
     cur: Any = d
@@ -65,6 +70,19 @@ def needs_review_from_output(estimate: Any) -> List[str]:
     # SOFT signals (only escalate if multiple)
     # ------------------------------------------------------------------
 
+    # Vision wants manual review (MVP safety rail)
+    vision_needs_review = _get(estimate, "meta.vision_needs_review", None)
+    if vision_needs_review is True:
+        # treat as a soft signal; it will trigger review if another soft signal is present
+        soft.append("vision_needs_review")
+
+        # add the specific reasons (also soft)
+        vr = _get(estimate, "meta.vision_review_reasons", None)
+        if isinstance(vr, list):
+            for r in vr:
+                if isinstance(r, str) and r:
+                    soft.append(f"vision:{r}")
+
     # Line items presence
     items = _get(estimate, "line_items", None) or _get(estimate, "items", None)
     if not items or (isinstance(items, list) and len(items) == 0):
@@ -96,20 +114,18 @@ def needs_review_from_output(estimate: Any) -> List[str]:
 
     # Area checks (optional; only if you actually store it in output)
     # Keep this non-blocking.
-    area = (
-        _get(estimate, "inputs.area_sqft", None)
-        or _get(estimate, "square_feet", None)
-        or _get(estimate, "meta.square_feet", None)
+    area_m2 = _get(estimate, "meta.area_m2", None) or _get(
+        estimate, "inputs.area_m2", None
     )
-    if area is not None:
+    if area_m2 is not None:
         try:
-            area_val = float(area)
-            if area_val <= 0:
-                soft.append("area_non_positive")
-            if area_val > 20000:
-                soft.append("area_too_large")
+            a = float(area_m2)
+            if a < 8:
+                soft.append("area_m2_too_small")
+            if a > 250:
+                soft.append("area_m2_too_large")
         except Exception:
-            soft.append("area_not_numeric")
+            soft.append("area_m2_not_numeric")
 
     # Escalate only if multiple soft signals
     if len(soft) >= 2:

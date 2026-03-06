@@ -255,6 +255,17 @@ def build_pricing_output_from_legacy(
 
         desc = _val(it, "notes") or _val(it, "description")
 
+        surface_type = _val(it, "surface_type")
+    if surface_type and not _val(it, "label"):
+        labels = {
+            "walls": "Wanden schilderen",
+            "ceilings": "Plafond schilderen",
+            "trim": "Plinten & aftimmering",
+            "doors": "Deuren schilderen",
+            "exterior_siding": "Buitengevel schilderen",
+        }
+        it = {**it, "label": labels.get(str(surface_type), "Schilderwerk")}
+
         line_items.append(
             PricingLineItem(
                 code=str(_val(it, "code") or _val(it, "id") or f"item_{idx}"),

@@ -389,6 +389,8 @@ def send_estimate(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
 ):
+    logger.warning("SEND_ESTIMATE_HIT lead_id=%s", lead_id)
+
     lead = (
         db.query(Lead)
         .filter(Lead.id == lead_id, Lead.tenant_id == str(current_user.tenant_id))
@@ -404,50 +406,56 @@ def send_estimate(
     if not lead.public_token:
         lead.public_token = secrets.token_hex(16)
 
-    # build public url
+    # build public quote url
     base = (settings.APP_PUBLIC_BASE_URL or str(request.base_url)).rstrip("/")
     public_url = f"{base}/e/{lead.public_token}"
 
-    # must have an email
+    # must have email
     to_email = (getattr(lead, "email", "") or "").strip()
     if not to_email:
         raise HTTPException(status_code=400, detail="Lead has no email address")
 
-    # render email html (existing renderer)
+    # render email html
     company_name = "Paintly"
     customer_name = getattr(lead, "name", "") or ""
+
     email_html = render_estimate_ready_email(
         customer_name=customer_name,
         public_url=public_url,
         company_name=company_name,
     )
 
-    # background send task
-    def _send_email_task():
-        logger.info("EMAIL_TASK_START lead_id=%s to=%s", lead.id, to_email)
+    # background email task
+    def send_email():
+        logger.info("Sending estimate email to %s", to_email)
         try:
             send_postmark_email(
                 to=to_email,
-                subject="Je offerte van Paintly staat klaar",
+                subject="Je offerte staat klaar",
                 html_body=email_html,
-                metadata={"lead_id": str(lead.id), "tenant_id": str(lead.tenant_id)},
+                metadata={
+                    "lead_id": str(lead.id),
+                    "tenant_id": str(lead.tenant_id),
+                },
             )
-            logger.info("EMAIL_TASK_DONE lead_id=%s to=%s", lead.id, to_email)
         except Exception:
-            logger.exception("estimate_email_send_failed lead_id=%s", lead.id)
+            logger.exception("Email send failed for lead %s", lead.id)
 
-    background_tasks.add_task(_send_email_task)
+    background_tasks.add_task(send_email)
 
-    # mark sent (queued)
+    # mark as sent
     lead.status = "SENT"
     lead.sent_at = _utcnow()
+
     db.add(lead)
     db.commit()
 
-    # ✅ IMPORTANT: attach background tasks to the RedirectResponse explicitly
-    resp = RedirectResponse(url=f"/app/leads/{lead_id}?sent=1", status_code=303)
-    resp.background = background_tasks
-    return resp
+    response = RedirectResponse(
+        url=f"/app/leads/{lead_id}?sent=1",
+        status_code=303,
+    )
+    response.background = background_tasks
+    return response
 
 
 # -------------------------

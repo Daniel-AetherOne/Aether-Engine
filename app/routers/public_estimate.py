@@ -62,7 +62,7 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
     show_accepted_banner = (lead_status == "ACCEPTED") or accepted_param
 
     accepted_banner = ""
-    if show_accepted_banner and not show_accept:
+    if show_accepted_banner:
         accepted_banner = """
 <div class="no-print sticky top-0 z-[9999] border-b border-emerald-200 bg-emerald-50">
   <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
@@ -158,8 +158,12 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
         throw new Error((data && (data.detail || data.error)) || 'Failed to accept');
       }}
 
-      show('success', 'Redirecting…');
-      setTimeout(() => {{ window.location.href = '/e/{token}?accepted=1'; }}, 450);
+      let data = {};
+try { data = await res.json(); } catch(_) {}
+show('success', 'Redirecting…');
+setTimeout(() => {
+  window.location.href = (data && data.redirect) ? data.redirect : '/e/{token}?accepted=1';
+}, 350);
     }} catch (err) {{
       show('error', err && err.message ? err.message : 'Something went wrong');
       btn.disabled = false;
@@ -179,7 +183,10 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
 
 @router.post("/{token}/accept")
 def public_accept(
-    token: str, background: BackgroundTasks, db: Session = Depends(get_db)
+    token: str,
+    request: Request,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
 ):
     lead = db.query(Lead).filter(Lead.public_token == token).first()
     if not lead:
@@ -263,4 +270,10 @@ def public_accept(
 
                 background.add_task(_send)
 
-    return RedirectResponse(url=f"/e/{token}?accepted=1", status_code=303)
+    redirect_url = f"/e/{token}?accepted=1"
+
+    accept = (request.headers.get("accept") or "").lower()
+    if "application/json" in accept:
+        return JSONResponse({"ok": True, "redirect": redirect_url})
+
+    return RedirectResponse(url=redirect_url, status_code=303)

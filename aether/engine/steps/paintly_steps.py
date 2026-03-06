@@ -216,10 +216,50 @@ def step_vision_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
 def step_aggregate_v1(
     state: PipelineState, step: StepConfig, assets: dict
 ) -> StepResult:
+    db: Session = assets["db"]
+    lead: Lead = assets["lead"]
+
     vision_raw = (state.data.get("steps") or {}).get("vision", {}).get("vision_raw")
     vision_raw = _ensure_obj(vision_raw)
 
-    vision = aggregate_vision(vision_raw)
+    # --- area ophalen uit intake_payload of lead.square_meters ---
+    estimated_area_m2 = None
+    try:
+        raw = getattr(lead, "intake_payload", None)
+        payload = json.loads(raw) if isinstance(raw, str) and raw.strip() else {}
+        if isinstance(payload, dict):
+            v = (
+                payload.get("square_meters")
+                or payload.get("area_m2")
+                or payload.get("sqm")
+            )
+            if v is not None:
+                estimated_area_m2 = float(v)
+    except Exception:
+        pass
+
+    if estimated_area_m2 is None:
+        try:
+            v = getattr(lead, "square_meters", None)
+            if v is not None:
+                estimated_area_m2 = float(v)
+        except Exception:
+            pass
+
+    # scope (MVP default)
+    scope = {
+        "interior": True,
+        "paint_walls": True,
+        "paint_ceiling": False,
+        "paint_trim": False,
+    }
+
+    # ✅ nu wél correct
+    vision = aggregate_vision(
+        vision_raw,
+        estimated_area_m2=estimated_area_m2,
+        scope=scope,
+    )
     vision = _ensure_obj(vision)
 
     return StepResult(status="OK", data={"vision": vision})
@@ -510,7 +550,7 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
 
     vat_rate = _to_float_safe(lead_payload.get("vat_rate"))
     if vat_rate is None:
-        vat_rate = 0.09  # MVP: altijd 9%
+        vat_rate = 0.21  # MVP: altijd 9%
 
     subtotal_excl = None
     try:

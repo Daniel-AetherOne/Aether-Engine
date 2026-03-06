@@ -131,13 +131,7 @@ def _inject_overrides_from_lead(
 
     # 3) Surface type fallback (critical: base_rates lookup)
     if not vs.get("surface_type"):
-        # If you have more job types later, map them here.
-        jt = (payload.get("job_type") or "").lower().strip()
-        if jt:
-            # For now: interior defaults to walls pricing baseline
-            vs["surface_type"] = "walls"
-        else:
-            vs["surface_type"] = "walls"
+        vs["surface_type"] = "walls"
 
     return vs
 
@@ -219,6 +213,109 @@ def _has_pricing_area(rate_cfg: Dict[str, Any], vision_surface: Dict[str, Any]) 
 
 
 # -------------------------
+# Adapter for quote_inputs (photo-assisted MVP)
+# -------------------------
+def _map_level3_to_prep_legacy(level: str) -> str:
+    # Legacy prep levels in your pipeline: light/medium/heavy
+    m = {
+        "low": "light",
+        "medium": "medium",
+        "high": "heavy",
+    }
+    return m.get((level or "").lower(), "medium")
+
+
+def _map_level3_to_access_legacy(level: str) -> str:
+    # Pricing rules expect access_risk buckets like low/medium/high
+    m = {"low": "low", "medium": "medium", "high": "high"}
+    return m.get((level or "").lower(), "low")
+
+
+def _complexity_multiplier_from_level(level: str) -> float:
+    """
+    We store a numeric 'estimated_complexity' so the existing complexity_bucket() keeps working.
+    Bucket thresholds:
+      >= 1.3 -> high
+      >= 1.1 -> medium
+      else -> low
+    """
+    m = {
+        "low": 1.0,  # -> low bucket
+        "medium": 1.15,  # -> medium bucket
+        "high": 1.3,  # -> high bucket
+    }
+    try:
+        return float(m.get((level or "").lower(), 1.0))
+    except Exception:
+        return 1.0
+
+
+def _quote_inputs_to_surface(q: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convert quote_inputs from vision_aggregate_us.py into a pricing surface dict
+    expected by price_from_vision().
+
+    Supports BOTH:
+    - legacy q["modifiers"] (prep_level light/medium/heavy + complexity float)
+    - new q["decision_vars"] + q["confidence"] (+ evidences/review reasons)
+    """
+    area = q.get("area") if isinstance(q.get("area"), dict) else {}
+    mods = q.get("modifiers") if isinstance(q.get("modifiers"), dict) else {}
+    dv = q.get("decision_vars") if isinstance(q.get("decision_vars"), dict) else {}
+    conf_bundle = q.get("confidence") if isinstance(q.get("confidence"), dict) else {}
+
+    area_m2 = _safe_float(area.get("value_m2"))
+
+    # --- Decide which source to use (new decision_vars wins) ---
+    if dv:
+        prep_level = _map_level3_to_prep_legacy(
+            dv.get("prep_level") or dv.get("prep") or "medium"
+        )
+        access_risk = _map_level3_to_access_legacy(
+            dv.get("access_risk") or dv.get("access") or "low"
+        )
+
+        # complexity_level -> numeric estimated_complexity so existing engine keeps working
+        complexity_level = (
+            dv.get("complexity_level") or dv.get("complexity") or "medium"
+        )
+        estimated_complexity = _complexity_multiplier_from_level(str(complexity_level))
+    else:
+        # legacy path
+        prep_level = mods.get("prep_level") or "medium"
+        access_risk = "low"
+        estimated_complexity = _safe_float(mods.get("complexity")) or 1.0
+
+    # --- Confidence gating signal ---
+    sig = _safe_float(q.get("vision_signal_confidence")) or 0.0
+    overall = _safe_float(conf_bundle.get("overall")) if conf_bundle else None
+    base_conf = float(overall) if overall is not None else float(sig)
+
+    # Confidence floor: if customer provided area, don't block pricing on vision confidence
+    conf = max(base_conf, 0.7) if (area_m2 and area_m2 > 0) else base_conf
+
+    return {
+        "surface_type": "walls",
+        "pricing_ready": bool(q.get("pricing_ready", False)),
+        "area_sqm": area_m2,
+        "prep_level": prep_level,
+        "access_risk": access_risk,
+        "estimated_complexity": float(estimated_complexity),
+        "confidence": float(conf),
+        # optional debug/meta for downstream output builder / HTML
+        "meta": {
+            "sig_conf": sig,
+            "overall_conf": overall,
+            "area_source": area.get("source"),
+            "needs_review": bool(q.get("needs_review", False)),
+            "review_reasons": q.get("review_reasons", []),
+            "decision_vars": dv,
+            "evidences": q.get("evidences", []),
+        },
+    }
+
+
+# -------------------------
 # Main pricing logic
 # -------------------------
 def price_from_vision(
@@ -237,7 +334,10 @@ def price_from_vision(
 
     min_conf = float(gates.get("min_confidence", 0.0))
     conf = float(vision_surface.get("confidence", 0.0) or 0.0)
-    if conf < min_conf:
+    area_ok = _get_area_sqm(vision_surface) > 0
+
+    # Only block on confidence if we also lack area (otherwise we can still price & flag review)
+    if (not area_ok) and conf < min_conf:
         return {
             "status": "pricing_blocked",
             "reason": "LOW_CONFIDENCE",
@@ -427,6 +527,18 @@ def price_from_vision(
         }
     )
 
+    # ---- Propagate review flags from upstream (aggregator) ----
+    meta = (
+        vision_surface.get("meta")
+        if isinstance(vision_surface.get("meta"), dict)
+        else {}
+    )
+
+    upstream_needs_review = bool(meta.get("needs_review", False))
+    upstream_reasons = meta.get("review_reasons", [])
+    if not isinstance(upstream_reasons, list):
+        upstream_reasons = []
+
     return {
         "status": "priced_with_margin",
         "currency": rules.get("currency", "EUR"),
@@ -439,12 +551,21 @@ def price_from_vision(
         "total_eur": round(total_eur, 2),
         "ratios": {"labor": labor_ratio, "materials": materials_ratio},
         "line_items": line_items,
+        # NEW: review + explainability
+        "needs_review": upstream_needs_review,
+        "review_reasons": upstream_reasons,
+        "confidence": conf,
+        # useful for HTML / debugging
+        "decision_vars": meta.get("decision_vars"),
+        "evidences": meta.get("evidences", []),
     }
 
 
 # -------------------------
 # Pipeline compatibility wrapper
 # -------------------------
+
+
 def run_pricing_engine(
     lead: Any,
     vision: Union[Dict[str, Any], list],
@@ -454,16 +575,24 @@ def run_pricing_engine(
     Entry point used by engine step.
     - Prefer injecting rules from pipeline (tenant/market aware).
     - If not injected, we try to pick based on lead, else default.
+    Supports:
+      - legacy vision_surface dict
+      - legacy list[vision_surface]
+      - NEW: quote_inputs dict (area/modifiers/scope + optional decision_vars/confidence/evidences)
     """
     if rules is None:
         rules = _pick_rules_from_lead(lead) or load_rules_default()
 
-    if isinstance(vision, list):
+    # Normalize `vision` input
+    if isinstance(vision, dict) and ("area" in vision and "modifiers" in vision):
+        # quote_inputs shape from aggregator
+        vision_surface = _quote_inputs_to_surface(vision)
+    elif isinstance(vision, list):
         vision_surface = vision[0] if vision else {}
     else:
         vision_surface = vision if isinstance(vision, dict) else {}
 
-    # ✅ Inject area + surface_type from lead/intake overrides (EU migration safety net)
+    # Inject area + surface_type from lead/intake overrides (EU migration safety net)
     vision_surface = _inject_overrides_from_lead(lead, vision_surface)
 
     return price_from_vision(vision_surface, rules=rules)

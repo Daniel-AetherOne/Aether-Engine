@@ -17,6 +17,7 @@ from app.verticals.paintly.router_app import router as paintly_app_router
 from app.routers.public_estimate import router as public_estimate_router
 from app.models.job import Job
 from app.jobs.runner import start_worker
+from app.routers.quote_debug import router as quote_router
 
 from app.security.basic_auth import BasicAuthMiddleware
 from app.security.rate_limit import SimpleRateLimitMiddleware
@@ -203,6 +204,7 @@ app.include_router(app_me_router)
 # app.include_router(app_dashboard_router)
 app.include_router(paintly_app_router)
 app.include_router(public_estimate_router)
+app.include_router(quote_router)
 
 # Optional ACE routers
 ACE_ENABLED = _env_truthy("ACE_ENABLED", "false")

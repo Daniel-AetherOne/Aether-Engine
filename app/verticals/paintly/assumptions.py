@@ -15,27 +15,39 @@ class ScopeAndAssumptions:
     change_conditions: list[str]
 
 
-US_PAINTERS_SCOPE_ASSUMPTIONS = ScopeAndAssumptions(
+# -------------------------------------------------------------------
+# Paintly (EU) scope assumptions expected by render_estimate.py
+# render_estimate.py reads: getattr(PAINTLY_SCOPE_ASSUMPTIONS, "included", None)
+# -------------------------------------------------------------------
+
+PAINTLY_SCOPE_ASSUMPTIONS = ScopeAndAssumptions(
     included=[
-        "Surface preparation as noted (light sanding, scraping, patching as required).",
-        "Priming of repaired or bare areas as needed.",
-        "Application of finish coats to listed surfaces only.",
-        "Standard protection of adjacent surfaces (masking, drop cloths).",
-        "Daily cleanup of work areas related to painting activities.",
+        "Voorbereiding van oppervlakken waar nodig (licht schuren, bijwerken, primer op reparaties).",
+        "Aanbrengen van afwerklagen op alleen de genoemde oppervlakken.",
+        "Standaard afplakken/beschermen van aangrenzende delen.",
+        "Oplever-schoonmaak gerelateerd aan het schilderwerk.",
     ],
     not_included=[
-        "Structural repairs, carpentry, or drywall replacement.",
-        "Extensive repair of hidden damage (rot, mold, moisture intrusion).",
-        "Lead paint abatement or hazardous material removal.",
-        "Wallpaper removal or specialty coatings unless explicitly listed.",
-        "Moving or storing large furniture or personal belongings.",
-        "Permit fees or inspections unless specifically stated.",
+        "Constructieve reparaties, timmerwerk, of vervanging van plaatmateriaal.",
+        "Herstel van verborgen schade (rot, schimmel, vochtproblemen) tenzij expliciet opgenomen.",
+        "Verwijderen van oude behanglagen of speciale coatings tenzij expliciet opgenomen.",
+        "Verplaatsen/opslag van grote meubels of volledige woning-inboedel.",
+        "Vergunningen of keuringen tenzij expliciet opgenomen.",
     ],
     change_conditions=[
-        "Pricing may change if on-site conditions differ materially from those visible in provided photos or descriptions.",
-        "Additional preparation may be required if surfaces are found to be in poorer condition than assumed.",
-        "Scope or pricing adjustments may occur if access limitations, safety requirements, or working hours differ from initial assumptions.",
-        "Customer-requested scope changes, color changes, or additional areas will be priced separately.",
-        "Weather conditions may affect scheduling for exterior work.",
+        "Prijs kan wijzigen als de situatie ter plekke afwijkt van foto’s/omschrijving.",
+        "Extra voorbereiding kan nodig zijn bij slechtere ondergrond dan verwacht.",
+        "Wijzigingen in scope (extra ruimtes, extra lagen, kleurwijzigingen) worden apart geprijsd.",
+        "Bij buitenwerk kan planning wijzigen door weersomstandigheden.",
     ],
 )
+
+# Backwards compatible export expected by render_estimate.py
+PAINTLY_SCOPE_ASSUMPTIONS = {
+    "includes_paint": False,
+    "includes_prep": False,
+    "includes_cleanup": False,
+    "includes_repairs": False,
+    "includes_materials": False,
+    "includes_labor": False,
+}

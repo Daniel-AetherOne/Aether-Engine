@@ -25,7 +25,7 @@
 <body class="bg-slate-50 text-slate-900 antialiased">
 
   {# ---------- pricing flags ---------- #}
-  {% set reasons = (pricing.meta.needs_review_reasons if pricing and pricing.meta and pricing.meta.needs_review_reasons else []) %}
+  {% set reasons = (review_reasons if review_reasons is defined and review_reasons else (pricing.review_reasons if pricing and pricing.review_reasons else (pricing.meta.review_reasons if pricing and pricing.meta and pricing.meta.review_reasons else []))) %}
   {% set is_provisional = ('provisional_total' in reasons) or ('missing_total' in reasons) %}
   {% set show_prices = pricing_ready or is_provisional %}
 
@@ -56,17 +56,7 @@
       </div>
 
       <div class="no-print flex items-center gap-2">
-        {% if show_prices and token %}
-          <form method="post" action="/e/{{ token }}/accept" class="m-0">
-            <button type="submit"
-                    class="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors">
-              <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-              </svg>
-              Offerte accepteren
-            </button>
-          </form>
-        {% endif %}
+        {# Accept CTA handled by sticky bar in public_estimate.py #}
 
         {% if company and company.phone %}
           <a class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
@@ -99,6 +89,14 @@
             <div class="mt-2 text-xs text-amber-700">
               {{ needs_review.range_explanation if needs_review and needs_review.range_explanation else "Een reviewer zal oppervlakken, voorbereidingsniveau en toegang bevestigen. U ontvangt binnenkort een definitieve prijs." }}
             </div>
+
+            {% if reasons and (reasons | length) > 0 %}
+              <ul class="mt-3 space-y-1 text-xs text-amber-800 list-disc pl-5">
+                {% for r in reasons %}
+                  <li>{{ r }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -472,6 +470,34 @@
               {% endif %}
             </div>
 
+            {% if decision_vars is defined and decision_vars %}
+              <div class="h-px bg-slate-100"></div>
+
+              <div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Assumpties</div>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">Voorbereiding</span>
+                    <span class="font-medium text-slate-900 text-right">{{ decision_vars.prep_level or "—" }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">Complexiteit</span>
+                    <span class="font-medium text-slate-900 text-right">{{ decision_vars.complexity_level or "—" }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">Toegang</span>
+                    <span class="font-medium text-slate-900 text-right">{{ decision_vars.access_risk or "—" }}</span>
+                  </div>
+                </div>
+
+                {% if needs_review_flag %}
+                  <p class="mt-2 text-xs text-amber-700">
+                    Deze inschatting vereist een korte review.
+                  </p>
+                {% endif %}
+              </div>
+            {% endif %}
+
             {% if project and project.description %}
               <div class="h-px bg-slate-100"></div>
               <div>
@@ -493,16 +519,15 @@
                   <div class="flex justify-between text-sm">
                     <span class="text-slate-600">{{ copy.labor_label if copy and copy.labor_label else "Arbeid" }}</span>
                     <span class="font-medium text-slate-900">
-					  {{ fmt_eur(pricing.subtotals.labor if pricing and pricing.subtotals and pricing.subtotals.labor is not none else pricing_labor) }}
-					</span>
-					
-					</div>
+                      {{ fmt_eur(pricing.subtotals.labor if pricing and pricing.subtotals and pricing.subtotals.labor is not none else pricing_labor) }}
+                    </span>
+                  </div>
 
                   <div class="flex justify-between text-sm">
                     <span class="text-slate-600">{{ copy.materials_label if copy and copy.materials_label else "Materialen" }}</span>
                     <span class="font-medium text-slate-900">
-					  {{ fmt_eur(pricing.subtotals.materials if pricing and pricing.subtotals and pricing.subtotals.materials is not none else pricing_materials) }}
-					</span>
+                      {{ fmt_eur(pricing.subtotals.materials if pricing and pricing.subtotals and pricing.subtotals.materials is not none else pricing_materials) }}
+                    </span>
                   </div>
 
                   <div class="flex justify-between text-sm pt-2">

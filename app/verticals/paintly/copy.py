@@ -1,4 +1,4 @@
-# app/verticals/painters_us/copy.py
+# app/verticals/paintly/copy.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -29,8 +29,14 @@ def _to_decimal(value: Any) -> Decimal:
         return Decimal(str(value))
 
     if isinstance(value, str):
-        # strip $ and commas if any
-        v = value.strip().replace("$", "").replace(",", "")
+        # strip €/$ and separators if any (best effort)
+        v = (
+            value.strip()
+            .replace("€", "")
+            .replace("$", "")
+            .replace(" ", "")
+            .replace(",", "")
+        )
         if v == "":
             return Decimal("0")
         return Decimal(v)
@@ -79,18 +85,23 @@ def fmt_qty(quantity: float | int | Decimal, unit: str = "") -> str:
 
 def fmt_eur(amount: Any) -> str:
     """
-    Format amount as US dollars with 2 decimals.
-    Supports Money objects and dicts with {amount: ...}.
-    Examples: 1200 -> "$1,200.00", 99.5 -> "$99.50"
+    Format amount as EUR with 2 decimals (Dutch style).
+    Examples:
+      1200 -> "€1.200,00"
+      99.5 -> "€99,50"
     """
     d = _to_decimal(amount)
     d = d.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    return f"${d:,.2f}"
+
+    # format like 1,234.56 then swap separators to NL: 1.234,56
+    s = f"{d:,.2f}"
+    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"€{s}"
 
 
 def fmt_eur_range(low: Any, high: Any) -> str:
     """
-    Format a EUR range: "$X.XX – $Y.XX"
+    Format a EUR range: "€X,XX – €Y,XX"
     """
     return f"{fmt_eur(low)} – {fmt_eur(high)}"
 
@@ -161,6 +172,10 @@ class EstimateCopy:
     currency_symbol: str
 
 
+# -------------------------
+# US (legacy / optional)
+# -------------------------
+
 US_PAINTERS_ESTIMATE_COPY = EstimateCopy(
     doc_type="estimate",
     doc_title="Painting Estimate",
@@ -200,4 +215,48 @@ US_PAINTERS_ESTIMATE_COPY = EstimateCopy(
     cta_approve="Approve estimate",
     currency_code="EUR",
     currency_symbol="$",
+)
+
+
+# -------------------------
+# Paintly (EU) expected by render_estimate.py
+# -------------------------
+
+PAINTLY_ESTIMATE_COPY = EstimateCopy(
+    doc_type="offerte",
+    doc_title="Offerte schilderwerk",
+    estimate_word="Offerte",
+    needs_review_badge="Handmatige check nodig",
+    labor_label="Arbeid",
+    materials_label="Materiaal",
+    scope_label="Scope",
+    surfaces_label="Oppervlakken",
+    assumptions_label="Aannames",
+    exclusions_label="Uitsluitingen",
+    validity_copy="Geldig voor {days} dagen vanaf vandaag.",
+    subject_to_verification_copy="Onder voorbehoud van controle op locatie.",
+    estimated_total_label="Totaal (indicatie)",
+    estimated_total_range_label="Totaal (prijsrange)",
+    opener_pricing_ready=(
+        "Deze offerte is gebaseerd op de ingevoerde gegevens en aangeleverde foto’s. "
+        "Als de situatie op locatie afwijkt, kan de definitieve prijs licht wijzigen."
+    ),
+    opener_needs_review=(
+        "Deze offerte heeft een korte handmatige controle nodig, omdat de aangeleverde informatie "
+        "nog niet genoeg zekerheid geeft (bijv. weinig foto’s of onduidelijke ondergrond)."
+    ),
+    disclaimer_pricing_ready=(
+        "Prijs is gebaseerd op opgegeven meters/omschrijving en normale omstandigheden. "
+        "Verborgen gebreken (bijv. loszittende lagen, vocht/schimmel, houtrot) kunnen extra voorbereiding vereisen. "
+        "Wijzigingen in scope worden apart geprijsd."
+    ),
+    disclaimer_needs_review=(
+        "Deze indicatie is voorlopig en wordt nog gecontroleerd. Mogelijk zijn extra foto’s of een korte inspectie nodig "
+        "om voorbereiding, ondergrond en exacte hoeveelheden te bevestigen. Wijzigingen in scope worden apart geprijsd."
+    ),
+    cta_review="Bekijken",
+    cta_request_changes="Wijzigingen aanvragen",
+    cta_approve="Akkoord",
+    currency_code="EUR",
+    currency_symbol="€",
 )
