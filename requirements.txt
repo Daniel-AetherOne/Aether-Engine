@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+gunicorn
+jinja2
+sqlalchemy
+alembic
+psycopg2-binary
+python-multipart
+boto3
+pydantic
+requests
+python-dotenv
