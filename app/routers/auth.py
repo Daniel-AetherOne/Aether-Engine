@@ -1,26 +1,32 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy.orm import Session
+from pathlib import Path
 from uuid import uuid4
+import re
 
-from app.db import get_db
-from app.models.user import User
-from app.models.tenant import Tenant
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+
 from app.auth.jwt import create_access_token
 from app.auth.passwords import hash_password, verify_password
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from pathlib import Path
+from app.db import get_db
+from app.models.tenant import Tenant
+from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-templates = Jinja2Templates(directory="app/verticals/paintly/templates")
-
 
 TEMPLATES_DIR = (
     Path(__file__).resolve().parents[1] / "verticals" / "paintly" / "templates"
 )
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+
+def slugify(value: str) -> str:
+    value = (value or "").lower().strip()
+    value = re.sub(r"[^a-z0-9]+", "-", value)
+    value = re.sub(r"-{2,}", "-", value)
+    return value.strip("-")
+
 
 # ---------- HTML pages ----------
 
@@ -41,9 +47,6 @@ def register_page(request: Request):
     )
 
 
-# ---------- JSON API endpoints (blijven werken) ----------
-# (als je ze al had: laat staan)
-
 # ---------- Form POST endpoints (cookie-setting) ----------
 
 
@@ -56,14 +59,16 @@ def login_form(
 ):
     email_norm = email.lower().strip()
     user = db.query(User).filter(User.email == email_norm).first()
+
     if not user or not verify_password(password, user.password_hash):
         return RedirectResponse(url=f"/auth/login?next={next}", status_code=302)
 
     token = create_access_token(
-        user_id=user.id, tenant_id=user.tenant_id, email=user.email
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        email=user.email,
     )
 
-    # open-redirect bescherming (alleen relative paths toestaan)
     if not next.startswith("/"):
         next = "/app/leads"
 
@@ -97,12 +102,21 @@ def register_form(
     if existing:
         return RedirectResponse(url="/auth/login", status_code=302)
 
+    base_slug = slugify(company_name_clean) or "tenant"
+    slug = base_slug
+    counter = 2
+
+    while db.query(Tenant).filter(Tenant.slug == slug).first():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
     tenant = Tenant(
         id=str(uuid4()),
         name=company_name_clean,
         company_name=company_name_clean,
         email=email_norm,
         phone=phone_clean,
+        slug=slug,
         pricing_json={
             "walls_rate_eur_per_sqm": float(walls_rate_eur_per_sqm),
         },
@@ -123,7 +137,9 @@ def register_form(
     db.refresh(user)
 
     token = create_access_token(
-        user_id=user.id, tenant_id=user.tenant_id, email=user.email
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        email=user.email,
     )
 
     resp = RedirectResponse(url="/app/leads", status_code=303)

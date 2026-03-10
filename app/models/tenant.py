@@ -1,4 +1,3 @@
-# app/models/tenant.py
 from datetime import datetime
 from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -15,6 +14,7 @@ class Tenant(Base):
     company_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    slug: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
 
     pricing_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 

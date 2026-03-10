@@ -27,3 +27,24 @@ def public_intake_page(
         tenant_id=tenant.id,
         extra_context={"tenant": tenant},
     )
+
+
+@router.get("/p/{tenant_slug}/intake")
+def intake_by_slug(
+    request: Request,
+    tenant_slug: str,
+    db: Session = Depends(get_db),
+):
+    tenant = db.query(Tenant).filter(Tenant.slug == tenant_slug).first()
+
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    v = get_vertical("paintly")
+
+    return v.render_intake_form(
+        request=request,
+        lead_id="",
+        tenant_id=tenant.id,
+        extra_context={"tenant": tenant},
+    )

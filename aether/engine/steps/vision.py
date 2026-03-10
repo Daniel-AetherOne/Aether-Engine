@@ -14,8 +14,17 @@ def vision_v1(state: PipelineState, step: StepConfig, assets: dict) -> StepResul
     # vision_out = assets["vision_client"].run(...)
     vision_out = {"rooms": [], "confidence": 0.0}  # stub
 
-    # Optionally decide NEEDS_REVIEW early if low confidence
-    if vision_out.get("confidence", 1.0) < 0.4:
-        return StepResult(status="NEEDS_REVIEW", data=vision_out, meta={"reason": "low_confidence"})
+    # Always return OK here; Paintly-specific needs_review
+    # is decided centrally in paintly_steps.needs_review_v1.
+    # We still surface confidence/diagnostic info via meta.
+    meta = {}
+    try:
+        conf = float(vision_out.get("confidence", 1.0))
+        meta["confidence"] = conf
+        if conf < 0.4:
+            meta["low_confidence"] = True
+            meta.setdefault("reasons", []).append("vision_low_confidence")
+    except Exception:
+        pass
 
-    return StepResult(status="OK", data=vision_out)
+    return StepResult(status="OK", data=vision_out, meta=meta)

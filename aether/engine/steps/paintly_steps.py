@@ -694,6 +694,82 @@ def step_store_html_v1(
     return StepResult(status="OK", data={"estimate_html_key": html_key})
 
 
+def _decide_paintly_needs_review(
+    pq_bad,
+    prior_reasons,
+    aggregate_needs_review,
+    aggregate_reasons,
+    pricing_reasons,
+):
+    """
+    Central helper for Paintly NEEDS_REVIEW logic.
+
+    Only "hard blockers" are allowed to flip needs_review to True.
+    Soft signals (low confidence, furniture, framing, generic photo_quality
+    noise) are kept in reasons/meta but do NOT force NEEDS_REVIEW on their own.
+    """
+    prior_reasons = prior_reasons or []
+    aggregate_reasons = aggregate_reasons or []
+    pricing_reasons = pricing_reasons or []
+
+    merged_reasons = list(
+        dict.fromkeys(prior_reasons + aggregate_reasons + pricing_reasons)
+    )
+
+    # Hard blockers coming from pricing/engine-level validation
+    PRICING_BLOCKERS = {
+        "no_pricing_match",
+        "missing_required_field",
+        "too_few_images",
+    }
+
+    pricing_blocked = any(r in PRICING_BLOCKERS for r in pricing_reasons)
+
+    # Hard blockers coming from estimate/output interpretation
+    HARD_ESTIMATE_REASONS = {
+        # Broken totals / missing required numeric output
+        "estimate_not_dict",
+        "missing_total",
+        "non_positive_total",
+        "total_not_numeric",
+        # Explicit "missing analysis" style flags
+        "missing_required_analysis",
+        "missing_vision_output",
+        "missing_pricing_output",
+        "area_m2_non_positive",
+    }
+
+    # Hard blockers coming from vision aggregation / structural analysis
+    HARD_AGGREGATE_REASONS = {
+        # No usable walls/surfaces detected
+        "no_walls_detected",
+        "no_wall_detected",
+        "no_wall_surfaces",
+        "no_surfaces",
+    }
+
+    # Hard blockers coming from photo quality (true absence of photos)
+    HARD_PHOTO_REASONS = {
+        "no_photos",
+    }
+
+    hard_reason_present = any(
+        r in HARD_ESTIMATE_REASONS
+        or r in HARD_AGGREGATE_REASONS
+        or r in HARD_PHOTO_REASONS
+        for r in merged_reasons
+    )
+
+    # Final decision:
+    # - pricing_blocked is always a hard blocker
+    # - other hard blockers come from the explicit sets above
+    # - aggregate_needs_review alone is NOT enough anymore; it must surface
+    #   at least one concrete hard reason code in review_reasons.
+    needs_review = bool(pricing_blocked or hard_reason_present)
+
+    return needs_review, merged_reasons, pricing_blocked
+
+
 # -------------------------
 # Step: needs review
 # -------------------------
@@ -767,6 +843,21 @@ def step_needs_review_v1(
         if not isinstance(aggregate_reasons, list):
             aggregate_reasons = [str(aggregate_reasons)]
 
+        # Hard blocker: clearly invalid or non-positive area estimate
+        try:
+            area_val = (
+                (aggregate_data.get("area") or {}).get("value_m2", None)
+                if isinstance(aggregate_data.get("area"), dict)
+                else None
+            )
+            if area_val is not None:
+                a = float(area_val)
+                if a <= 0:
+                    reasons.append("area_m2_non_positive")
+        except Exception:
+            # Keep failures as soft diagnostics only
+            pass
+
     pq = (
         (state.data.get("steps") or {})
         .get("photo_quality", {})
@@ -781,20 +872,13 @@ def step_needs_review_v1(
         if pq_bad and not prior_reasons:
             prior_reasons = ["photo_quality_bad"]
 
-        merged_reasons = list(
-            dict.fromkeys(
-                (prior_reasons or []) + (aggregate_reasons or []) + (reasons or [])
-            )
-        )
-
-    PRICING_BLOCKERS = {
-        "no_pricing_match",
-        "missing_required_field",
-        "too_few_images",
-    }
-
-    pricing_blocked = any(r in PRICING_BLOCKERS for r in (reasons or []))
-    needs_review = bool(pq_bad or pricing_blocked or aggregate_needs_review)
+    needs_review, merged_reasons, pricing_blocked = _decide_paintly_needs_review(
+        pq_bad=pq_bad,
+        prior_reasons=prior_reasons,
+        aggregate_needs_review=aggregate_needs_review,
+        aggregate_reasons=aggregate_reasons,
+        pricing_reasons=reasons,
+    )
 
     if isinstance(estimate, dict):
         meta = estimate.get("meta") if isinstance(estimate.get("meta"), dict) else {}

@@ -2,6 +2,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 
+
 class IntakePayload(BaseModel):
     # Optioneel: UI stuurt dit (nog) niet mee; backend default naar "default"
     tenant_id: Optional[str] = None
@@ -11,6 +12,15 @@ class IntakePayload(BaseModel):
     email: EmailStr
     phone: Optional[str] = None
     project_description: Optional[str] = None
+
+    # Pricing / project velden
+    square_meters: Optional[float] = None
+    job_type: Optional[str] = "Binnenwerk"
+
+    # Eventuele extra context
+    substrate: Optional[str] = None
+    surface_type: Optional[str] = None
+    issues: List[str] = []
 
     # Tijdelijke upload keys (zonder tenant-prefix), bijv. "uploads/2025-11-01/<uuid>/TEST.jpg"
     object_keys: List[str] = []

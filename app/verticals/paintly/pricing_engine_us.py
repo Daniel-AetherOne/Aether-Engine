@@ -129,6 +129,11 @@ def _inject_overrides_from_lead(
         vs.setdefault("area_sqm", sqm2)
         vs.setdefault("sqm", sqm2)
 
+    # NEW: job_type from intake
+    job_type = payload.get("job_type")
+    if job_type:
+        vs.setdefault("job_type", job_type)
+
     # 3) Surface type fallback (critical: base_rates lookup)
     if not vs.get("surface_type"):
         vs["surface_type"] = "walls"
@@ -483,7 +488,18 @@ def price_from_vision(
     complexity_level = complexity_bucket(raw_complexity)
     complexity_multiplier = float(complexity_cfg.get(complexity_level, 1.0))
 
-    labor_multiplier = prep_multiplier * access_multiplier * complexity_multiplier
+    # NEW: job type multiplier (Binnenwerk / Buitenwerk / Beide)
+    job_type_cfg = multipliers_cfg.get("job_type", {})
+    job_type = vision_surface.get("job_type", "Binnenwerk")
+    job_type_multiplier = float(job_type_cfg.get(job_type, 1.0))
+
+    labor_multiplier = (
+        prep_multiplier
+        * access_multiplier
+        * complexity_multiplier
+        * job_type_multiplier
+    )
+
     labor_cost = base_total * labor_multiplier
 
     # -------------------------
@@ -518,6 +534,8 @@ def price_from_vision(
             "estimated_complexity": raw_complexity,
             "complexity_level": complexity_level,
             "complexity_multiplier": complexity_multiplier,
+            "job_type": job_type,
+            "job_type_multiplier": job_type_multiplier,
             "labor_eur": round(labor_eur, 2),
             "materials_eur": round(materials_eur, 2),
             "cost_eur": round(cost_eur, 2),

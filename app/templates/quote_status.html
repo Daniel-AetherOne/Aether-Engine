@@ -4,11 +4,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Offerte Status — Paintly</title>
-  
-  <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico ">
-  <script src="https://cdn.tailwindcss.com "></script>
-  
+  <title>Offerte status — Paintly</title>
+
+  <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
     @keyframes pulse-ring {
       0% { transform: scale(0.8); opacity: 0.5; }
@@ -18,40 +18,47 @@
       content: '';
       position: absolute;
       inset: -4px;
-      border-radius: 50%;
+      border-radius: 9999px;
       border: 2px solid currentColor;
       animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
     }
   </style>
 </head>
 
-<body class="bg-slate-50 text-slate-900 antialiased min-h-screen flex items-center justify-center p-4">
-  
+<body class="min-h-screen bg-[#eef4fb] text-slate-900 antialiased flex items-center justify-center p-4">
+
   <div class="w-full max-w-2xl">
-    
+
     <!-- Logo -->
-    <div class="flex justify-center mb-8">
-      <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
-        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+    <div class="mb-8 flex justify-center">
+      <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-sm">
+        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+        </svg>
       </div>
     </div>
 
     <!-- Main Card -->
-    <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      
+    <div class="overflow-hidden rounded-[28px] border border-slate-200/70 bg-white shadow-sm">
+
       <!-- Header -->
-      <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-5">
-        <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="border-b border-slate-100 px-6 py-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 class="text-xl font-bold text-slate-900" id="headline">We verwerken uw offerte…</h1>
-            <p class="text-sm text-slate-500 mt-1" id="subhead">Deze pagina wordt automatisch bijgewerkt. U kunt deze open laten staan.</p>
+            <div class="text-sm text-slate-400">Offerte</div>
+            <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900" id="headline">
+              We verwerken uw offerte…
+            </h1>
+            <p class="mt-2 text-sm text-slate-500" id="subhead">
+              Deze pagina wordt automatisch bijgewerkt. U kunt deze open laten staan.
+            </p>
           </div>
-          
+
           <!-- Status Pill -->
-          <div class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200" id="statusPill">
-            <span class="relative flex h-2.5 w-2.5" id="statusDotContainer">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" id="statusPing"></span>
-              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" id="statusDot"></span>
+          <div class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700" id="statusPill">
+            <span class="relative flex h-2.5 w-2.5 text-sky-500" id="statusDotContainer">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" id="statusPing"></span>
+              <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500" id="statusDot"></span>
             </span>
             <span id="statusText">Bezig met verwerken</span>
           </div>
@@ -59,51 +66,51 @@
       </div>
 
       <!-- Content -->
-      <div class="px-6 py-5 space-y-5">
-        
+      <div class="space-y-5 px-6 py-6">
+
         <!-- Lead Info -->
         <div class="flex flex-wrap items-center gap-4 text-sm">
           <div class="flex items-center gap-2">
             <span class="text-slate-500">Lead</span>
             <span class="font-mono font-semibold text-slate-900">#{{ lead_id }}</span>
           </div>
-          <div class="h-4 w-px bg-slate-200 hidden sm:block"></div>
-          <div class="text-slate-400 text-xs" id="updated"></div>
+          <div class="hidden h-4 w-px bg-slate-200 sm:block"></div>
+          <div class="text-xs text-slate-400" id="updated"></div>
         </div>
 
         <!-- Progress Section -->
-        <div id="progressBox" class="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-4">
-          
+        <div id="progressBox" class="space-y-4 rounded-[24px] border border-slate-200/70 bg-slate-50 p-5">
+
           <!-- Steps -->
           <div class="flex items-center gap-2">
-            <div class="flex items-center gap-2 flex-1">
-              <div id="step1" class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shadow-sm">1</div>
-              <div class="hidden sm:block text-xs font-medium text-slate-600">Intake</div>
+            <div class="flex flex-1 items-center gap-2">
+              <div id="step1" class="flex h-8 w-8 items-center justify-center rounded-full bg-sky-500 text-xs font-bold text-white shadow-sm">1</div>
+              <div class="hidden text-xs font-medium text-slate-600 sm:block">Intake</div>
             </div>
-            
-            <div class="h-px flex-1 bg-slate-200 relative">
-              <div id="line1" class="absolute inset-y-0 left-0 bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+
+            <div class="relative h-px flex-1 bg-slate-200">
+              <div id="line1" class="absolute inset-y-0 left-0 bg-sky-500 transition-all duration-500" style="width: 0%"></div>
             </div>
-            
-            <div class="flex items-center gap-2 flex-1">
-              <div id="step2" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs font-bold transition-colors">2</div>
-              <div class="hidden sm:block text-xs font-medium text-slate-500">Foto's</div>
+
+            <div class="flex flex-1 items-center gap-2">
+              <div id="step2" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-500 transition-colors">2</div>
+              <div class="hidden text-xs font-medium text-slate-500 sm:block">Foto's</div>
             </div>
-            
-            <div class="h-px flex-1 bg-slate-200 relative">
-              <div id="line2" class="absolute inset-y-0 left-0 bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+
+            <div class="relative h-px flex-1 bg-slate-200">
+              <div id="line2" class="absolute inset-y-0 left-0 bg-sky-500 transition-all duration-500" style="width: 0%"></div>
             </div>
-            
-            <div class="flex items-center gap-2 flex-1">
-              <div id="step3" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs font-bold transition-colors">3</div>
-              <div class="hidden sm:block text-xs font-medium text-slate-500">Offerte</div>
+
+            <div class="flex flex-1 items-center gap-2">
+              <div id="step3" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-500 transition-colors">3</div>
+              <div class="hidden text-xs font-medium text-slate-500 sm:block">Offerte</div>
             </div>
           </div>
 
           <!-- Progress Bar -->
           <div class="space-y-2">
-            <div class="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
-              <div id="barFill" class="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500" style="width: 10%"></div>
+            <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+              <div id="barFill" class="h-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all duration-500" style="width: 10%"></div>
             </div>
             <p class="text-xs text-slate-500" id="progressHint">Voorbereiden…</p>
           </div>
@@ -112,7 +119,10 @@
         <!-- Actions -->
         <div id="actions" class="flex flex-wrap gap-3">
           <span class="inline-flex items-center gap-2 text-sm text-slate-500">
-            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
             Bezig met verwerken…
           </span>
         </div>
@@ -124,8 +134,8 @@
     </div>
 
     <!-- Footer -->
-    <div class="text-center mt-6">
-      <p class="text-xs text-slate-400">Paintly • AI-gestuurde Offertes</p>
+    <div class="mt-6 text-center">
+      <p class="text-xs text-slate-400">Paintly • AI-gestuurde offertes</p>
     </div>
 
   </div>
@@ -188,12 +198,11 @@
           setStatusPill("PUBLISH_FAILED");
           setHeadline("Kon verwerking niet starten");
           setSubhead(`Publiceren mislukt: ${res.status}`);
-          setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(txt || "").slice(0, 800)}</pre>`);
+          setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded-2xl bg-rose-100 p-3 text-xs font-mono text-rose-800">${(txt || "").slice(0, 800)}</pre>`);
           stopPolling();
           return;
         }
 
-        // optional: log json
         try {
           const data = await res.json();
           console.log("publish started:", data);
@@ -203,7 +212,7 @@
         setStatusPill("PUBLISH_ERROR");
         setHeadline("Kon verwerking niet starten");
         setSubhead("Netwerkfout bij het starten van publicatie");
-        setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(e && e.toString ? e.toString() : e)}</pre>`);
+        setMessage(`<pre class="mt-2 max-h-40 overflow-auto rounded-2xl bg-rose-100 p-3 text-xs font-mono text-rose-800">${(e && e.toString ? e.toString() : e)}</pre>`);
         stopPolling();
       }
     }
@@ -219,12 +228,11 @@
 
     function setStatusPill(status) {
       elStatusText.textContent = status;
-      
-      // Reset classes
+
       elStatusPill.className = "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold border";
       elStatusDot.className = "relative inline-flex rounded-full h-2.5 w-2.5";
       elStatusPing.className = "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75";
-      
+
       if (status === "SUCCEEDED") {
         elStatusPill.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-200");
         elStatusDot.classList.add("bg-emerald-500");
@@ -241,15 +249,14 @@
         elStatusPing.classList.add("bg-rose-400");
         elStatusDotContainer.classList.remove("pulse-ring");
       } else {
-        elStatusPill.classList.add("bg-blue-50", "text-blue-700", "border-blue-200");
-        elStatusDot.classList.add("bg-blue-500");
-        elStatusPing.classList.add("bg-blue-400");
+        elStatusPill.classList.add("bg-sky-50", "text-sky-700", "border-sky-200");
+        elStatusDot.classList.add("bg-sky-500");
+        elStatusPing.classList.add("bg-sky-400");
         elStatusDotContainer.classList.add("pulse-ring");
       }
     }
 
     function setProgress(stage) {
-      // stage: 1..3
       const stages = [
         { step: step1, line: null, pct: 15 },
         { step: step2, line: line1, pct: 50 },
@@ -259,16 +266,16 @@
       stages.forEach((s, idx) => {
         const active = stage > idx;
         const current = stage === idx + 1;
-        
+
         if (active || current) {
-          s.step.className = "flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-bold shadow-sm transition-colors " + 
-            (active ? "bg-emerald-500" : "bg-blue-600");
+          s.step.className = "flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-bold shadow-sm transition-colors " +
+            (active ? "bg-emerald-500" : "bg-sky-500");
           s.step.innerHTML = active ? "✓" : (idx + 1);
         } else {
           s.step.className = "flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-xs font-bold transition-colors";
           s.step.innerHTML = idx + 1;
         }
-        
+
         if (s.line) {
           s.line.style.width = active ? "100%" : (current ? "50%" : "0%");
         }
@@ -308,21 +315,21 @@
       progressBox.style.display = "none";
 
       setActions(`
-        <a href="/quotes/${leadId}/html" class="inline-flex h-10 items-center justify-center rounded-lg bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors">
+        <a href="/quotes/${leadId}/html" class="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
           Bekijk offerte
         </a>
       `);
 
       setMessage(`
-        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <div class="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3">
           <div class="flex items-start gap-3">
             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             </div>
             <div>
               <div class="text-sm font-semibold text-emerald-900">Gelukt!</div>
-              <div class="text-xs text-emerald-700 mt-0.5">Uw offerte is gegenereerd en klaar voor review.</div>
+              <div class="mt-0.5 text-xs text-emerald-700">Uw offerte is gegenereerd en klaar voor review.</div>
             </div>
           </div>
         </div>
@@ -335,20 +342,20 @@
       progressBox.style.display = "none";
 
       setActions(`
-        <a href="/intake/painters-us" class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
+        <a href="/intake/painters-us" class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
           Start een nieuwe aanvraag
         </a>
       `);
 
       setMessage(`
-        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+        <div class="rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3">
           <div class="flex items-start gap-3">
             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
             <div>
               <div class="text-sm font-semibold text-amber-900">Handmatige review nodig</div>
-              <div class="text-xs text-amber-700 mt-0.5">We reviewen uw foto's en werkgebied details en volgen op met de definitieve offerte. U hoeft nu niets te doen.</div>
+              <div class="mt-0.5 text-xs text-amber-700">We reviewen uw foto's en werkgebieddetails en volgen op met de definitieve offerte. U hoeft nu niets te doen.</div>
             </div>
           </div>
         </div>
@@ -361,25 +368,25 @@
       progressBox.style.display = "none";
 
       setActions(`
-        <a href="/quotes/${leadId}/status?autostart=1" class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
+        <a href="/quotes/${leadId}/status?autostart=1" class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Opnieuw proberen
         </a>
-        <a href="/intake/painters-us" class="inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
+        <a href="/intake/painters-us" class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
           Start nieuwe aanvraag
         </a>
       `);
 
       setMessage(`
-        <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+        <div class="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3">
           <div class="flex items-start gap-3">
             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div class="flex-1">
               <div class="text-sm font-semibold text-rose-900">Fout</div>
-              <div class="text-xs text-rose-700 mt-0.5">Als dit blijft gebeuren, moeten we er intern even naar kijken.</div>
-              <pre class="mt-2 max-h-32 overflow-auto rounded bg-rose-100 p-2 text-xs text-rose-800 font-mono">${(msg || "Onbekende fout").toString()}</pre>
+              <div class="mt-0.5 text-xs text-rose-700">Als dit blijft gebeuren, moeten we er intern even naar kijken.</div>
+              <pre class="mt-2 max-h-32 overflow-auto rounded-2xl bg-rose-100 p-3 text-xs font-mono text-rose-800">${(msg || "Onbekende fout").toString()}</pre>
             </div>
           </div>
         </div>
@@ -399,7 +406,6 @@
         setStatusPill(status);
         elUpdated.textContent = data.updated_at ? `Bijgewerkt ${data.updated_at}` : "";
 
-        // ✅ autostart: start publish once als niet-terminal
         if (autostart === 1) {
           const terminal = ["SUCCEEDED", "NEEDS_REVIEW", "FAILED"];
           if (!terminal.includes(status)) {
@@ -446,7 +452,6 @@
       }
     }
 
-    // boot
     (async () => {
       if (autostart === 1) {
         await startPublishOnce();

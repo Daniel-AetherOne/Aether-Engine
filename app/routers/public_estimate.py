@@ -2,26 +2,81 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.settings import settings
 from app.db import get_db
 from app.models.lead import Lead
-from app.services.email import EmailError, send_postmark_email
+from app.models.user import User
+from app.models.job import Job
+from app.services.email_service import send_email, EmailSendError
 from app.services.storage import get_storage, get_text
+from app.services.workflow import (
+    ensure_job_for_lead,
+    mark_lead_accepted,
+    mark_lead_viewed,
+)
 from app.verticals.paintly.email_render import render_estimate_accepted_email
 from app.workflow.status import apply_workflow
-from app.models.user import User
-from app.services.email_service import EmailService
-
-from app.services.workflow import (
-    mark_lead_viewed,
-    mark_lead_accepted,
-    ensure_job_for_lead,
-)
 
 router = APIRouter(prefix="/e", tags=["public_estimate"])
+
+
+async def send_painter_accept_email(
+    *,
+    painter_email: str,
+    lead_id: int,
+    lead_name: str,
+    lead_email: str,
+    quote_url: str,
+    admin_url: str,
+) -> None:
+    subject = f"Offerte geaccepteerd - {lead_name}"
+
+    html_body = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
+        <h2>Offerte geaccepteerd</h2>
+        <p>Een klant heeft de offerte geaccepteerd.</p>
+
+        <ul>
+          <li><strong>Klant:</strong> {lead_name}</li>
+          <li><strong>Email:</strong> {lead_email}</li>
+          <li><strong>Lead ID:</strong> {lead_id}</li>
+        </ul>
+
+        <p>
+          <a href="{admin_url}" style="display:inline-block;padding:12px 18px;background:#111;color:#fff;text-decoration:none;border-radius:8px;">
+            Open dashboard
+          </a>
+        </p>
+
+        <p>
+          Offerte bekijken:<br>
+          <a href="{quote_url}">{quote_url}</a>
+        </p>
+      </body>
+    </html>
+    """
+
+    text_body = (
+        "Offerte geaccepteerd.\n\n"
+        f"Klant: {lead_name}\n"
+        f"Email: {lead_email}\n"
+        f"Lead ID: {lead_id}\n\n"
+        f"Dashboard: {admin_url}\n"
+        f"Offerte: {quote_url}\n"
+    )
+
+    await send_email(
+        to=painter_email,
+        subject=subject,
+        html_body=html_body,
+        text_body=text_body,
+        tag="painter-accepted",
+        metadata={"lead_id": str(lead_id)},
+    )
 
 
 @router.get("/{token}", response_class=HTMLResponse)
@@ -34,7 +89,6 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
     if not html_key:
         raise HTTPException(status_code=404, detail="Estimate not found")
 
-    # mark viewed (alleen 1x) + status SENT -> VIEWED
     mark_lead_viewed(db, lead)
     db.commit()
 
@@ -82,9 +136,7 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
 """
 
     if show_accept:
-        # NOTE: NOT an f-string. We use .format(token=...) and escape JS braces as {{ }}
         accept_bar = """
-<!-- Tailwind CDN (safe to include; estimate.html already has it, but this makes bar work even if estimate HTML changes) -->
 <script src="https://cdn.tailwindcss.com"></script>
 
 <div class="no-print sticky top-0 z-[9999] border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -125,14 +177,14 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
   const flashWrap = document.getElementById('acceptFlash');
   if(!form || !btn || !flashWrap) return;
 
-  function show(type, msg){{
+   function show(type, msg){{
     flashWrap.classList.remove('hidden');
     flashWrap.innerHTML = `
-      <div class="rounded-2xl border px-4 py-3 text-sm ${
+      <div class="rounded-2xl border px-4 py-3 text-sm ${{
         type==='success'
           ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
           : 'border-rose-200 bg-rose-50 text-rose-950'
-      }">
+      }}">
         <div class="font-semibold">${{type==='success' ? 'Accepted' : 'Could not accept'}}</div>
         <div class="mt-1 text-sm opacity-90">${{msg}}</div>
       </div>
@@ -140,7 +192,6 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
   }}
 
   form.addEventListener('submit', async (e) => {{
-    // progressive enhancement (works without JS too)
     e.preventDefault();
     btn.disabled = true;
     const old = btn.textContent;
@@ -158,12 +209,12 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
         throw new Error((data && (data.detail || data.error)) || 'Failed to accept');
       }}
 
-      let data = {};
-try { data = await res.json(); } catch(_) {}
-show('success', 'Redirecting…');
-setTimeout(() => {
-  window.location.href = (data && data.redirect) ? data.redirect : '/e/{token}?accepted=1';
-}, 350);
+      let data = {{}};
+      try {{ data = await res.json(); }} catch(_) {{}}
+      show('success', 'Redirecting…');
+      setTimeout(() => {{
+        window.location.href = (data && data.redirect) ? data.redirect : '/e/{token}?accepted=1';
+      }}, 350);
     }} catch (err) {{
       show('error', err && err.message ? err.message : 'Something went wrong');
       btn.disabled = false;
@@ -192,24 +243,29 @@ def public_accept(
     if not lead:
         raise HTTPException(status_code=404, detail="Not found")
 
-    # only do work once
     if (lead.status or "").upper() != "ACCEPTED":
         mark_lead_accepted(db, lead)
-        ensure_job_for_lead(db, lead)
         apply_workflow(db, lead)
         db.commit()
 
-        # ✅ notify painter/tenant (best-effort)
+        override_email = (
+            getattr(settings, "PAINTER_NOTIFICATION_OVERRIDE_EMAIL", "") or ""
+        ).strip()
+
         try:
             painter = (
                 db.query(User)
                 .filter(User.tenant_id == lead.tenant_id)
+                .filter(User.email.isnot(None))
+                .filter(User.email != "")
                 .order_by(User.id.asc())
                 .first()
             )
-            painter_email = (getattr(painter, "email", "") or "").strip()
+            db_painter_email = (getattr(painter, "email", "") or "").strip()
         except Exception:
-            painter_email = ""
+            db_painter_email = ""
+
+        painter_email = override_email or db_painter_email
 
         if painter_email:
             base = (
@@ -217,8 +273,8 @@ def public_accept(
                 or str(getattr(settings, "APP_PUBLIC_BASE_URL", ""))
                 or ""
             ).rstrip("/")
+
             if not base:
-                # fallback to relative; still useful internally, but prefer absolute in prod
                 quote_url = f"/e/{lead.public_token}"
                 admin_url = f"/app/leads/{lead.id}"
             else:
@@ -226,9 +282,8 @@ def public_accept(
                 admin_url = f"{base}/app/leads/{lead.id}"
 
             background.add_task(
-                email_svc.send_quote_accepted,
+                send_painter_accept_email,
                 painter_email=painter_email,
-                tenant_name="Paintly",
                 lead_id=lead.id,
                 lead_name=getattr(lead, "name", "") or "—",
                 lead_email=getattr(lead, "email", "") or "",
@@ -236,7 +291,6 @@ def public_accept(
                 admin_url=admin_url,
             )
 
-        # optional: send confirmation email (best-effort)
         if getattr(settings, "SEND_ACCEPT_CONFIRMATION_EMAIL", True):
             to_email = (getattr(lead, "email", "") or "").strip()
             if to_email:
@@ -249,23 +303,30 @@ def public_accept(
                 customer_name = getattr(lead, "name", "") or ""
                 company_name = "Paintly"
 
-                def _send():
+                async def _send():
                     html_body = render_estimate_accepted_email(
                         customer_name=customer_name,
-                        public_url=public_url,
+                        quote_url=public_url,
                         company_name=company_name,
                     )
+                    text_body = (
+                        f"Hi {customer_name},\n\n"
+                        "We received your acceptance.\n\n"
+                        f"View your estimate: {public_url}\n"
+                    )
                     try:
-                        send_postmark_email(
+                        await send_email(
                             to=to_email,
                             subject="We received your acceptance",
                             html_body=html_body,
+                            text_body=text_body,
+                            tag="customer-accepted",
                             metadata={
                                 "lead_id": str(lead.id),
                                 "tenant_id": str(lead.tenant_id),
                             },
                         )
-                    except EmailError:
+                    except EmailSendError:
                         return
 
                 background.add_task(_send)

@@ -8,10 +8,11 @@
     "vocht": 0.20,
     "scheuren": 0.10
   },
+  "work_type_factors": {
+    "Binnenwerk": 1.0,
+    "Buitenwerk": 1.3,
+    "Beide": 1.15
+  },
   "min_total": 250.0,
   "vat_percent": 21.0
 }
-
-
-
-

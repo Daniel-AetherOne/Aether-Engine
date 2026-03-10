@@ -1,6 +1,6 @@
 from __future__ import annotations
 import io
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
@@ -44,21 +44,43 @@ def _build_intake_key(s3: S3Service, lead_id: str, kind: str, filename: str) -> 
 
 
 @router.post("/upload")
-async def upload_intake_file(
+async def upload_intake_files(
     lead_id: str = Form(...),
     kind: str = Form("attachments"),
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     s3: S3Service = Depends(get_s3_service),
 ):
-    key = _build_intake_key(s3, lead_id=lead_id, kind=kind, filename=file.filename or "upload.bin")
-    ctype = file.content_type or _guess_content_type(file.filename or "")
-    try:
-        data = await file.read()
-        bio = io.BytesIO(data)
-        s3.put_fileobj(bio, key, content_type=ctype, metadata={"lead_id": lead_id, "kind": kind})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"S3 upload failed: {e}")
-    return {"ok": True, "key": key, "uri": f"s3://{s3.bucket}/{key}"}
+    uploaded = []
+
+    for file in files:
+        key = _build_intake_key(
+            s3,
+            lead_id=lead_id,
+            kind=kind,
+            filename=file.filename or "upload.bin",
+        )
+        ctype = file.content_type or _guess_content_type(file.filename or "")
+
+        try:
+            data = await file.read()
+            bio = io.BytesIO(data)
+            s3.put_fileobj(
+                bio,
+                key,
+                content_type=ctype,
+                metadata={"lead_id": lead_id, "kind": kind},
+            )
+            uploaded.append(
+                {
+                    "filename": file.filename,
+                    "key": key,
+                    "uri": f"s3://{s3.bucket}/{key}",
+                }
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"S3 upload failed: {e}")
+
+    return {"ok": True, "files": uploaded}
 
 
 @router.get("/upload/presign")
@@ -72,7 +94,9 @@ async def presign_upload(
 ):
     key = _build_intake_key(s3, lead_id=lead_id, kind=kind, filename=filename)
     ctype = content_type or _guess_content_type(filename)
-    form = s3.presigned_post(key, content_type=ctype, max_size=max_size_mb * 1024 * 1024)
+    form = s3.presigned_post(
+        key, content_type=ctype, max_size=max_size_mb * 1024 * 1024
+    )
     return {"ok": True, "key": key, "form": form}
 
 

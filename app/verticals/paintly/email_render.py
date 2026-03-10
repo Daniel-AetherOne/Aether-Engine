@@ -11,11 +11,20 @@ _env = Environment(
     autoescape=select_autoescape(["html", "xml"]),
 )
 
-def render_estimate_ready_email(*, customer_name: str, public_url: str, company_name: str) -> str:
+
+def render_estimate_ready_email(*, customer_name: str, quote_url: str, company_name: str) -> str:
     tmpl = _env.get_template("email/estimate_ready.html")
-    return tmpl.render(customer_name=customer_name, public_url=public_url, company_name=company_name)
+    return tmpl.render(
+        customer_name=customer_name,
+        quote_url=quote_url,
+        company_name=company_name,
+    )
 
 
-def render_estimate_accepted_email(*, customer_name: str, public_url: str, company_name: str) -> str:
+def render_estimate_accepted_email(*, customer_name: str, quote_url: str, company_name: str) -> str:
     tmpl = _env.get_template("email/estimate_accepted.html")
-    return tmpl.render(customer_name=customer_name, public_url=public_url, company_name=company_name)
+    return tmpl.render(
+        customer_name=customer_name,
+        quote_url=quote_url,
+        company_name=company_name,
+    )

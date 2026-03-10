@@ -4,25 +4,32 @@
 <div class="space-y-6">
 
   <!-- Header -->
-  <div class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Leads</h1>
-      <div class="mt-1 text-sm text-slate-600">Beheer klantaanvragen en verstuur offertes</div>
+  <div class="rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm">
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div>
+        <div class="text-sm text-slate-400">Leads</div>
+        <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">Leadoverzicht</h1>
+        <div class="mt-2 text-sm text-slate-500">Beheer klantaanvragen en verstuur offertes</div>
+      </div>
+
+      <a class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+         href="/app/leads/new">
+        <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nieuwe lead
+      </a>
     </div>
-    
-    <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
-       href="/app/leads/new">
-      <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-      Nieuwe Lead
-    </a>
   </div>
 
-  <!-- Toast (copy link feedback) -->
+  <!-- Toast -->
   <div id="toast"
-       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
+       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-lg z-50">
     <div class="flex items-start gap-3">
       <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
       </div>
       <div>
         <div class="text-sm font-semibold text-slate-900">Link gekopieerd</div>
@@ -31,8 +38,8 @@
     </div>
   </div>
 
-  <!-- Stats row -->
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <!-- Stats -->
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
     {% set counts = {'new': 0, 'pending': 0, 'accepted': 0, 'total': leads|length} %}
     {% for lead in leads %}
       {% set st = (lead.status or '').upper() %}
@@ -44,82 +51,92 @@
         {% set _ = counts.update({'accepted': counts.accepted + 1}) %}
       {% endif %}
     {% endfor %}
-    
-    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+
+    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
+      <div class="flex items-center gap-4">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
         </div>
         <div>
-          <div class="text-2xl font-bold text-slate-900">{{ counts.total }}</div>
-          <div class="text-xs text-slate-500">Totaal leads</div>
+          <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.total }}</div>
+          <div class="text-sm text-slate-400">Totaal leads</div>
         </div>
       </div>
     </div>
-    
-    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+
+    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
+      <div class="flex items-center gap-4">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
         </div>
         <div>
-          <div class="text-2xl font-bold text-slate-900">{{ counts.new }}</div>
-          <div class="text-xs text-slate-500">Nieuw / Concept</div>
+          <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.new }}</div>
+          <div class="text-sm text-slate-400">Nieuw / Concept</div>
         </div>
       </div>
     </div>
-    
-    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+
+    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
+      <div class="flex items-center gap-4">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-500">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
         </div>
         <div>
-          <div class="text-2xl font-bold text-slate-900">{{ counts.pending }}</div>
-          <div class="text-xs text-slate-500">Offerte verstuurd</div>
+          <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.pending }}</div>
+          <div class="text-sm text-slate-400">Offerte verstuurd</div>
         </div>
       </div>
     </div>
-    
-    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+
+    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
+      <div class="flex items-center gap-4">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-500">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
         </div>
         <div>
-          <div class="text-2xl font-bold text-slate-900">{{ counts.accepted }}</div>
-          <div class="text-xs text-slate-500">Geaccepteerd</div>
+          <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.accepted }}</div>
+          <div class="text-sm text-slate-400">Geaccepteerd</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Table card -->
-  <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-    <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
-      <div class="flex items-center gap-2">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+  <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
         </div>
         <div>
           <div class="text-sm font-semibold text-slate-900">Alle leads</div>
-          <div class="text-xs text-slate-500">Klik op een lead voor details</div>
+          <div class="text-xs text-slate-400">Klik op een lead voor details</div>
         </div>
       </div>
     </div>
 
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Klant</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Offerte</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Acties</th>
+      <table class="min-w-full">
+        <thead>
+          <tr class="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+            <th class="px-5 py-4 text-left font-medium">Klant</th>
+            <th class="px-5 py-4 text-left font-medium">Status</th>
+            <th class="px-5 py-4 text-left font-medium">Offerte</th>
+            <th class="px-5 py-4 text-right font-medium">Acties</th>
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-slate-200 bg-white">
+        <tbody>
           {% for lead in leads %}
             {% set st = (lead.status or '').upper() %}
             {% set status_labels = {
@@ -133,51 +150,58 @@
               'DRAFT': 'Concept'
             } %}
             {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
-              {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
+              {% set badge_color = 'bg-emerald-50 text-emerald-600' %}
             {% elif st in ['SENT','VIEWED'] %}
-              {% set badge_color = 'bg-amber-50 text-amber-700 ring-amber-600/20' %}
+              {% set badge_color = 'bg-amber-50 text-amber-600' %}
             {% elif st in ['CANCELLED'] %}
-              {% set badge_color = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
+              {% set badge_color = 'bg-rose-50 text-rose-600' %}
             {% else %}
-              {% set badge_color = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
+              {% set badge_color = 'bg-slate-100 text-slate-600' %}
             {% endif %}
 
             {% set total = lead.get("total") if lead is mapping else None %}
 
-            <tr class="hover:bg-slate-50/80 transition-colors">
+            <tr class="border-b border-slate-100 last:border-0 transition hover:bg-slate-50/70">
               <!-- Customer -->
-              <td class="px-4 py-3 align-top">
-                <div class="flex flex-col gap-0.5">
-                  <a href="/app/leads/{{ lead.id }}" class="text-sm font-semibold text-slate-900 hover:text-slate-700 transition-colors">
+              <td class="px-5 py-4 align-top">
+                <div class="flex flex-col gap-1">
+                  <a href="/app/leads/{{ lead.id }}" class="text-sm font-medium text-slate-900 transition hover:text-sky-600">
                     {{ lead.customer_name or "—" }}
                   </a>
                   {% if lead.address %}
-                    <div class="flex items-center gap-1 text-xs text-slate-500">
-                      <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                      <span class="truncate max-w-[200px]">{{ lead.address }}</span>
+                    <div class="flex items-center gap-1.5 text-xs text-slate-500">
+                      <svg class="h-3.5 w-3.5 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      </svg>
+                      <span class="max-w-[220px] truncate">{{ lead.address }}</span>
                     </div>
                   {% endif %}
                 </div>
               </td>
 
               <!-- Status -->
-              <td class="px-4 py-3 align-top">
-                <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
+              <td class="px-5 py-4 align-top">
+                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ badge_color }}">
                   {{ status_labels.get(st, "Nieuw") }}
                 </span>
               </td>
 
               <!-- Estimate -->
-              <td class="px-4 py-3 align-top">
-                <div class="flex flex-col gap-1">
+              <td class="px-5 py-4 align-top">
+                <div class="flex flex-col gap-2">
                   {% if lead.estimate_html_key %}
-                    <span class="inline-flex w-fit items-center gap-1.5 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
-                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span class="inline-flex w-fit items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-600">
+                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      </svg>
                       Gereed
                     </span>
                   {% else %}
-                    <span class="inline-flex w-fit items-center gap-1.5 rounded-md bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-500/20">
-                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span class="inline-flex w-fit items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
                       In behandeling
                     </span>
                   {% endif %}
@@ -191,13 +215,13 @@
               </td>
 
               <!-- Actions -->
-              <td class="px-4 py-3 align-top text-right">
+              <td class="px-5 py-4 align-top text-right">
                 <div class="flex flex-wrap justify-end gap-2">
                   {% set a = lead.next_action %}
                   {% if a.method == "POST" %}
                     <form method="post" action="{{ a.href }}" class="m-0">
                       <button
-                        class="inline-flex h-8 items-center justify-center rounded-md bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
+                        class="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
                         type="submit"
                       >
                         {{ a.label }}
@@ -205,7 +229,7 @@
                     </form>
                   {% else %}
                     <a
-                      class="inline-flex h-8 items-center justify-center rounded-md bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
+                      class="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
                       href="{{ a.href }}"
                     >
                       {{ a.label }}
@@ -214,11 +238,13 @@
 
                   {% if lead.public_url %}
                     <button
-                      class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-colors"
+                      class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
                       type="button"
                       onclick="copyText('{{ lead.public_url }}')"
                     >
-                      <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                      <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                      </svg>
                       Link kopiëren
                     </button>
                   {% endif %}
@@ -227,14 +253,17 @@
             </tr>
           {% else %}
             <tr>
-              <td class="px-4 py-12 text-center" colspan="4">
+              <td class="px-5 py-16 text-center" colspan="4">
                 <div class="flex flex-col items-center justify-center">
-                  <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
                   </div>
                   <p class="text-sm font-medium text-slate-900">Nog geen leads</p>
-                  <p class="text-xs text-slate-500 mt-1">Maak je eerste lead aan om te beginnen</p>
-                  <a href="/app/leads/new" class="mt-3 inline-flex h-8 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors">
+                  <p class="mt-1 text-xs text-slate-500">Maak je eerste lead aan om te beginnen</p>
+                  <a href="/app/leads/new"
+                     class="mt-4 inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600">
                     Lead aanmaken
                   </a>
                 </div>

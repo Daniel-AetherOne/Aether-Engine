@@ -6,7 +6,7 @@
   <title>{{ title or "Paintly" }}</title>
 
   <!-- Tailwind (CDN for now) -->
-  <script src="https://cdn.tailwindcss.com "></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Optional: keep legacy css if you still use it somewhere -->
   <link rel="stylesheet" href="/static/app.css">
@@ -21,6 +21,9 @@
               900: '#0f172a',
               950: '#020617',
             }
+          },
+          boxShadow: {
+            soft: '0 10px 30px rgba(15, 23, 42, 0.06)',
           }
         }
       }
@@ -28,13 +31,9 @@
   </script>
 
   <style>
-    /* Smooth scrolling */
     html { scroll-behavior: smooth; }
-    
-    /* Prevent layout shift */
     html, body { height: 100%; }
-    
-    /* Custom scrollbar */
+
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
@@ -44,7 +43,7 @@
     }
     ::-webkit-scrollbar-thumb {
       background: #cbd5e1;
-      border-radius: 4px;
+      border-radius: 9999px;
     }
     ::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
@@ -52,154 +51,177 @@
   </style>
 </head>
 
-<body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
+<body class="min-h-screen bg-[#eef4fb] text-slate-900 antialiased">
   {% set path = request.url.path if request else "" %}
 
-  <div class="min-h-screen lg:flex">
+  <div class="min-h-screen p-3 md:p-4">
+    <div class="min-h-[calc(100vh-24px)] overflow-hidden rounded-[30px] border border-slate-200/70 bg-[#f8fbff] shadow-soft lg:flex">
 
-    <!-- Sidebar -->
-    <aside class="hidden lg:flex lg:w-64 lg:flex-col bg-slate-900 text-white border-r border-slate-800">
-      <!-- Logo -->
-      <div class="px-4 py-5 border-b border-slate-800">
-        <div class="flex items-center gap-3">
-          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-lg shadow-blue-900/20">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-          </div>
-          <div>
-            <div class="text-sm font-bold leading-tight">Paintly</div>
-            <div class="text-xs text-slate-400">AI Offertes</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Navigation -->
-      <nav class="flex-1 px-3 py-4 space-y-1">
-        {% macro nav_link(href, label, icon_path, active_condition) %}
-          <a href="{{ href }}"
-             class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all
-               {% if active_condition %}
-                 bg-blue-600 text-white shadow-sm
-               {% else %}
-                 text-slate-300 hover:bg-slate-800 hover:text-white
-               {% endif %}">
-            <svg class="h-5 w-5 {% if active_condition %}text-white{% else %}text-slate-400 group-hover:text-white{% endif %} transition-colors" 
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}"/>
-            </svg>
-            {{ label }}
-          </a>
-        {% endmacro %}
-
-        {{ nav_link('/app/dashboard', 'Dashboard', 
-          'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z',
-          path.startswith('/app/dashboard')) }}
-
-        {{ nav_link('/app/leads', 'Leads', 
-          'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
-          path.startswith('/app/leads')) }}
-
-        {{ nav_link('/app/jobs', 'Klussen', 
-          'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-          path.startswith('/app/jobs')) }}
-		  
-		  {{ nav_link('/app/reviews', 'Review',
-		'M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l2 2h3a2 2 0 012 2v10a2 2 0 01-2 2z',
-		path.startswith('/app/reviews')) }}
-
-        {{ nav_link('/app/calendar', 'Agenda', 
-          'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-          path.startswith('/app/calendar')) }}
-      </nav>
-
-      <!-- Bottom section -->
-      <div class="border-t border-slate-800 p-4">
-        <div class="rounded-lg bg-slate-800/50 p-3 mb-3">
-          <div class="flex items-center gap-2">
-            <div class="h-2 w-2 rounded-full bg-emerald-500"></div>
-            <span class="text-xs font-medium text-slate-300">Systeem online</span>
-          </div>
-        </div>
-        
-        <form method="post" action="/auth/logout">
-          <button type="submit"
-            class="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            Uitloggen
-          </button>
-        </form>
-      </div>
-    </aside>
-
-    <!-- Main -->
-    <div class="flex-1 min-w-0 flex flex-col">
-      <!-- Topbar -->
-      <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-sm">
-        <div class="mx-auto max-w-[1400px] px-4 sm:px-6">
-          <div class="flex h-14 items-center justify-between gap-4">
-            <!-- Left: Mobile menu + Title -->
-            <div class="flex items-center gap-3">
-              <!-- Mobile menu button -->
-              <button type="button" 
-                      onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
-                      class="lg:hidden inline-flex items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-              </button>
-
-              <!-- Mobile brand -->
-              <div class="lg:hidden flex items-center gap-2">
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-                </div>
-                <span class="font-bold text-slate-900">Paintly</span>
-              </div>
-
-              <!-- Desktop: Page title -->
-              <div class="hidden lg:block">
-                <h1 class="text-lg font-semibold text-slate-900">{{ title or "Dashboard" }}</h1>
-              </div>
+      <!-- Sidebar -->
+      <aside class="hidden lg:flex lg:w-72 lg:flex-col border-r border-slate-200/70 bg-white/80 backdrop-blur-sm">
+        <!-- Logo -->
+        <div class="px-5 py-6">
+          <div class="flex items-center gap-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-sm">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+              </svg>
             </div>
-
-            <!-- Right: Actions -->
-            <div class="flex items-center gap-3">
-              <span class="hidden sm:inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                v1.0
-              </span>
-              
-              <a href="/app/leads/new" class="inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                <span class="hidden sm:inline">Nieuwe Lead</span>
-              </a>
+            <div>
+              <div class="text-[22px] font-semibold tracking-tight text-slate-900">Paintly</div>
+              <div class="text-xs text-slate-400">AI OS voor schilders</div>
             </div>
           </div>
         </div>
-      </header>
 
-      <!-- Mobile menu -->
-      <div id="mobile-menu" class="hidden lg:hidden border-b border-slate-200 bg-white">
-        <nav class="px-4 py-3 space-y-1">
-          {% macro mobile_nav_link(href, label, active_condition) %}
+        <!-- Nav label -->
+        <div class="px-5 pb-2">
+          <div class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Menu
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 px-3 py-2 space-y-1.5">
+          {% macro nav_link(href, label, icon_path, active_condition) %}
             <a href="{{ href }}"
-               class="block rounded-lg px-3 py-2 text-sm font-medium transition-colors
+               class="group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all
                  {% if active_condition %}
                    bg-slate-100 text-slate-900
                  {% else %}
-                   text-slate-600 hover:bg-slate-50 hover:text-slate-900
+                   text-slate-500 hover:bg-slate-50 hover:text-slate-900
                  {% endif %}">
+              <svg class="h-5 w-5 {% if active_condition %}text-sky-500{% else %}text-slate-400 group-hover:text-slate-700{% endif %} transition-colors"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}"/>
+              </svg>
               {{ label }}
             </a>
           {% endmacro %}
-          
-          {{ mobile_nav_link('/app/dashboard', 'Dashboard', path.startswith('/app/dashboard')) }}
-          {{ mobile_nav_link('/app/leads', 'Leads', path.startswith('/app/leads')) }}
-          {{ mobile_nav_link('/app/jobs', 'Klussen', path.startswith('/app/jobs')) }}
-          {{ mobile_nav_link('/app/calendar', 'Agenda', path.startswith('/app/calendar')) }}
-        </nav>
-      </div>
 
-      <!-- Content -->
-      <main class="flex-1 mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6">
-        {% block content %}{% endblock %}
-      </main>
+          {{ nav_link('/app/dashboard', 'Dashboard',
+            'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z',
+            path.startswith('/app/dashboard')) }}
+
+          {{ nav_link('/app/leads', 'Leads',
+            'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+            path.startswith('/app/leads')) }}
+
+          {{ nav_link('/app/jobs', 'Klussen',
+            'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+            path.startswith('/app/jobs')) }}
+
+          {{ nav_link('/app/reviews', 'Review',
+            'M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l2 2h3a2 2 0 012 2v10a2 2 0 01-2 2z',
+            path.startswith('/app/reviews')) }}
+
+          {{ nav_link('/app/calendar', 'Agenda',
+            'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+            path.startswith('/app/calendar')) }}
+        </nav>
+
+        <!-- Bottom section -->
+        <div class="mt-auto p-4">
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex items-center gap-2">
+              <div class="h-2.5 w-2.5 rounded-full bg-emerald-500"></div>
+              <span class="text-xs font-medium text-slate-600">Systeem online</span>
+            </div>
+            <div class="mt-2 text-xs text-slate-400">
+              Paintly draait normaal
+            </div>
+          </div>
+
+          <form method="post" action="/auth/logout" class="mt-3">
+            <button type="submit"
+              class="group flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all">
+              <svg class="h-5 w-5 text-slate-400 group-hover:text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+              </svg>
+              Uitloggen
+            </button>
+          </form>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <div class="flex min-w-0 flex-1 flex-col bg-[#fbfdff]">
+        <!-- Topbar -->
+        <header class="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-sm">
+          <div class="mx-auto max-w-[1400px] px-4 sm:px-6">
+            <div class="flex h-16 items-center justify-between gap-4">
+              <!-- Left -->
+              <div class="flex items-center gap-3">
+                <button type="button"
+                        onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
+                        class="lg:hidden inline-flex items-center justify-center rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
+                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                  </svg>
+                </button>
+
+                <!-- Mobile brand -->
+                <div class="lg:hidden flex items-center gap-2">
+                  <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500 text-white">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                    </svg>
+                  </div>
+                  <span class="font-semibold text-slate-900">Paintly</span>
+                </div>
+
+                <!-- Desktop title -->
+                <div class="hidden lg:block">
+                  <h1 class="text-lg font-semibold tracking-tight text-slate-900">{{ title or "Dashboard" }}</h1>
+                </div>
+              </div>
+
+              <!-- Right -->
+              <div class="flex items-center gap-3">
+                <span class="hidden sm:inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+                  v1.0
+                </span>
+
+                <a href="/app/leads/new"
+                   class="inline-flex h-10 items-center gap-2 rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm hover:bg-sky-600 transition-colors">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  <span class="hidden sm:inline">Nieuwe Lead</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden lg:hidden border-b border-slate-200/70 bg-white">
+          <nav class="px-4 py-3 space-y-1.5">
+            {% macro mobile_nav_link(href, label, active_condition) %}
+              <a href="{{ href }}"
+                 class="block rounded-xl px-3 py-2.5 text-sm font-medium transition-colors
+                   {% if active_condition %}
+                     bg-slate-100 text-slate-900
+                   {% else %}
+                     text-slate-500 hover:bg-slate-50 hover:text-slate-900
+                   {% endif %}">
+                {{ label }}
+              </a>
+            {% endmacro %}
+
+            {{ mobile_nav_link('/app/dashboard', 'Dashboard', path.startswith('/app/dashboard')) }}
+            {{ mobile_nav_link('/app/leads', 'Leads', path.startswith('/app/leads')) }}
+            {{ mobile_nav_link('/app/jobs', 'Klussen', path.startswith('/app/jobs')) }}
+            {{ mobile_nav_link('/app/reviews', 'Review', path.startswith('/app/reviews')) }}
+            {{ mobile_nav_link('/app/calendar', 'Agenda', path.startswith('/app/calendar')) }}
+          </nav>
+        </div>
+
+        <!-- Content -->
+        <main class="flex-1 mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6">
+          {% block content %}{% endblock %}
+        </main>
+      </div>
     </div>
   </div>
 </body>

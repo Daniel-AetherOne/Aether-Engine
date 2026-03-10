@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # Public estimate flow
     SEND_ACCEPT_CONFIRMATION_EMAIL: bool = True
+    PAINTER_NOTIFICATION_OVERRIDE_EMAIL: Optional[str] = None
 
     # Security-critical (geen defaults)
     JWT_SECRET: str

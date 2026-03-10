@@ -4,32 +4,35 @@
 <div class="space-y-6">
 
   <!-- Header -->
-  <div class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Review</h1>
-      <div class="mt-1 text-sm text-slate-600">
-        Leads die handmatige review nodig hebben voordat een offerte kan worden gegenereerd
+  <div class="rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm">
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <div>
+        <div class="text-sm text-slate-400">Review</div>
+        <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">Review wachtrij</h1>
+        <div class="mt-2 text-sm text-slate-500">
+          Leads die handmatige review nodig hebben voordat een offerte kan worden gegenereerd
+        </div>
       </div>
-    </div>
 
-    <a class="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50 transition-colors"
-       href="/app/leads">
-      Terug naar Leads
-    </a>
+      <a class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+         href="/app/leads">
+        Terug naar leads
+      </a>
+    </div>
   </div>
 
   <!-- Empty state -->
   {% if not leads or leads|length == 0 %}
-    <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <div class="rounded-[26px] border border-slate-200/70 bg-white p-8 shadow-sm">
       <div class="max-w-xl">
-        <h2 class="text-lg font-semibold text-slate-900">Geen leads hoeven gereviewed te worden</h2>
-        <p class="mt-1 text-sm text-slate-600">
+        <h2 class="text-lg font-semibold text-slate-900">Geen leads hoeven gereviewd te worden</h2>
+        <p class="mt-2 text-sm text-slate-500">
           Wanneer de AI niet zeker is, verschijnen leads hier voor een snelle handmatige controle.
         </p>
-        <div class="mt-4">
-          <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
+        <div class="mt-5">
+          <a class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
              href="/app/leads">
-            Bekijk Leads
+            Bekijk leads
           </a>
         </div>
       </div>
@@ -37,64 +40,85 @@
   {% else %}
 
   <!-- Table -->
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
+    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-slate-900">Leads in review</div>
+          <div class="text-xs text-slate-400">Controleer en genereer handmatig een offerte</div>
+        </div>
+      </div>
+    </div>
+
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
-          <tr>
-            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Klant</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Lead</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Bijgewerkt</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
-            <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Actie</th>
+      <table class="min-w-full">
+        <thead>
+          <tr class="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+            <th class="px-5 py-4 text-left font-medium">Klant</th>
+            <th class="px-5 py-4 text-left font-medium">Lead</th>
+            <th class="px-5 py-4 text-left font-medium">Bijgewerkt</th>
+            <th class="px-5 py-4 text-left font-medium">Status</th>
+            <th class="px-5 py-4 text-right font-medium">Actie</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200 bg-white">
+        <tbody>
           {% for lead in leads %}
-          <tr class="hover:bg-slate-50/50">
+          <tr class="border-b border-slate-100 last:border-0 transition hover:bg-slate-50/70">
+            <!-- Customer -->
             <td class="px-5 py-4 align-top">
               <div class="font-medium text-slate-900">
                 {{ lead.customer_name or lead.name or "Onbekend" }}
               </div>
-              <div class="mt-0.5 text-sm text-slate-600">
+              <div class="mt-1 text-sm text-slate-500">
                 {{ lead.customer_email or lead.email or "" }}
                 {% if lead.customer_phone or lead.phone %}
-                  <span class="text-slate-300">•</span> {{ lead.customer_phone or lead.phone }}
+                  <span class="mx-1 text-slate-300">•</span>{{ lead.customer_phone or lead.phone }}
                 {% endif %}
               </div>
             </td>
 
+            <!-- Lead -->
             <td class="px-5 py-4 align-top">
-              <div class="text-sm text-slate-900">
+              <div class="text-sm font-medium text-slate-900">
                 #{{ (lead.id|string)[:8] }}
-                {% set raw_notes = (lead.project_notes or lead.notes or "") %}
-{% set safe_notes = (raw_notes.split("VISION_JSON=")[0] | trim) %}
+              </div>
 
-{% if safe_notes %}
-  <div class="mt-1 line-clamp-2 max-w-[520px] text-sm text-slate-600">
-    {{ safe_notes }}
-  </div>
-{% endif %}
+              {% set raw_notes = (lead.project_notes or lead.notes or "") %}
+              {% set safe_notes = (raw_notes.split("VISION_JSON=")[0] | trim) %}
+
+              {% if safe_notes %}
+                <div class="mt-1 max-w-[520px] text-sm text-slate-500 line-clamp-2">
+                  {{ safe_notes }}
+                </div>
+              {% endif %}
             </td>
 
+            <!-- Updated -->
             <td class="px-5 py-4 align-top">
-              <div class="text-sm text-slate-700">
+              <div class="text-sm text-slate-600">
                 {{ lead.updated_at or lead.created_at }}
               </div>
             </td>
 
+            <!-- Status -->
             <td class="px-5 py-4 align-top">
-              <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
-                REVIEW_NODIG
+              <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                Review nodig
               </span>
             </td>
 
-            <td class="px-5 py-4 text-right align-top">
-              <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
+            <!-- Action -->
+            <td class="px-5 py-4 align-top text-right">
+              <a class="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
                  href="/app/reviews/{{ lead.id }}">
                 Reviewen
               </a>
-            </td> 
+            </td>
           </tr>
           {% endfor %}
         </tbody>

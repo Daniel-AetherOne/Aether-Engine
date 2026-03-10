@@ -272,15 +272,16 @@ def compute_quote_for_lead_v15(
     if forced_needs_review:
         needs_review = True
 
-    # ---- Also: if estimate itself says reasons exist, mark needs_review=True ----
-    try:
-        if isinstance(estimate, dict):
-            meta = estimate.get("meta") or {}
-            reasons = meta.get("needs_review_reasons") or []
-            if isinstance(reasons, list) and reasons:
-                needs_review = True
-    except Exception:
-        pass
+        # Keep review reasons as diagnostic metadata only.
+        # Do NOT force needs_review just because reasons are present.
+    #  try:
+    #    if isinstance(estimate, dict):
+    #      meta = estimate.get("meta") or {}
+    #    reasons = meta.get("needs_review_reasons") or []
+    #  if not isinstance(reasons, list):
+    #    reasons = []
+    # except Exception:
+    #   pass
 
     # If HTML wasn't stored, that's an actual engine wiring bug
     if not html_key:

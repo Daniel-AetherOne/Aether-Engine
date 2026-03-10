@@ -21,6 +21,7 @@ from app.routers.quote_debug import router as quote_router
 from app.routers import tenant_pricing
 from app.routers import onboarding
 from app.routers import public_intake
+from app.routers.debug_email import router as debug_email_router
 
 from app.security.basic_auth import BasicAuthMiddleware
 from app.security.rate_limit import SimpleRateLimitMiddleware
@@ -211,6 +212,7 @@ app.include_router(app_me_router)
 app.include_router(tenant_pricing.router)
 app.include_router(settings_pricing_page.router)
 app.include_router(public_intake.router)
+app.include_router(debug_email_router)
 # app.include_router(app_dashboard_router)
 app.include_router(paintly_app_router)
 app.include_router(public_estimate_router)

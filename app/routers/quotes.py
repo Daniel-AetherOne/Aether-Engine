@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -17,6 +17,10 @@ from app.models import Lead, LeadFile
 from app.services.storage import get_storage, head_ok, MAX_BYTES, ALLOWED_CONTENT_TYPES
 from app.services.metrics import inc  # ✅ FASE 6 metrics
 from app.verticals.registry import get as get_vertical
+from app.core.settings import settings
+from app.verticals.paintly.estimate_email import (
+    send_estimate_ready_email_to_customer,
+)
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 templates = Jinja2Templates(directory="app/templates")
@@ -189,7 +193,11 @@ def quote_status_json(lead_id: int, db: Session = Depends(get_db)):
 # PUBLISH (sync compute)
 # =========================
 @router.post("/publish/{lead_id}")
-def publish_quote(lead_id: int, db: Session = Depends(get_db)):
+def publish_quote(
+    lead_id: int,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     lead = _load_lead(db, lead_id)
 
     inc("publish_requests_total")
@@ -275,6 +283,40 @@ def publish_quote(lead_id: int, db: Session = Depends(get_db)):
         lead.status = "NEEDS_REVIEW" if needs_review else "SUCCEEDED"
         lead.updated_at = datetime.utcnow()
         db.commit()
+
+        # If the quote fully succeeded, send the customer "estimate ready" email.
+        if lead.status == "SUCCEEDED":
+            to_email = (getattr(lead, "email", "") or "").strip()
+            if to_email:
+                # Ensure public token exists so we can build the /e/{token} link
+                if not getattr(lead, "public_token", None):
+                    import secrets
+
+                    lead.public_token = secrets.token_hex(16)
+                    lead.updated_at = datetime.utcnow()
+                    db.add(lead)
+                    db.commit()
+
+                base = (settings.APP_PUBLIC_BASE_URL or "").rstrip("/")
+                if base:
+                    quote_url = f"{base}/e/{lead.public_token}"
+                else:
+                    quote_url = f"/e/{lead.public_token}"
+
+                customer_name = getattr(lead, "name", "") or ""
+                company_name = "Paintly"
+
+                async def _send():
+                    await send_estimate_ready_email_to_customer(
+                        to_email=to_email,
+                        customer_name=customer_name,
+                        quote_url=quote_url,
+                        company_name=company_name,
+                        lead_id=lead.id,
+                        tenant_id=str(getattr(lead, "tenant_id", "") or ""),
+                    )
+
+                background.add_task(_send)
 
         if lead.status == "NEEDS_REVIEW":
             inc("quotes_needs_review_total")

@@ -27,8 +27,10 @@ from app.models.lead import LeadFile
 from app.models.upload_record import UploadRecord, UploadStatus
 
 from app.core.settings import settings
-from app.services.email import send_postmark_email
 from app.verticals.paintly.email_render import render_estimate_ready_email
+from app.verticals.paintly.estimate_email import (
+    send_estimate_ready_email_to_customer,
+)
 
 
 router = APIRouter(
@@ -408,40 +410,28 @@ def send_estimate(
 
     # build public quote url
     base = (settings.APP_PUBLIC_BASE_URL or str(request.base_url)).rstrip("/")
-    public_url = f"{base}/e/{lead.public_token}"
+    quote_url = f"{base}/e/{lead.public_token}"
 
     # must have email
     to_email = (getattr(lead, "email", "") or "").strip()
     if not to_email:
         raise HTTPException(status_code=400, detail="Lead has no email address")
 
-    # render email html
     company_name = "Paintly"
     customer_name = getattr(lead, "name", "") or ""
 
-    email_html = render_estimate_ready_email(
-        customer_name=customer_name,
-        public_url=public_url,
-        company_name=company_name,
-    )
-
-    # background email task
-    def send_email():
+    async def _send():
         logger.info("Sending estimate email to %s", to_email)
-        try:
-            send_postmark_email(
-                to=to_email,
-                subject="Je offerte staat klaar",
-                html_body=email_html,
-                metadata={
-                    "lead_id": str(lead.id),
-                    "tenant_id": str(lead.tenant_id),
-                },
-            )
-        except Exception:
-            logger.exception("Email send failed for lead %s", lead.id)
+        await send_estimate_ready_email_to_customer(
+            to_email=to_email,
+            customer_name=customer_name,
+            quote_url=quote_url,
+            company_name=company_name,
+            lead_id=lead.id,
+            tenant_id=str(lead.tenant_id),
+        )
 
-    background_tasks.add_task(send_email)
+    background_tasks.add_task(_send)
 
     # mark as sent
     lead.status = "SENT"

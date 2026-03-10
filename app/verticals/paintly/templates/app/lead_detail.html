@@ -8,10 +8,12 @@
 
   <!-- Toast -->
   <div id="toast"
-       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg z-50">
+       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-lg z-50">
     <div class="flex items-start gap-3">
       <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
       </div>
       <div>
         <div class="text-sm font-semibold text-slate-900">Link gekopieerd</div>
@@ -21,86 +23,107 @@
   </div>
 
   <!-- Header -->
-  <div class="flex flex-wrap items-center justify-between gap-4">
-    <a href="/app/leads"
-       class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-4 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">
-      <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-      Terug naar leads
-    </a>
-
-    <div class="flex flex-wrap items-center gap-2">
-      {% if lead.public_token %}
-        <a class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
-           href="/e/{{ lead.public_token }}" target="_blank">
-          <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-          Publiek bekijken
+  <div class="rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm">
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div>
+        <a href="/app/leads"
+           class="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition hover:text-slate-900">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Terug naar leads
         </a>
 
-        <button class="inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
-                type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
-          <svg class="mr-1.5 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-          Link kopiëren
-        </button>
-      {% endif %}
+        <div class="mt-3 text-sm text-slate-400">Lead</div>
+        <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">
+          {{ lead.customer_name or ('Lead #' ~ lead.id) }}
+        </h1>
+        <p class="mt-2 text-sm text-slate-500">Bekijk klantgegevens, offerte en planning op één plek.</p>
+      </div>
 
-      {% if lead.estimate_html_key %}
-        <a class="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-3 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors"
-           href="/app/leads/{{ lead.id }}/estimate" target="_blank">
-          <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          Offerte openen
-        </a>
-		
-		{% if lead.estimate_html_key %}
-  <a class="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50 transition-colors"
-     href="/app/leads/{{ lead.id }}/edit-estimate">
-    <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M11 5h2M12 7v10m-7 0h14M5 17V9a2 2 0 012-2h10a2 2 0 012 2v8"/>
-    </svg>
-    Offerte bewerken
-  </a>
-{% endif %}
+      <div class="flex flex-wrap items-center gap-2">
+        {% if lead.public_token %}
+          <a class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+             href="/e/{{ lead.public_token }}" target="_blank">
+            <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
+            Publiek bekijken
+          </a>
 
-        <form id="sendEstimateFormTop" method="post" action="/app/leads/{{ lead.id }}/send" class="m-0">
-          <button id="sendEstimateBtnTop"
-                  class="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                  type="submit">
-            <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-            Offerte versturen
+          <button class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                  type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
+            <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            Link kopiëren
           </button>
-        </form>
-      {% endif %}
+        {% endif %}
+
+        {% if lead.estimate_html_key %}
+          <a class="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+             href="/app/leads/{{ lead.id }}/estimate" target="_blank">
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Offerte openen
+          </a>
+
+          <a class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+             href="/app/leads/{{ lead.id }}/edit-estimate">
+            <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5h2M12 7v10m-7 0h14M5 17V9a2 2 0 012-2h10a2 2 0 012 2v8"/>
+            </svg>
+            Offerte bewerken
+          </a>
+
+          <form id="sendEstimateFormTop" method="post" action="/app/leads/{{ lead.id }}/send" class="m-0">
+            <button id="sendEstimateBtnTop"
+                    class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    type="submit">
+              <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+              </svg>
+              Offerte versturen
+            </button>
+          </form>
+        {% endif %}
+      </div>
     </div>
   </div>
 
   <!-- Alerts -->
   {% if sent == '1' %}
-    <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+    <div class="rounded-[24px] border border-emerald-200 bg-emerald-50 px-4 py-3">
       <div class="flex items-start gap-3">
         <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
         </div>
         <div>
           <div class="text-sm font-semibold text-emerald-900">Offerte verstuurd</div>
-          <div class="text-xs text-emerald-700 mt-0.5">De klant ontvangt de e-mail binnenkort</div>
+          <div class="mt-0.5 text-xs text-emerald-700">De klant ontvangt de e-mail binnenkort</div>
         </div>
       </div>
     </div>
   {% endif %}
 
   {% if send_error == 'postmark_pending' %}
-    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+    <div class="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3">
       <div class="flex items-start gap-3">
         <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
         </div>
         <div>
           <div class="text-sm font-semibold text-amber-900">E-mail verzending nog niet actief</div>
-          <div class="text-xs text-amber-700 mt-1">
+          <div class="mt-1 text-xs text-amber-700">
             Postmark is in afwachting van goedkeuring. Tijdens deze periode kun je alleen versturen naar ontvangers op hetzelfde domein als je From adres
             (<code class="rounded bg-white/60 px-1 py-0.5 font-mono">getpaintly.com</code>).
           </div>
-          <div class="text-xs text-amber-600 mt-2">
+          <div class="mt-2 text-xs text-amber-600">
             Tip: voor testen, gebruik <code class="rounded bg-white/60 px-1 py-0.5 font-mono">jij@getpaintly.com</code>
           </div>
         </div>
@@ -109,37 +132,41 @@
   {% endif %}
 
   {% if send_error and send_error not in ['postmark_pending'] %}
-    <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+    <div class="rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-3">
       <div class="flex items-start gap-3">
         <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
         </div>
         <div>
           <div class="text-sm font-semibold text-rose-900">Kon offerte niet versturen</div>
-          <div class="text-xs text-rose-700 mt-0.5">Probeer het opnieuw</div>
+          <div class="mt-0.5 text-xs text-rose-700">Probeer het opnieuw</div>
         </div>
       </div>
     </div>
   {% endif %}
 
   <div class="grid gap-6 lg:grid-cols-[1fr_400px]">
-    
-    <!-- Left column: Lead info -->
+
+    <!-- Left column -->
     <div class="space-y-6">
-      
+
       <!-- Lead card -->
-      <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
-          <div class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
             </div>
             <div>
               <div class="text-sm font-semibold text-slate-900">Lead #{{ lead.id }}</div>
-              <div class="text-xs text-slate-500">Klantgegevens</div>
+              <div class="text-xs text-slate-400">Klantgegevens</div>
             </div>
           </div>
-          
+
           {% set st = (lead.status or '').upper() %}
           {% set status_labels = {
             'ACCEPTED': 'Geaccepteerd',
@@ -151,73 +178,70 @@
             'NEW': 'Nieuw'
           } %}
           {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
-            {% set badge_color = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
+            {% set badge_color = 'bg-emerald-50 text-emerald-600' %}
           {% elif st in ['SENT','VIEWED'] %}
-            {% set badge_color = 'bg-amber-50 text-amber-700 ring-amber-600/20' %}
+            {% set badge_color = 'bg-amber-50 text-amber-600' %}
           {% elif st in ['CANCELLED'] %}
-            {% set badge_color = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
+            {% set badge_color = 'bg-rose-50 text-rose-600' %}
           {% else %}
-            {% set badge_color = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
+            {% set badge_color = 'bg-slate-100 text-slate-600' %}
           {% endif %}
 
-          <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ badge_color }}">
+          <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ badge_color }}">
             {{ status_labels.get(st, 'Nieuw') }}
           </span>
         </div>
 
-        <div class="p-4 space-y-4">
-          <!-- Customer info -->
-          <div class="grid gap-4 sm:grid-cols-2">
+        <div class="space-y-5 p-5">
+          <div class="grid gap-5 sm:grid-cols-2">
             <div>
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Klant</div>
-              <div class="mt-1 text-sm font-semibold text-slate-900">{{ lead.customer_name or "—" }}</div>
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Klant</div>
+              <div class="mt-2 text-sm font-medium text-slate-900">{{ lead.customer_name or "—" }}</div>
             </div>
-            
+
             <div>
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Adres</div>
-              <div class="mt-1 text-sm text-slate-700">{{ lead.address or "—" }}</div>
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Adres</div>
+              <div class="mt-2 text-sm text-slate-700">{{ lead.address or "—" }}</div>
             </div>
           </div>
 
-          <!-- Description -->
           <div>
-            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Projectomschrijving</div>
-            <div class="mt-1 text-sm text-slate-700 bg-slate-50 rounded-lg p-3 border border-slate-100">
+            <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Projectomschrijving</div>
+            <div class="mt-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               {{ lead.project_description or "Geen omschrijving opgegeven" }}
             </div>
           </div>
 
-          <!-- Estimate key -->
           {% if lead.estimate_html_key %}
-            <div class="pt-4 border-t border-slate-100">
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Offerte sleutel</div>
-              <code class="mt-1 block text-xs font-mono text-slate-600 bg-slate-100 rounded px-2 py-1 break-all">{{ lead.estimate_html_key }}</code>
+            <div class="border-t border-slate-100 pt-5">
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Offerte sleutel</div>
+              <code class="mt-2 block break-all rounded-xl bg-slate-100 px-3 py-2 text-xs font-mono text-slate-600">{{ lead.estimate_html_key }}</code>
             </div>
           {% endif %}
 
-          <!-- Public URL -->
           {% if lead.public_token %}
-            <div class="pt-4 border-t border-slate-100">
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Publieke URL</div>
-              <div class="mt-2 flex flex-wrap items-center gap-2">
-                <code class="text-xs font-mono text-slate-600 bg-slate-100 rounded px-2 py-1">/e/{{ lead.public_token }}</code>
-                <button class="inline-flex h-7 items-center justify-center rounded-md bg-white px-2 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors"
+            <div class="border-t border-slate-100 pt-5">
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Publieke URL</div>
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <code class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-mono text-slate-600">/e/{{ lead.public_token }}</code>
+                <button class="inline-flex h-8 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
                         type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
                   Kopiëren
                 </button>
               </div>
-              <p class="mt-2 text-xs text-slate-500">Deel deze link met de klant om de offerte te bekijken en accepteren</p>
+              <p class="mt-2 text-xs text-slate-500">Deel deze link met de klant om de offerte te bekijken en accepteren.</p>
             </div>
           {% endif %}
 
-          <!-- Review reasons -->
           {% if lead.needs_review_reasons %}
-            <div class="pt-4 border-t border-slate-100">
-              <div class="text-xs font-medium text-amber-600 uppercase tracking-wide flex items-center gap-1">
-                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div class="border-t border-slate-100 pt-5">
+              <div class="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-600">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
                 Review nodig
               </div>
-              <pre class="mt-2 max-h-40 overflow-auto rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200">{{ lead.needs_review_reasons }}</pre>
+              <pre class="mt-2 max-h-40 overflow-auto rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">{{ lead.needs_review_reasons }}</pre>
             </div>
           {% endif %}
         </div>
@@ -225,15 +249,17 @@
 
       <!-- Job card -->
       {% if job %}
-        <div id="job" class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
-            <div class="flex items-center gap-2">
-              <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        <div id="job" class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
               </div>
               <div>
                 <div class="text-sm font-semibold text-slate-900">Klus #{{ job.id }}</div>
-                <div class="text-xs text-slate-500">Planning & status</div>
+                <div class="text-xs text-slate-400">Planning & status</div>
               </div>
             </div>
 
@@ -246,28 +272,29 @@
               'NEW': 'Nieuw'
             } %}
             {% if jst == 'DONE' %}
-              {% set jbadge = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' %}
+              {% set jbadge = 'bg-emerald-50 text-emerald-600' %}
             {% elif jst == 'IN_PROGRESS' %}
-              {% set jbadge = 'bg-violet-50 text-violet-700 ring-violet-600/20' %}
+              {% set jbadge = 'bg-violet-50 text-violet-600' %}
             {% elif jst == 'SCHEDULED' %}
-              {% set jbadge = 'bg-blue-50 text-blue-700 ring-blue-600/20' %}
+              {% set jbadge = 'bg-sky-50 text-sky-600' %}
             {% elif jst == 'CANCELLED' %}
-              {% set jbadge = 'bg-rose-50 text-rose-700 ring-rose-600/20' %}
+              {% set jbadge = 'bg-rose-50 text-rose-600' %}
             {% else %}
-              {% set jbadge = 'bg-slate-50 text-slate-700 ring-slate-600/20' %}
+              {% set jbadge = 'bg-slate-100 text-slate-600' %}
             {% endif %}
 
-            <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ jbadge }}">
+            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ jbadge }}">
               {{ job_status_labels.get(jst, 'Nieuw') }}
             </span>
           </div>
 
-          <div class="p-4 space-y-4">
-            <!-- Timeline -->
-            <div class="space-y-3">
+          <div class="space-y-5 p-5">
+            <div class="space-y-4">
               <div class="flex items-center gap-3">
-                <div class="flex h-8 w-8 items-center justify-center rounded-full {% if job.scheduled_at %}bg-blue-100 text-blue-600{% else %}bg-slate-100 text-slate-400{% endif %}">
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <div class="flex h-9 w-9 items-center justify-center rounded-full {% if job.scheduled_at %}bg-sky-100 text-sky-600{% else %}bg-slate-100 text-slate-400{% endif %}">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
                 </div>
                 <div class="flex-1">
                   <div class="text-sm font-medium text-slate-900">Ingepland</div>
@@ -283,8 +310,11 @@
 
               {% if job.started_at %}
                 <div class="flex items-center gap-3">
-                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-violet-600">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <div class="flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                   </div>
                   <div class="flex-1">
                     <div class="text-sm font-medium text-slate-900">Gestart</div>
@@ -295,8 +325,10 @@
 
               {% if job.done_at %}
                 <div class="flex items-center gap-3">
-                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <div class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                   </div>
                   <div class="flex-1">
                     <div class="text-sm font-medium text-slate-900">Afgerond</div>
@@ -306,14 +338,16 @@
               {% endif %}
             </div>
 
-            <!-- Status update -->
-            <div class="pt-4 border-t border-slate-100">
-              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Status bijwerken</div>
+            <div class="border-t border-slate-100 pt-5">
+              <div class="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Status bijwerken</div>
               <div class="flex flex-wrap items-center gap-2">
                 {% if job.status == "SCHEDULED" %}
                   <form method="post" action="/app/jobs/{{ job.id }}/start" class="m-0">
-                    <button class="inline-flex h-8 items-center justify-center rounded-md bg-violet-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-violet-700 transition-colors" type="submit">
-                      <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <button class="inline-flex h-9 items-center justify-center rounded-xl bg-violet-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-violet-700" type="submit">
+                      <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
                       Klus starten
                     </button>
                   </form>
@@ -321,8 +355,10 @@
 
                 {% if job.status == "IN_PROGRESS" %}
                   <form method="post" action="/app/jobs/{{ job.id }}/done" class="m-0">
-                    <button class="inline-flex h-8 items-center justify-center rounded-md bg-emerald-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors" type="submit">
-                      <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <button class="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700" type="submit">
+                      <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 13l4 4L19 7"/>
+                      </svg>
                       Afronden
                     </button>
                   </form>
@@ -330,7 +366,7 @@
 
                 <form method="post" action="/app/jobs/{{ job.id }}/status" class="flex flex-wrap items-center gap-2 m-0">
                   <select name="status"
-                          class="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900">
+                          class="h-9 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100">
                     {% for s in ["NEW","SCHEDULED","IN_PROGRESS","DONE","CANCELLED"] %}
                       {% set status_display = {
                         'NEW': 'Nieuw',
@@ -342,7 +378,7 @@
                       <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ status_display[s] }}</option>
                     {% endfor %}
                   </select>
-                  <button class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors" type="submit">
+                  <button class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" type="submit">
                     Bijwerken
                   </button>
                 </form>
@@ -353,81 +389,80 @@
       {% endif %}
     </div>
 
-    <!-- Right column: Scheduling -->
+    <!-- Right column -->
     {% if job and job.status in ["NEW","SCHEDULED"] %}
       <div class="space-y-6">
-        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/50">
-            <div class="flex items-center gap-2">
-              <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-500">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
               </div>
               <div>
                 <div class="text-sm font-semibold text-slate-900">Planning</div>
-                <div class="text-xs text-slate-500">{{ tz_name }}</div>
+                <div class="text-xs text-slate-400">{{ tz_name }}</div>
               </div>
             </div>
-            
+
             {% if job.scheduled_at %}
               <div class="text-right">
                 <div class="text-sm font-semibold text-slate-900">{{ scheduled_display }}</div>
-                <div class="text-xs text-slate-500">Momenteel ingepland</div>
+                <div class="text-xs text-slate-400">Momenteel ingepland</div>
               </div>
             {% endif %}
           </div>
 
-          <div class="p-4 space-y-4">
-            <!-- Date/time input -->
-            <form id="scheduleForm" method="post" action="/app/jobs/{{ job.id }}/schedule" class="space-y-3">
+          <div class="space-y-4 p-5">
+            <form id="scheduleForm" method="post" action="/app/jobs/{{ job.id }}/schedule" class="space-y-4">
               <div>
-                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Datum & tijd</label>
+                <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Datum & tijd</label>
                 <div class="flex gap-2">
                   <input id="dtInput" type="datetime-local" name="scheduled_at_local" value="{{ scheduled_input_value }}" required
-                         class="flex-1 h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900" />
-                  <button class="inline-flex h-9 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition-colors" type="submit">
+                         class="flex-1 h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100" />
+                  <button class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600" type="submit">
                     {% if job.scheduled_at %}Bijwerken{% else %}Inplannen{% endif %}
                   </button>
                 </div>
               </div>
 
-              <!-- Quick dates -->
               <div>
-                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Snel selecteren</label>
+                <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Snel selecteren</label>
                 <div class="flex flex-wrap gap-2">
-                  <button type="button" onclick="setDayOffset(0)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Vandaag</button>
-                  <button type="button" onclick="setDayOffset(1)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Morgen</button>
-                  <button type="button" onclick="setDayOffset(2)" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">Overmorgen</button>
+                  <button type="button" onclick="setDayOffset(0)" class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">Vandaag</button>
+                  <button type="button" onclick="setDayOffset(1)" class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">Morgen</button>
+                  <button type="button" onclick="setDayOffset(2)" class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">Overmorgen</button>
                 </div>
               </div>
 
-              <!-- Quick times -->
               <div>
-                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Gebruikelijke tijden</label>
+                <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Gebruikelijke tijden</label>
                 <div class="grid grid-cols-2 gap-2">
-                  <button type="button" onclick="setTime('09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">09:00</button>
-                  <button type="button" onclick="setTime('11:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">11:00</button>
-                  <button type="button" onclick="setTime('13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">13:00</button>
-                  <button type="button" onclick="setTime('15:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 transition-colors">15:00</button>
+                  <button type="button" onclick="setTime('09:00')" class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">09:00</button>
+                  <button type="button" onclick="setTime('11:00')" class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">11:00</button>
+                  <button type="button" onclick="setTime('13:00')" class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">13:00</button>
+                  <button type="button" onclick="setTime('15:00')" class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">15:00</button>
                 </div>
               </div>
 
-              <!-- One-click -->
-              <div class="pt-3 border-t border-slate-100">
-                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Direct inplannen</label>
+              <div class="border-t border-slate-100 pt-4">
+                <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Direct inplannen</label>
                 <div class="grid grid-cols-2 gap-2">
-                  <button type="button" onclick="quickSchedule(0,'09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Vandaag 9:00</button>
-                  <button type="button" onclick="quickSchedule(0,'13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Vandaag 13:00</button>
-                  <button type="button" onclick="quickSchedule(1,'09:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Morgen 9:00</button>
-                  <button type="button" onclick="quickSchedule(1,'13:00')" class="inline-flex h-8 items-center justify-center rounded-md bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 transition-colors">Morgen 13:00</button>
+                  <button type="button" onclick="quickSchedule(0,'09:00')" class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-50 px-3 text-xs font-medium text-sky-600 transition hover:bg-sky-100">Vandaag 9:00</button>
+                  <button type="button" onclick="quickSchedule(0,'13:00')" class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-50 px-3 text-xs font-medium text-sky-600 transition hover:bg-sky-100">Vandaag 13:00</button>
+                  <button type="button" onclick="quickSchedule(1,'09:00')" class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-50 px-3 text-xs font-medium text-sky-600 transition hover:bg-sky-100">Morgen 9:00</button>
+                  <button type="button" onclick="quickSchedule(1,'13:00')" class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-50 px-3 text-xs font-medium text-sky-600 transition hover:bg-sky-100">Morgen 13:00</button>
                 </div>
               </div>
             </form>
 
-            <!-- Unschedule -->
             {% if job.scheduled_at %}
-              <form id="unscheduleForm" method="post" action="/app/jobs/{{ job.id }}/unschedule" class="pt-3 border-t border-slate-100">
-                <button type="submit" class="inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-medium text-rose-600 shadow-sm ring-1 ring-rose-200 hover:bg-rose-50 transition-colors">
-                  <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <form id="unscheduleForm" method="post" action="/app/jobs/{{ job.id }}/unschedule" class="border-t border-slate-100 pt-4">
+                <button type="submit" class="inline-flex h-9 items-center justify-center rounded-xl border border-rose-200 bg-white px-4 text-sm font-medium text-rose-600 transition hover:bg-rose-50">
+                  <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
                   Planning wissen
                 </button>
               </form>
@@ -440,7 +475,6 @@
 </div>
 
 <script>
-  // Copy helper + toast
   function copyText(text) {
     const toast = document.getElementById("toast");
     const showToast = () => {
@@ -463,7 +497,6 @@
     }
   }
 
-  // Sending state hint
   (function(){
     const form = document.getElementById('sendEstimateFormTop');
     const btn = document.getElementById('sendEstimateBtnTop');
@@ -471,13 +504,12 @@
 
     form.addEventListener('submit', () => {
       btn.disabled = true;
-      btn.innerHTML = '<svg class="mr-1.5 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Bezig met versturen...';
+      btn.innerHTML = '<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Bezig met versturen...';
     });
   })();
 
-  // Scheduling helpers
   function pad(n){ return String(n).padStart(2,'0'); }
-  
+
   function setDayOffset(offsetDays){
     const input = document.getElementById("dtInput");
     if(!input) return;
@@ -494,7 +526,7 @@
     }
     input.value = `${yyyy}-${mm}-${dd}T${time}`;
   }
-  
+
   function setTime(hhmm){
     const input = document.getElementById("dtInput");
     if(!input) return;
@@ -510,7 +542,7 @@
     const datePart = parts[0];
     input.value = `${datePart}T${hhmm}`;
   }
-  
+
   function quickSchedule(dayOffset, hhmm){
     setDayOffset(dayOffset);
     setTime(hhmm);
