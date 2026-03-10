@@ -23,3 +23,4 @@ pandas
 weasyprint
 opencv-python-headless
 passlib[bcrypt]
+PyJWT
