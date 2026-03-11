@@ -46,7 +46,7 @@ def _wants_json(request: Request) -> bool:
 
 
 def _status_url(lead_id: str) -> str:
-    return f"/quotes/{lead_id}/status?autostart=1"
+    return "/app/leads"
 
 
 def _get_vertical_or_404(vertical: str):
