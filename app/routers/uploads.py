@@ -373,9 +373,9 @@ async def local_upload(
 
     # ✅ als lead_id meegegeven is: check dat lead bestaat + tenant matcht
     if lead_id is not None:
-    lead, t = _lead_and_tenant(db, int(lead_id))
-    if str(t) != str(tenant_id):
-        raise HTTPException(status_code=403, detail="tenant_mismatch")
+        lead, t = _lead_and_tenant(db, int(lead_id))
+        if str(t) != str(tenant_id):
+            raise HTTPException(status_code=403, detail="tenant_mismatch")
 
     st = get_storage()
     if not isinstance(st, LocalStorage):
