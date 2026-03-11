@@ -14,6 +14,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ /app/app
+COPY aether/ /app/aether
 COPY alembic/ /app/alembic
 COPY alembic.ini /app/alembic.ini
 COPY gunicorn.conf.py /app/gunicorn.conf.py
