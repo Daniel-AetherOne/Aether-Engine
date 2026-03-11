@@ -153,6 +153,7 @@ def intake_by_tenant_slug(
         request,
         lead_id=str(uuid.uuid4()),
         tenant_id=str(tenant.id),
+        submit_url=f"/intake/t/{tenant_slug}/lead",
     )
 
 
@@ -233,6 +234,7 @@ def intake_by_vertical(
         request,
         lead_id=str(uuid.uuid4()),
         tenant_id=tenant_id,
+        submit_url=f"/intake/{vertical}/lead",
     )
 
 

@@ -121,7 +121,7 @@
           </div>
         </div>
 
-        <form id="intakeForm" enctype="multipart/form-data" class="space-y-6">
+        <form id="intakeForm" method="post" action="{{ submit_url }}" enctype="multipart/form-data" class="space-y-6">
           <input type="hidden" name="tenant_id" value="{{ tenant.id if tenant is defined and tenant else '' }}" />
           <input type="hidden" name="vertical" value="{{ vertical or 'paintly' }}" />
           <input type="hidden" name="area_unit" value="sqm" />
@@ -426,6 +426,7 @@
   <script>
     const TENANT_ID = "{{ tenant.id if tenant is defined and tenant else '' }}";
     const VERTICAL_SLUG = "paintly";
+	const SUBMIT_URL = "{{ submit_url }}";
 
     const MAX_FILES = 5;
     const MAX_BYTES = 15 * 1024 * 1024;
@@ -523,7 +524,7 @@
       const addressNotes = (form.querySelector('#address')?.value || '').trim();
       if (addressNotes) fd.append("address", addressNotes);
 
-      const url = `/intake/${VERTICAL_SLUG}/lead?format=json`;
+      const url = `${SUBMIT_URL}?format=json`;
       const resp = await fetch(url, { method: "POST", body: fd });
 
       const data = await resp.json().catch(() => ({}));
@@ -743,7 +744,7 @@ console.log(
   document.querySelectorAll('input[name="photo_keys"]').length
 );
 
-        const res = await fetch('/intake/lead', { method: 'POST', body: formData });
+        const res = await fetch(SUBMIT_URL, { method: 'POST', body: formData });
 
         if (res.redirected) { window.location.href = res.url; return; }
         const loc = res.headers.get('location');

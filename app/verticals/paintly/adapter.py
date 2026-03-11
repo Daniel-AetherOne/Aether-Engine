@@ -106,12 +106,14 @@ class PaintlyAdapter(VerticalAdapter):
         lead_id: str,
         tenant_id: str = "public",
         extra_context: dict | None = None,
+        submit_url: str | None = None,
     ):
         context = {
             "request": request,
             "lead_id": lead_id,
             "tenant_id": tenant_id,
             "vertical": self.vertical_id,
+            "submit_url": submit_url or f"/intake/{self.vertical_id}/lead",
         }
         if extra_context:
             context.update(extra_context)
