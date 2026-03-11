@@ -14,6 +14,7 @@ from app.verticals.paintly.eu_config import resolve_eu_config  # ✅ ADD
 
 from app.auth.optional_user import get_optional_user
 from app.models.user import User
+from app.models.tenant import Tenant
 
 router = APIRouter(prefix="/intake", tags=["intake"])
 logger = logging.getLogger(__name__)
@@ -85,7 +86,6 @@ async def _create_lead_impl(
     else:
         tenant_id = "dev-tenant"
 
-    # ✅ Upsert: als lead_id in form zit → update existing lead
     if hasattr(v, "upsert_lead_from_form"):
         result = await v.upsert_lead_from_form(
             request,
@@ -135,6 +135,85 @@ async def _create_lead_impl(
 def intake_painters_us_redirect():
     # ✅ keep old link working, but always use paintly now
     return RedirectResponse(url="/intake/paintly", status_code=302)
+
+
+@router.get("/t/{tenant_slug}", response_class=HTMLResponse)
+def intake_by_tenant_slug(
+    request: Request,
+    tenant_slug: str,
+    db: Session = Depends(get_db),
+):
+    tenant = db.query(Tenant).filter(Tenant.slug == tenant_slug).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    v = _get_vertical_or_404(DEFAULT_VERTICAL)
+
+    return v.render_intake_form(
+        request,
+        lead_id=str(uuid.uuid4()),
+        tenant_id=str(tenant.id),
+    )
+
+
+@router.post("/t/{tenant_slug}/lead")
+async def create_lead_by_tenant_slug(
+    request: Request,
+    tenant_slug: str,
+    db: Session = Depends(get_db),
+):
+    try:
+        tenant = db.query(Tenant).filter(Tenant.slug == tenant_slug).first()
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+
+        v = _get_vertical_or_404(DEFAULT_VERTICAL)
+
+        if hasattr(v, "upsert_lead_from_form"):
+            result = await v.upsert_lead_from_form(
+                request,
+                db,
+                tenant_id=str(tenant.id),
+            )
+        else:
+            result = await v.create_lead_from_form(
+                request,
+                db,
+                tenant_id=str(tenant.id),
+            )
+
+        logger.info(
+            "INTAKE created lead=%s via tenant_slug=%s tenant=%s",
+            result.lead_id,
+            tenant_slug,
+            result.tenant_id,
+        )
+
+        status_url = _status_url(result.lead_id)
+
+        if _wants_json(request):
+            return JSONResponse(
+                {
+                    "lead_id": result.lead_id,
+                    "tenant_id": result.tenant_id,
+                    "files": result.files,
+                    "vertical": result.vertical,
+                    "next": {
+                        "status": status_url,
+                        "publish_estimate": f"/quotes/publish/{result.lead_id}",
+                        "json": f"/quotes/{result.lead_id}/json",
+                        "html": f"/quotes/{result.lead_id}/html",
+                    },
+                }
+            )
+
+        return RedirectResponse(url=status_url, status_code=303)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("create_lead_by_tenant_slug crashed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # -------------------------
