@@ -126,7 +126,7 @@ def register_form(
         id=str(uuid4()),
         tenant_id=tenant.id,
         email=email_norm,
-        password_hash=hash_password(password),
+        password_hash=hash_password(password[:72]),
         is_active=True,
     )
 

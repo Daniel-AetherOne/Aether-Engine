@@ -38,5 +38,6 @@ timm
 
 weasyprint
 
-passlib[bcrypt]
+passlib[bcrypt]==1.7.4
 PyJWT
+bcrypt==3.2.0
