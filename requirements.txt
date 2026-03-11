@@ -24,3 +24,4 @@ weasyprint
 opencv-python-headless
 passlib[bcrypt]
 PyJWT
+email-validator
