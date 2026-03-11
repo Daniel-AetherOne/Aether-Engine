@@ -8,20 +8,20 @@ depends_on = None
 
 
 def upgrade():
-    op.alter_column(
-        "upload_records",
-        "tenant_id",
-        existing_type=sa.Integer(),
-        type_=sa.String(length=100),
-        existing_nullable=False,
-    )
+    with op.batch_alter_table("upload_records") as batch_op:
+        batch_op.alter_column(
+            "tenant_id",
+            existing_type=sa.Integer(),
+            type_=sa.String(length=100),
+            existing_nullable=False,
+        )
 
 
 def downgrade():
-    op.alter_column(
-        "upload_records",
-        "tenant_id",
-        existing_type=sa.String(length=100),
-        type_=sa.Integer(),
-        existing_nullable=False,
-    )
+    with op.batch_alter_table("upload_records") as batch_op:
+        batch_op.alter_column(
+            "tenant_id",
+            existing_type=sa.String(length=100),
+            type_=sa.Integer(),
+            existing_nullable=False,
+        )
