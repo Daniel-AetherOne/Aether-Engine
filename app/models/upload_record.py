@@ -29,7 +29,7 @@ class UploadRecord(Base):
     id = Column(Integer, primary_key=True)
 
     # Multi-tenant safety: always store tenant_id for correct scoping
-    tenant_id = Column(Integer, nullable=False, index=True)
+    tenant_id = Column(String(100), nullable=False, index=True)
 
     # Link to lead
     lead_id = Column(Integer, nullable=False, index=True)
