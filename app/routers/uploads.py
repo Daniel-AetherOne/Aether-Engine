@@ -141,7 +141,6 @@ def _local_path_if_available(
 async def presign_upload(
     req: PresignRequest,
     db: Session = Depends(get_db),
-    _user=Depends(require_auth),  # tests verwachten auth
 ) -> Dict:
     """
     Presign for intake:
@@ -186,7 +185,12 @@ async def presign_upload(
         try:
             import boto3  # lazy import
 
-            s3 = boto3.client("s3", region_name=S3_REGION)
+            s3 = boto3.client(
+                "s3",
+                region_name=S3_REGION,
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            )
 
             fields = {"key": key_with_tenant, "Content-Type": ctype}
             conditions = [
@@ -369,7 +373,7 @@ async def local_upload(
 
     # ✅ als lead_id meegegeven is: check dat lead bestaat + tenant matcht
     if lead_id is not None:
-        lead, t = _lead_and_tenant(db, int(lead_id))
+    lead, t = _lead_and_tenant(db, int(lead_id))
     if str(t) != str(tenant_id):
         raise HTTPException(status_code=403, detail="tenant_mismatch")
 
