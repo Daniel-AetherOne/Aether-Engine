@@ -122,6 +122,17 @@ logger.info("startup", service=getattr(settings, "SERVICE_NAME", "aether-api"))
 
 app.state.templates = Jinja2Templates(directory="app/templates")
 
+
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "paintly-api"}
+
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+
 # ----------------------------------------------------
 # Middleware
 # ----------------------------------------------------
