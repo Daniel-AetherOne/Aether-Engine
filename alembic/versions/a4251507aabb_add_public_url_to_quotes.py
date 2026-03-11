@@ -12,53 +12,70 @@ import sqlalchemy as sa
 from sqlalchemy import text
 
 
-# revision identifiers, used by Alembic.
 revision: str = "a4251507aabb"
 down_revision: Union[str, Sequence[str], None] = "8a40197da8d5"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def _sqlite_index_exists(op_, index_name: str) -> bool:
+def _index_exists(op_, index_name: str) -> bool:
     conn = op_.get_bind()
-    res = conn.execute(
-        text("SELECT 1 FROM sqlite_master " "WHERE type='index' AND name=:name"),
-        {"name": index_name},
-    ).fetchone()
-    return res is not None
+    dialect = conn.dialect.name
+
+    if dialect == "sqlite":
+        res = conn.execute(
+            text("SELECT 1 FROM sqlite_master WHERE type='index' AND name=:name"),
+            {"name": index_name},
+        ).fetchone()
+        return res is not None
+
+    if dialect == "postgresql":
+        res = conn.execute(
+            text("SELECT 1 FROM pg_indexes WHERE indexname = :name"),
+            {"name": index_name},
+        ).fetchone()
+        return res is not None
+
+    return False
 
 
-def _sqlite_table_exists(op_, table_name: str) -> bool:
+def _table_exists(op_, table_name: str) -> bool:
     conn = op_.get_bind()
-    res = conn.execute(
-        text("SELECT 1 FROM sqlite_master " "WHERE type='table' AND name=:name"),
-        {"name": table_name},
-    ).fetchone()
-    return res is not None
+    dialect = conn.dialect.name
+
+    if dialect == "sqlite":
+        res = conn.execute(
+            text("SELECT 1 FROM sqlite_master WHERE type='table' AND name=:name"),
+            {"name": table_name},
+        ).fetchone()
+        return res is not None
+
+    if dialect == "postgresql":
+        res = conn.execute(
+            text("SELECT 1 FROM information_schema.tables WHERE table_name = :name"),
+            {"name": table_name},
+        ).fetchone()
+        return res is not None
+
+    return False
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
-
-    # ---- DROP INDEX (only if exists) ----
     ix_candidates = [
         op.f("ix_upload_status_object_key"),
         "ix_upload_status_object_key",
     ]
 
     for ix_name in ix_candidates:
-        if _sqlite_index_exists(op, ix_name):
+        if _index_exists(op, ix_name):
             op.drop_index(ix_name, table_name="upload_status")
             break
 
-    # ---- DROP TABLE (only if exists) ----
-    if _sqlite_table_exists(op, "upload_status"):
+    if _table_exists(op, "upload_status"):
         op.drop_table("upload_status")
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
-
     op.create_table(
         "upload_status",
         sa.Column("id", sa.VARCHAR(), nullable=False),
