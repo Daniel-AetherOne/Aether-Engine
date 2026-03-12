@@ -267,9 +267,13 @@ class PaintlyAdapter(VerticalAdapter):
             "name": form_dict.get("name"),
             "email": form_dict.get("email"),
             "phone": form_dict.get("phone"),
+            "street": form_dict.get("street"),
+            "city": form_dict.get("city"),
+            "state": form_dict.get("state"),
+            "zip": form_dict.get("zip"),
             "project_description": form_dict.get("project_description")
             or form_dict.get("address"),
-            "object_keys": object_keys,  # ✅ tenant-loos
+            "object_keys": object_keys,
             "square_meters": square_meters,
             "job_type": form_dict.get("job_type"),
         }
@@ -377,9 +381,13 @@ class PaintlyAdapter(VerticalAdapter):
             "name": form_dict.get("name"),
             "email": form_dict.get("email"),
             "phone": form_dict.get("phone"),
+            "street": form_dict.get("street"),
+            "city": form_dict.get("city"),
+            "state": form_dict.get("state"),
+            "zip": form_dict.get("zip"),
             "project_description": form_dict.get("project_description")
             or form_dict.get("address"),
-            "object_keys": object_keys,  # ✅ tenant-loos
+            "object_keys": object_keys,
             "square_meters": square_meters,
             "job_type": form_dict.get("job_type"),
         }

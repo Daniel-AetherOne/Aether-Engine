@@ -291,38 +291,19 @@ def app_lead_detail(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    payload = {}
+    intake_payload_dict = {}
 
     if lead.intake_payload:
         try:
-            payload = json.loads(lead.intake_payload)
+            intake_payload_dict = json.loads(lead.intake_payload)
         except Exception:
-            payload = {}
+            intake_payload_dict = {}
 
     job = (
         db.query(Job)
         .filter(Job.lead_id == lead.id, Job.tenant_id == str(current_user.tenant_id))
         .first()
     )
-
-    vm = {
-        "id": lead.id,
-        "status": derive_status(lead),
-        "customer_name": getattr(lead, "name", "") or "",
-        "email": getattr(lead, "email", "") or "",
-        "phone": getattr(lead, "phone", "") or "",
-        # intake data
-        "street": payload.get("street", ""),
-        "city": payload.get("city", ""),
-        "state": payload.get("state", ""),
-        "zip": payload.get("zip", ""),
-        "square_meters": payload.get("square_meters", ""),
-        "address": f"{payload.get('street','')} {payload.get('city','')}".strip(),
-        "project_description": getattr(lead, "notes", "") or "",
-        "estimate_html_key": getattr(lead, "estimate_html_key", None),
-        "needs_review_reasons": getattr(lead, "needs_review_reasons", None),
-        "public_token": getattr(lead, "public_token", None),
-    }
 
     tz_name = _get_tenant_timezone(current_user, job)
 
@@ -344,8 +325,9 @@ def app_lead_detail(
         "app/lead_detail.html",
         {
             "request": request,
-            "lead": vm,
+            "lead": lead,
             "job": job,
+            "intake_payload_dict": intake_payload_dict,
             "tz_name": tz_name,
             "scheduled_input_value": scheduled_input_value,
             "scheduled_display": scheduled_display,
