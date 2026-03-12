@@ -6,6 +6,26 @@
   {% set sent = request.query_params.get('sent') %}
   {% set send_error = request.query_params.get('send_error') %}
 
+  {# intake payload veilig uitlezen #}
+  {% set payload = intake_payload_dict if intake_payload_dict is defined and intake_payload_dict else {} %}
+
+  {% set street = payload.get('street') or payload.get('address_street') or '' %}
+  {% set city = payload.get('city') or payload.get('address_city') or '' %}
+  {% set state = payload.get('state') or payload.get('region') or '' %}
+  {% set zip_code = payload.get('zip') or payload.get('postal_code') or '' %}
+  {% set country = payload.get('country') or '' %}
+  {% set square_meters = payload.get('square_meters') or payload.get('sqm') or '' %}
+  {% set job_type = payload.get('job_type') or '' %}
+  {% set vertical_label = lead.vertical or 'paintly' %}
+
+  {% set address_parts = [] %}
+  {% if street %}{% set _ = address_parts.append(street) %}{% endif %}
+  {% if city %}{% set _ = address_parts.append(city) %}{% endif %}
+  {% if state %}{% set _ = address_parts.append(state) %}{% endif %}
+  {% if zip_code %}{% set _ = address_parts.append(zip_code) %}{% endif %}
+  {% if country %}{% set _ = address_parts.append(country) %}{% endif %}
+  {% set full_address = address_parts | join(', ') %}
+
   <!-- Toast -->
   <div id="toast"
        class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-lg z-50">
@@ -36,9 +56,9 @@
 
         <div class="mt-3 text-sm text-slate-400">Lead</div>
         <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">
-          {{ lead.customer_name or ('Lead #' ~ lead.id) }}
+          {{ lead.name or ('Lead #' ~ lead.id) }}
         </h1>
-        <p class="mt-2 text-sm text-slate-500">Bekijk klantgegevens, offerte en planning op één plek.</p>
+        <p class="mt-2 text-sm text-slate-500">Bekijk klantgegevens, intake en offerte op één plek.</p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
@@ -196,21 +216,75 @@
           <div class="grid gap-5 sm:grid-cols-2">
             <div>
               <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Klant</div>
-              <div class="mt-2 text-sm font-medium text-slate-900">{{ lead.customer_name or "—" }}</div>
+              <div class="mt-2 text-sm font-medium text-slate-900">{{ lead.name or "—" }}</div>
             </div>
 
             <div>
               <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Adres</div>
-              <div class="mt-2 text-sm text-slate-700">{{ lead.address or "—" }}</div>
+              <div class="mt-2 text-sm text-slate-700">{{ full_address or "—" }}</div>
+            </div>
+          </div>
+
+          <div class="grid gap-5 sm:grid-cols-2">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">E-mail</div>
+              <div class="mt-2 text-sm text-slate-700 break-all">{{ lead.email or "—" }}</div>
+            </div>
+
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Telefoon</div>
+              <div class="mt-2 text-sm text-slate-700">{{ lead.phone or "—" }}</div>
+            </div>
+          </div>
+
+          <div class="grid gap-5 sm:grid-cols-3">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Oppervlakte</div>
+              <div class="mt-2 text-sm text-slate-700">
+                {% if square_meters %}{{ square_meters }} m²{% else %}—{% endif %}
+              </div>
+            </div>
+
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Soort werk</div>
+              <div class="mt-2 text-sm text-slate-700">{{ job_type or "—" }}</div>
+            </div>
+
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Vertical</div>
+              <div class="mt-2 text-sm text-slate-700">{{ vertical_label }}</div>
             </div>
           </div>
 
           <div>
             <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Projectomschrijving</div>
-            <div class="mt-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              {{ lead.project_description or "Geen omschrijving opgegeven" }}
+            <div class="mt-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700 whitespace-pre-line">
+              {{ lead.notes or "Geen omschrijving opgegeven" }}
             </div>
           </div>
+
+          {% if lead.files %}
+            <div class="border-t border-slate-100 pt-5">
+              <div class="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Uploads</div>
+              <div class="space-y-2">
+                {% for file in lead.files %}
+                  <div class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <div class="min-w-0">
+                      <div class="truncate text-sm font-medium text-slate-900">{{ file.s3_key.split('/')[-1] }}</div>
+                      <div class="mt-1 text-xs text-slate-500">{{ file.content_type }}{% if file.size_bytes %} · {{ file.size_bytes }} bytes{% endif %}</div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          {% if payload %}
+            <div class="border-t border-slate-100 pt-5">
+              <div class="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Intake payload</div>
+              <pre class="max-h-80 overflow-auto rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs text-slate-700">{{ payload | tojson(indent=2) }}</pre>
+            </div>
+          {% endif %}
 
           {% if lead.estimate_html_key %}
             <div class="border-t border-slate-100 pt-5">
@@ -230,18 +304,6 @@
                 </button>
               </div>
               <p class="mt-2 text-xs text-slate-500">Deel deze link met de klant om de offerte te bekijken en accepteren.</p>
-            </div>
-          {% endif %}
-
-          {% if lead.needs_review_reasons %}
-            <div class="border-t border-slate-100 pt-5">
-              <div class="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-600">
-                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                </svg>
-                Review nodig
-              </div>
-              <pre class="mt-2 max-h-40 overflow-auto rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">{{ lead.needs_review_reasons }}</pre>
             </div>
           {% endif %}
         </div>
