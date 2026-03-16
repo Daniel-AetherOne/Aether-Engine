@@ -9,7 +9,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.routers.auth import router as auth_router
@@ -43,6 +43,8 @@ from fastapi.staticfiles import StaticFiles
 from app.routers.debug_aws import router as debug_aws_router
 from app.routers.vision_debug import router as vision_router
 from app.routers import uploads, intake, quotes, files
+from app.routers import billing
+from app.routers import stripe_webhook
 from app.observability.metrics import router as metrics_router
 from app.routers import internal
 
@@ -123,14 +125,9 @@ logger.info("startup", service=getattr(settings, "SERVICE_NAME", "aether-api"))
 app.state.templates = Jinja2Templates(directory="app/templates")
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
-    return {"status": "ok", "service": "paintly-api"}
-
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy"}
+    return RedirectResponse(url="/app")
 
 
 # ----------------------------------------------------
@@ -173,9 +170,9 @@ def ratelimit_handler(request: Request, exc: RateLimitExceeded):
 # ----------------------------------------------------
 # Health
 # ----------------------------------------------------
-@app.get("/health", include_in_schema=True)
+@app.get("/health", include_in_schema=False)
 def health() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "service": "paintly-api"}
 
 
 # ----------------------------------------------------
@@ -229,6 +226,8 @@ app.include_router(paintly_app_router)
 app.include_router(public_estimate_router)
 app.include_router(quote_router)
 app.include_router(onboarding.router)
+app.include_router(billing.router)
+app.include_router(stripe_webhook.router)
 
 # Optional ACE routers
 ACE_ENABLED = _env_truthy("ACE_ENABLED", "false")
