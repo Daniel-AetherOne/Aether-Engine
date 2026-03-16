@@ -29,10 +29,10 @@ def _find_tenant_by_subscription(db: Session, subscription_id: str) -> Tenant | 
     )
 
 
-@router.post("/webhook", include_in_schema=False)
+@router.post("/webhook", include_in_schema=False, response_model=None)
 async def stripe_webhook(
     request: Request,
-    db: Session = get_db(),
+    db: Session = Depends(get_db),
     stripe_signature: str | None = Header(None, alias="Stripe-Signature"),
 ):
     payload = await request.body()
