@@ -1,6 +1,7 @@
 from pathlib import Path
 from uuid import uuid4
 import re
+import logging
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -14,6 +15,7 @@ from app.models.tenant import Tenant
 from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = (
     Path(__file__).resolve().parents[1] / "verticals" / "paintly" / "templates"
@@ -57,10 +59,12 @@ def login_form(
     next: str = Form("/app/leads"),
     db: Session = Depends(get_db),
 ):
+    logger.info("AUTH_LOGIN_FORM_HIT email=%s", email)
     email_norm = email.lower().strip()
     user = db.query(User).filter(User.email == email_norm).first()
 
     if not user or not verify_password(password, user.password_hash):
+        logger.warning("AUTH_LOGIN_INVALID_CREDENTIALS email=%s", email_norm)
         return RedirectResponse(url=f"/auth/login?next={next}", status_code=302)
 
     token = create_access_token(
@@ -72,6 +76,7 @@ def login_form(
     if not next.startswith("/"):
         next = "/app/leads"
 
+    logger.info("AUTH_LOGIN_SUCCESS user_id=%s tenant_id=%s", user.id, user.tenant_id)
     resp = RedirectResponse(url=next, status_code=302)
     resp.set_cookie(
         key="access_token",
@@ -94,12 +99,14 @@ def register_form(
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
+    logger.info("AUTH_REGISTER_FORM_HIT email=%s company_name=%s", email, company_name)
     company_name_clean = company_name.strip()
     email_norm = email.lower().strip()
     phone_clean = phone.strip() if phone else None
 
     existing = db.query(User).filter(User.email == email_norm).first()
     if existing:
+        logger.warning("AUTH_REGISTER_EMAIL_EXISTS email=%s", email_norm)
         return RedirectResponse(url="/auth/login", status_code=302)
 
     base_slug = slugify(company_name_clean) or "tenant"
@@ -152,6 +159,7 @@ def register_form(
         max_age=60 * 60 * 24,
         path="/",
     )
+    logger.info("AUTH_REGISTER_SUCCESS user_id=%s tenant_id=%s", user.id, user.tenant_id)
     return resp
 
 
