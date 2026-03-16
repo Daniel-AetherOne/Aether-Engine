@@ -18,6 +18,7 @@ pydantic-settings
 requests
 httpx
 boto3
+stripe
 
 slowapi
 prometheus-client

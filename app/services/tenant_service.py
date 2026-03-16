@@ -78,7 +78,20 @@ class TenantService:
     def _save_tenants(self):
         """Save tenant configurations to file"""
         try:
-            data = {tid: tenant.dict() for tid, tenant in self._tenants.items()}
+            # TenantSettings is een SQLAlchemy ORM-model, dus we bouwen hier expliciet een dict
+            data = {
+                tid: {
+                    "tenant_id": tenant.tenant_id,
+                    "company_name": tenant.company_name,
+                    "logo_url": tenant.logo_url,
+                    "hubspot_token": tenant.hubspot_token,
+                    "pipeline": tenant.pipeline,
+                    "stage": tenant.stage,
+                    "primary_color": tenant.primary_color,
+                    "secondary_color": tenant.secondary_color,
+                }
+                for tid, tenant in self._tenants.items()
+            }
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             logger.info("Saved tenant configurations to file")
