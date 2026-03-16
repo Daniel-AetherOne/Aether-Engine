@@ -2,6 +2,9 @@ import json
 import logging
 from pathlib import Path
 from typing import Dict, Optional
+
+from app.db import SessionLocal
+from app.models.tenant import Tenant
 from app.models.tenant_settings import TenantSettings
 
 # Configure logging
@@ -99,13 +102,55 @@ class TenantService:
             logger.error(f"Error saving tenant config: {e}")
 
     def get_tenant(self, tenant_id: str) -> Optional[TenantSettings]:
-        """Get tenant settings by ID"""
-        if tenant_id not in self._tenants:
-            logger.warning(f"Tenant {tenant_id} not found, falling back to default")
-            # Fallback to default tenant
-            return self._tenants.get("default")
-        logger.info(f"Retrieved tenant settings for {tenant_id}")
-        return self._tenants[tenant_id]
+        """Get tenant settings by ID.
+
+        Prefer in-memory TenantSettings. If not present, try to hydrate from the DB
+        `Tenant` table (Paintly multi-tenant source of truth). Fallback to `default`.
+        """
+        ts = self._tenants.get(tenant_id)
+        if ts is not None:
+            logger.info(f"Retrieved tenant settings for {tenant_id} (cached)")
+            return ts
+
+        # Try to hydrate from DB Tenant row (for real SaaS tenants with UUID ids)
+        tenant_db: Tenant | None = None
+        try:
+            db = SessionLocal()
+            try:
+                tenant_db = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Error loading Tenant {tenant_id} from DB: {e}")
+            tenant_db = None
+
+        if tenant_db is not None:
+            company_name = (
+                (tenant_db.company_name or "").strip()
+                or (tenant_db.name or "").strip()
+                or "Paintly"
+            )
+            ts = TenantSettings(
+                tenant_id=tenant_db.id,
+                company_name=company_name,
+                logo_url=None,
+                hubspot_token=None,
+                pipeline="Default Pipeline",
+                stage="New Lead",
+            )
+            self._tenants[tenant_id] = ts
+            logger.info(
+                "Hydrated TenantSettings from DB for tenant %s (company_name=%s)",
+                tenant_id,
+                company_name,
+            )
+            return ts
+
+        logger.warning(
+            f"Tenant {tenant_id} not found in config or DB, falling back to default"
+        )
+        # Fallback to default tenant (safe baseline branding)
+        return self._tenants.get("default")
 
     def list_tenants(self) -> Dict[str, TenantSettings]:
         """List all available tenants"""
