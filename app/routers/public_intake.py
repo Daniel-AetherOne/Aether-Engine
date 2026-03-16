@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models.tenant import Tenant
+from app.models.tenant import Tenant, get_tenant_by_slug
 from app.verticals.registry import get as get_vertical
 
 router = APIRouter(tags=["public-intake"])
@@ -25,7 +25,10 @@ def public_intake_page(
         request=request,
         lead_id="",
         tenant_id=tenant.id,
-        extra_context={"tenant": tenant},
+        extra_context={
+            "tenant": tenant,
+            "tenant_slug": tenant.slug,
+        },
     )
 
 
@@ -35,7 +38,7 @@ def intake_by_slug(
     tenant_slug: str,
     db: Session = Depends(get_db),
 ):
-    tenant = db.query(Tenant).filter(Tenant.slug == tenant_slug).first()
+    tenant = get_tenant_by_slug(db, tenant_slug)
 
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -46,5 +49,8 @@ def intake_by_slug(
         request=request,
         lead_id="",
         tenant_id=tenant.id,
-        extra_context={"tenant": tenant},
+        extra_context={
+            "tenant": tenant,
+            "tenant_slug": tenant.slug,
+        },
     )

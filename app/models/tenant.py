@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import DateTime, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, Session
 from sqlalchemy.types import JSON
 from app.db import Base
 
@@ -32,3 +32,12 @@ class Tenant(Base):
 
     def __repr__(self) -> str:
         return f"<Tenant id={self.id!r} name={self.name!r}>"
+
+
+def get_tenant_by_slug(db: Session, slug: str) -> "Tenant | None":
+    """
+    Small helper for public routing to keep slug lookups consistent.
+    """
+    if not slug:
+        return None
+    return db.query(Tenant).filter(Tenant.slug == slug).first()

@@ -15,7 +15,7 @@ from app.verticals.paintly.eu_config import resolve_eu_config  # ✅ ADD
 
 from app.auth.optional_user import get_optional_user
 from app.models.user import User
-from app.models.tenant import Tenant
+from app.models.tenant import Tenant, get_tenant_by_slug
 from app.models.lead import Lead as LeadModel
 
 router = APIRouter(prefix="/intake", tags=["intake"])
@@ -144,22 +144,41 @@ async def _create_lead_impl(
 
 
 # -------------------------
-# Backward compatible routes
-# Keep this BEFORE /{vertical} too, otherwise it gets treated as vertical.
+# Backward compatible + tenant slug routes
 # -------------------------
 @router.get("/painters-us", include_in_schema=False)
 def intake_painters_us_redirect():
-    # ✅ keep old link working, but always use paintly now
+    # ✅ keep old link working, but always use tenant slug route now
     return RedirectResponse(url="/intake/paintly", status_code=302)
 
 
-@router.get("/t/{tenant_slug}", response_class=HTMLResponse)
+@router.get("/t/{tenant_slug}", include_in_schema=False)
+def legacy_intake_by_tenant_slug_redirect(tenant_slug: str):
+    """
+    Legacy entrypoint; keep compatibility but delegate to primary slug route.
+    """
+    return RedirectResponse(url=f"/intake/{tenant_slug}", status_code=302)
+
+
+@router.post("/t/{tenant_slug}/lead", include_in_schema=False)
+async def legacy_create_lead_by_tenant_slug(
+    request: Request,
+    tenant_slug: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Legacy POST entrypoint; reuse primary slug handler to avoid logic duplication.
+    """
+    return await create_lead_by_tenant_slug(request=request, tenant_slug=tenant_slug, db=db)
+
+
+@router.get("/{tenant_slug}", response_class=HTMLResponse)
 def intake_by_tenant_slug(
     request: Request,
     tenant_slug: str,
     db: Session = Depends(get_db),
 ):
-    tenant = db.query(Tenant).filter(Tenant.slug == tenant_slug).first()
+    tenant = get_tenant_by_slug(db, tenant_slug)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
@@ -169,18 +188,22 @@ def intake_by_tenant_slug(
         request,
         lead_id=str(uuid.uuid4()),
         tenant_id=str(tenant.id),
-        submit_url=f"/intake/t/{tenant_slug}/lead",
+        submit_url=f"/intake/{tenant_slug}",
+        extra_context={
+            "tenant": tenant,
+            "tenant_slug": tenant.slug,
+        },
     )
 
 
-@router.post("/t/{tenant_slug}/lead")
+@router.post("/{tenant_slug}")
 async def create_lead_by_tenant_slug(
     request: Request,
     tenant_slug: str,
     db: Session = Depends(get_db),
 ):
     try:
-        tenant = db.query(Tenant).filter(Tenant.slug == tenant_slug).first()
+        tenant = get_tenant_by_slug(db, tenant_slug)
         if not tenant:
             raise HTTPException(status_code=404, detail="Tenant not found")
 
@@ -252,9 +275,9 @@ async def create_lead_by_tenant_slug(
 
 
 # -------------------------
-# New dynamic routes
+# Dynamic vertical routes (legacy, now under /v/)
 # -------------------------
-@router.get("/{vertical}", response_class=HTMLResponse)
+@router.get("/v/{vertical}", response_class=HTMLResponse)
 def intake_by_vertical(
     request: Request,
     vertical: str,
@@ -268,11 +291,11 @@ def intake_by_vertical(
         request,
         lead_id=str(uuid.uuid4()),
         tenant_id=tenant_id,
-        submit_url=f"/intake/{vertical}/lead",
+        submit_url=f"/intake/v/{vertical}/lead",
     )
 
 
-@router.post("/{vertical}/lead")
+@router.post("/v/{vertical}/lead")
 async def create_lead_by_vertical(
     request: Request,
     vertical: str,

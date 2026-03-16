@@ -155,5 +155,5 @@ def lead_detail_page(
 
 @router.get("/new")
 def new_estimate(request: Request):
-    # MVP: redirect naar jouw intake entrypoint
+    # MVP: redirect naar jouw intake entrypoint (Paintly demo tenant via slug)
     return RedirectResponse(url="/intake/paintly", status_code=302)
