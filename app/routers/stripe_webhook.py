@@ -2,7 +2,7 @@ import json
 import os
 from typing import Any, Dict
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -84,4 +84,3 @@ async def stripe_webhook(
                 db.commit()
 
     return {"received": True}
-
