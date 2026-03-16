@@ -2,31 +2,34 @@
 from __future__ import annotations
 
 import secrets
+import uuid
+import datetime as dt
 from zoneinfo import ZoneInfo
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from datetime import datetime, timezone, timedelta
+import logging
+import json
 
 from fastapi import BackgroundTasks
-
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, Query
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from datetime import datetime, timezone, timedelta
-import logging
-from fastapi import Form
-import json
 
 from app.auth.deps import require_user_html
 from app.db import get_db
 from app.models.lead import Lead
 from app.models.job import Job
 from app.models.user import User
+from app.models.tenant import Tenant
+from app.models.tenant_settings import TenantSettings
 from app.services.storage import get_storage, get_text
 from app.models.lead import LeadFile
 from app.models.upload_record import UploadRecord, UploadStatus
 
 from app.core.settings import settings
+from app.dependencies import tenant_service
 from app.verticals.paintly.email_render import render_estimate_ready_email
 from app.verticals.paintly.estimate_email import (
     send_estimate_ready_email_to_customer,
@@ -46,7 +49,86 @@ logger = logging.getLogger(__name__)
 
 
 # -------------------------
-# Time helpers
+# Tenant / UI context helpers
+# -------------------------
+def _resolve_company_name_and_tenant(
+    tenant_id: str,
+    db: Session,
+) -> tuple[str, Tenant | TenantSettings | None]:
+    """
+    Resolve tenant settings + human-friendly company name.
+
+    Priority:
+    1) tenant.company_name
+    2) tenant.name
+    3) "Paintly"
+    """
+    company_name: str | None = None
+    source_obj: Tenant | TenantSettings | None = None
+
+    # 1) Try DB Tenant table (authoritative for onboarded accounts)
+    try:
+        tenant_db = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    except Exception:
+        tenant_db = None
+
+    if tenant_db is not None:
+        source_obj = tenant_db
+        for attr in ("company_name", "name"):
+            val = getattr(tenant_db, attr, None)
+            if isinstance(val, str) and val.strip():
+                company_name = val.strip()
+                break
+
+    # 2) Fallback: in-memory TenantSettings (legacy JSON config)
+    if company_name is None:
+        try:
+            ts = tenant_service.get_tenant(tenant_id)
+        except Exception:
+            ts = None
+
+        if ts is not None:
+            if source_obj is None:
+                source_obj = ts
+            for attr in ("company_name", "name"):
+                val = getattr(ts, attr, None)
+                if isinstance(val, str) and val.strip():
+                    company_name = val.strip()
+                    break
+
+    if not company_name:
+        company_name = "Aether Engine"
+
+    return company_name, source_obj
+
+
+def _dashboard_context(
+    request: Request,
+    current_user: User,
+    db: Session,
+    extra: dict | None = None,
+) -> dict:
+    """
+    Shared context for all internal Paintly app templates.
+    Ensures multi-tenant company branding per request.
+    """
+    raw_tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = str(raw_tenant_id) if raw_tenant_id is not None else "default"
+
+    company_name, tenant_obj = _resolve_company_name_and_tenant(tenant_id, db)
+
+    ctx: dict = {
+        "request": request,
+        "tenant": tenant_obj,
+        "company_name": company_name,
+    }
+    if extra:
+        ctx.update(extra)
+    return ctx
+
+
+# -------------------------
+# Time & money helpers
 # -------------------------
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -99,6 +181,262 @@ def _utc_to_local_human(dt_utc: datetime | None, tz_name: str) -> str:
     return dt_utc.astimezone(tz).strftime("%b %d, %Y %H:%M")
 
 
+def _safe_decimal(val: object) -> Decimal | None:
+    """Best-effort conversion to Decimal without raising."""
+    if val is None:
+        return None
+    try:
+        return Decimal(str(val))
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def _fmt_eur(amount: Decimal | None) -> str | None:
+    """Simple EUR formatting for internal UI only."""
+    if amount is None:
+        return None
+    quantized = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    # Basic European-style formatting: 1 234,56
+    s = f"{quantized:,.2f}"
+    s = s.replace(",", "_").replace(".", ",").replace("_", ".")
+    return f"€ {s}"
+
+
+def _apply_overrides_to_estimate_dict(estimate: dict, overrides: dict) -> dict:
+    """
+    Build an override-aware copy of the pricing estimate dict.
+    Applies manual_total / discount_percent into totals + meta
+    so that rendered HTML reflects the internal override UI.
+    """
+    estimate = dict(estimate or {})
+    pricing = estimate  # render_estimate_html expects pricing at top-level
+
+    overrides = dict(overrides or {})
+    manual_total = overrides.get("manual_total")
+    discount_percent = overrides.get("discount_percent")
+
+    totals = dict(pricing.get("totals") or {})
+
+    # Base total (incl. VAT) from existing estimate
+    base_total_incl = totals.get("grand_total") or totals.get("pre_tax") or 0
+    try:
+        total_dec = Decimal(str(base_total_incl))
+    except Exception:
+        total_dec = Decimal("0")
+
+    # Apply discount % if present and no explicit manual_total
+    if manual_total is None and discount_percent is not None:
+        try:
+            disc = Decimal(str(discount_percent))
+            if disc > 0:
+                if disc > 100:
+                    disc = Decimal("100")
+                factor = (Decimal("100") - disc) / Decimal("100")
+                total_dec = (total_dec * factor).quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP
+                )
+        except Exception:
+            # keep base total on parse errors
+            pass
+
+    # If manual_total is provided, it wins over discount_percent
+    if manual_total is not None:
+        try:
+            total_dec = Decimal(str(manual_total)).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+        except Exception:
+            # fall back to original total on parse errors
+            pass
+
+    # Derive VAT breakdown from total_dec using pricing's vat_rate if present
+    vat_rate = pricing.get("vat_rate")
+    if vat_rate is None:
+        vat_rate = pricing.get("tax_rate")
+    try:
+        vat_rate_dec = (
+            Decimal(str(vat_rate)) if vat_rate is not None else Decimal("0.21")
+        )
+    except Exception:
+        vat_rate_dec = Decimal("0.21")
+
+    if total_dec <= 0:
+        # nothing usable → return original estimate untouched
+        return estimate
+
+    # Reverse-calc excl VAT + VAT amount from total incl.
+    one_plus = Decimal("1") + vat_rate_dec
+    subtotal_excl = (total_dec / one_plus).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    vat_amount = (total_dec - subtotal_excl).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+
+    totals["pre_tax"] = float(subtotal_excl)
+    totals["grand_total"] = float(total_dec)
+    pricing["totals"] = totals
+
+    # Surface overrides + explicit override_total_incl_vat in meta
+    meta = dict(pricing.get("meta") or {})
+    meta["overrides"] = overrides
+    meta["override_total_incl_vat"] = float(total_dec)
+    pricing["meta"] = meta
+
+    # Debug log adjusted totals for verification
+    logger.info(
+        "APPLY_OVERRIDES_RESULT overrides=%r totals=%r meta_total=%r",
+        overrides,
+        totals,
+        meta.get("override_total_incl_vat"),
+    )
+
+    return pricing
+
+
+def render_quote_html_for_lead(lead: Lead, overrides: dict) -> tuple[str | None, bool]:
+    """
+    Helper used after saving manual overrides.
+    Re-renders estimate HTML from lead.estimate_json + overrides,
+    writes it to storage and returns the new html_key.
+    """
+    from app.verticals.paintly.render_estimate import render_estimate_html
+
+    raw_est = getattr(lead, "estimate_json", None)
+    if not raw_est:
+        logger.warning(
+            "RENDER_QUOTE_HTML_FOR_LEAD_SKIPPED_NO_JSON lead_id=%s html_key=%r",
+            getattr(lead, "id", None),
+            getattr(lead, "estimate_html_key", None),
+        )
+        return None, False
+
+    try:
+        estimate_dict = json.loads(raw_est)
+        if not isinstance(estimate_dict, dict):
+            raise TypeError("estimate_json not a dict")
+    except Exception:
+        logger.exception(
+            "RENDER_QUOTE_HTML_FOR_LEAD_PARSE_FAILED lead_id=%s",
+            getattr(lead, "id", None),
+        )
+        return None, False
+
+    logger.info(
+        "RENDER_QUOTE_HTML_FOR_LEAD_CALLED lead_id=%s old_html_key=%r",
+        getattr(lead, "id", None),
+        getattr(lead, "estimate_html_key", None),
+    )
+
+    # Apply overrides into pricing totals
+    estimate_with_overrides = _apply_overrides_to_estimate_dict(
+        estimate_dict, overrides
+    )
+
+    logger.info(
+        "RENDER_QUOTE_HTML_FOR_LEAD_AFTER_APPLY lead_id=%s totals=%r meta=%r",
+        getattr(lead, "id", None),
+        (estimate_with_overrides.get("totals") or {}),
+        (estimate_with_overrides.get("meta") or {}),
+    )
+
+    # Render fresh HTML
+    html = render_estimate_html(estimate_with_overrides)
+
+    storage = get_storage()
+    today = dt.date.today().isoformat()
+    filename = f"estimate_{lead.id}_{uuid.uuid4().hex}.html"
+    new_key = f"leads/{lead.id}/estimates/{today}/{filename}"
+
+    storage.save_bytes(
+        tenant_id=str(lead.tenant_id),
+        key=new_key,
+        data=html.encode("utf-8"),
+        content_type="text/html; charset=utf-8",
+    )
+
+    logger.info(
+        "RENDER_QUOTE_HTML_FOR_LEAD_DONE lead_id=%s old_html_key=%r new_html_key=%r",
+        getattr(lead, "id", None),
+        getattr(lead, "estimate_html_key", None),
+        new_key,
+    )
+
+    return new_key, True
+
+
+def get_estimate_overrides(lead: Lead) -> dict:
+    """
+    Safely parse estimate_overrides_json from a Lead.
+    Never raises; returns {} on any error or missing payload.
+    """
+    raw = getattr(lead, "estimate_overrides_json", None)
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        return {}
+    return {}
+
+
+def get_effective_total(lead: Lead) -> Decimal | None:
+    """
+    Compute override-aware total (incl. VAT) for internal display:
+    - If overrides.manual_total present and valid -> use that.
+    - Else if overrides.discount_percent present -> apply to base total_incl_vat from estimate_json.
+    - Else fall back to base total_incl_vat from estimate_json.
+    - Returns None if no usable total.
+    """
+    overrides = get_estimate_overrides(lead)
+
+    manual_total = _safe_decimal(overrides.get("manual_total"))
+    if manual_total is not None:
+        return manual_total
+
+    # Parse estimate_json for base total
+    base_total: Decimal | None = None
+    raw_est = getattr(lead, "estimate_json", None)
+    if raw_est:
+        try:
+            est = json.loads(raw_est)
+            if isinstance(est, dict):
+                # canonical path used by paintly render_estimate: pricing.meta.vat.total_incl_vat
+                totals = est.get("totals") or {}
+                vat_block = est.get("vat") or {}
+                # prefer vat.total_incl_vat if present, else totals.grand_total, else totals.pre_tax
+                for candidate in [
+                    vat_block.get("total_incl_vat"),
+                    totals.get("grand_total"),
+                    totals.get("pre_tax"),
+                ]:
+                    base_total = _safe_decimal(candidate)
+                    if base_total is not None:
+                        break
+        except Exception:
+            base_total = None
+
+    if base_total is None:
+        return None
+
+    discount = overrides.get("discount_percent")
+    discount_dec = _safe_decimal(discount)
+    if discount_dec is None:
+        return base_total
+
+    if discount_dec <= 0:
+        return base_total
+
+    # Cap at 100% to avoid negative totals
+    if discount_dec > 100:
+        discount_dec = Decimal("100")
+
+    factor = (Decimal("100") - discount_dec) / Decimal("100")
+    return (base_total * factor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
 # -------------------------
 # Dev helper (optional)
 # -------------------------
@@ -148,9 +486,10 @@ def compute_next_action(lead: Lead, job: Job | None) -> dict:
     has_public = bool(getattr(lead, "public_token", None))
 
     if not has_estimate:
-        return {"label": "Open lead", "href": f"/app/leads/{lead.id}"}
+        return {"label": "Bekijk offerte", "href": f"/app/leads/{lead.id}"}
 
-    if lead_status not in {"SENT", "VIEWED", "ACCEPTED"}:
+    # Alleen SUCCEEDED mag verstuurd worden; NEEDS_REVIEW blokkeert send.
+    if lead_status == "SUCCEEDED":
         return {
             "label": "Send estimate",
             "href": f"/app/leads/{lead.id}/send",
@@ -159,27 +498,27 @@ def compute_next_action(lead: Lead, job: Job | None) -> dict:
 
     if lead_status == "SENT":
         return (
-            {"label": "Open public link", "href": f"/e/{lead.public_token}"}
+            {"label": "Open publieke offerte", "href": f"/e/{lead.public_token}"}
             if has_public
-            else {"label": "Open lead", "href": f"/app/leads/{lead.id}"}
+            else {"label": "Bekijk offerte", "href": f"/app/leads/{lead.id}"}
         )
 
     if lead_status == "VIEWED":
         return (
             {"label": "Follow up (open)", "href": f"/e/{lead.public_token}"}
             if has_public
-            else {"label": "Open lead", "href": f"/app/leads/{lead.id}"}
+            else {"label": "Bekijk offerte", "href": f"/app/leads/{lead.id}"}
         )
 
     if lead_status == "ACCEPTED":
         if not job:
-            return {"label": "View lead", "href": f"/app/leads/{lead.id}"}
+            return {"label": "Bekijk offerte", "href": f"/app/leads/{lead.id}"}
         js = (job.status or "").upper()
         if js in {"NEW", "SCHEDULED", "IN_PROGRESS"}:
             return {"label": "Update job", "href": f"/app/leads/{lead.id}#job"}
-        return {"label": "View lead", "href": f"/app/leads/{lead.id}"}
+        return {"label": "Bekijk offerte", "href": f"/app/leads/{lead.id}"}
 
-    return {"label": "Open lead", "href": f"/app/leads/{lead.id}"}
+    return {"label": "Bekijk offerte", "href": f"/app/leads/{lead.id}"}
 
 
 # -------------------------
@@ -227,10 +566,13 @@ def app_dashboard(
         for l in leads
     ]
 
-    return templates.TemplateResponse(
-        "app/dashboard.html",
-        {"request": request, "kpis": kpis, "jobs": jobs_vm, "leads": leads_vm},
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
+        {"kpis": kpis, "jobs": jobs_vm, "leads": leads_vm},
     )
+    return templates.TemplateResponse("app/dashboard.html", context)
 
 
 @router.get("/leads", response_class=HTMLResponse)
@@ -270,10 +612,13 @@ def app_leads(
             }
         )
 
-    return templates.TemplateResponse(
-        "app/leads_list.html",
-        {"request": request, "leads": rows},
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
+        {"leads": rows},
     )
+    return templates.TemplateResponse("app/leads_list.html", context)
 
 
 @router.get("/leads/{lead_id}", response_class=HTMLResponse)
@@ -299,6 +644,11 @@ def app_lead_detail(
         except Exception:
             intake_payload_dict = {}
 
+    # Manual estimate overrides (internal-only)
+    overrides = get_estimate_overrides(lead)
+    effective_total = get_effective_total(lead)
+    effective_total_display = _fmt_eur(effective_total) if effective_total is not None else None
+
     job = (
         db.query(Job)
         .filter(Job.lead_id == lead.id, Job.tenant_id == str(current_user.tenant_id))
@@ -321,20 +671,123 @@ def app_lead_detail(
         _utc_to_local_human(getattr(job, "done_at", None), tz_name) if job else ""
     )
 
-    return templates.TemplateResponse(
-        "app/lead_detail.html",
+    # -------------------------
+    # Photo previews (MVP)
+    # -------------------------
+    photo_previews: list[dict] = []
+    try:
+        uploads = (
+            db.query(UploadRecord)
+            .filter(
+                UploadRecord.tenant_id == lead.tenant_id,
+                UploadRecord.lead_id == lead.id,
+                UploadRecord.status.in_([UploadStatus.uploaded, "uploaded"]),
+            )
+            .order_by(UploadRecord.id.desc())
+            .all()
+        )
+
+        storage = get_storage()
+
+        for u in uploads:
+            # alleen afbeeldingen tonen
+            if hasattr(u, "is_image") and not u.is_image:
+                continue
+
+            object_key = (getattr(u, "object_key", "") or "").strip()
+            if not object_key:
+                continue
+
+            # object_key staat meestal als "<tenant_id>/..."; storage verwacht key zonder tenant prefix
+            tenant_prefix = f"{lead.tenant_id}/"
+            key = (
+                object_key[len(tenant_prefix) :]
+                if object_key.startswith(tenant_prefix)
+                else object_key
+            )
+
+            try:
+                if hasattr(storage, "presigned_get_url"):
+                    url = storage.presigned_get_url(
+                        tenant_id=str(lead.tenant_id),
+                        key=key,
+                        expires_seconds=3600,
+                    )
+                else:
+                    url = storage.public_url(
+                        tenant_id=str(lead.tenant_id),
+                        key=key,
+                    )
+
+                name = key.split("/")[-1] if key else ""
+                photo_previews.append({"url": url, "name": name})
+            except Exception:
+                # nooit hard falen op previews
+                continue
+    except Exception:
+        # bij problemen met query/storage gewoon geen foto's tonen
+        photo_previews = []
+
+    # -------------------------
+    # Quote UI flags (MVP)
+    # -------------------------
+    has_estimate = bool(getattr(lead, "estimate_html_key", None))
+    raw_status = (getattr(lead, "status", "") or "").upper()
+
+    if not has_estimate:
+        quote_status = "none"
+    elif raw_status == "ACCEPTED":
+        quote_status = "accepted"
+    elif raw_status == "NEEDS_REVIEW":
+        quote_status = "review"
+    elif raw_status in {"SENT", "VIEWED"}:
+        quote_status = "sent"
+    else:
+        quote_status = "generated"
+
+    public_quote_url = public_url_for(request, lead)
+
+    can_generate = not has_estimate
+    can_view = has_estimate
+    # Only allow sending if estimate is fully succeeded (not in review) and email present
+    can_send = (
+        has_estimate
+        and raw_status == "SUCCEEDED"
+        and bool((getattr(lead, "email", "") or "").strip())
+    )
+    # Allow regeneration while not accepted
+    can_regenerate = has_estimate and raw_status != "ACCEPTED"
+
+    quote_ui = {
+        "has_estimate": has_estimate,
+        "quote_status": quote_status,
+        "can_generate": can_generate,
+        "can_view": can_view,
+        "can_regenerate": can_regenerate,
+        "can_send": can_send,
+        "public_quote_url": public_quote_url,
+    }
+
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
         {
-            "request": request,
             "lead": lead,
             "job": job,
             "intake_payload_dict": intake_payload_dict,
+            "quote_ui": quote_ui,
+            "photo_previews": photo_previews,
             "tz_name": tz_name,
             "scheduled_input_value": scheduled_input_value,
             "scheduled_display": scheduled_display,
             "started_display": started_display,
             "done_display": done_display,
+            "estimate_overrides": overrides,
+            "effective_total_display": effective_total_display,
         },
     )
+    return templates.TemplateResponse("app/lead_detail.html", context)
 
 
 @router.get("/leads/{lead_id}/estimate")
@@ -355,6 +808,12 @@ def app_lead_estimate(
     html_key = getattr(lead, "estimate_html_key", None)
     if not html_key:
         raise HTTPException(status_code=404, detail="Estimate HTML not found")
+
+    logger.info(
+        "APP_LEAD_ESTIMATE_ROUTE lead_id=%s html_key=%r",
+        getattr(lead, "id", None),
+        html_key,
+    )
 
     storage = get_storage()
 
@@ -398,7 +857,11 @@ def send_estimate(
         raise HTTPException(status_code=404, detail="Lead not found")
 
     if not lead.estimate_html_key:
-        raise HTTPException(status_code=400, detail="No estimate to send")
+        # Geen offerte beschikbaar om te versturen -> nette melding op lead detail
+        return RedirectResponse(
+            url=f"/app/leads/{lead_id}?send_error=no_estimate",
+            status_code=303,
+        )
 
     # ensure public token
     if not lead.public_token:
@@ -411,7 +874,11 @@ def send_estimate(
     # must have email
     to_email = (getattr(lead, "email", "") or "").strip()
     if not to_email:
-        raise HTTPException(status_code=400, detail="Lead has no email address")
+        # Geen klant e-mail -> nette melding op lead detail
+        return RedirectResponse(
+            url=f"/app/leads/{lead_id}?send_error=no_email",
+            status_code=303,
+        )
 
     company_name = "Paintly"
     customer_name = getattr(lead, "name", "") or ""
@@ -547,15 +1014,17 @@ def app_jobs_list(
             }
         )
 
-    return templates.TemplateResponse(
-        "app/jobs_list.html",
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
         {
-            "request": request,
             "jobs": rows,
             "counts": counts,
             "active_status": status_norm,
         },
     )
+    return templates.TemplateResponse("app/jobs_list.html", context)
 
 
 @router.post("/jobs/{job_id}/schedule")
@@ -891,10 +1360,11 @@ def app_calendar_week(
         f"/app/calendar?week={year}-W{week_no:02d}&show_done={0 if show_done else 1}"
     )
 
-    return templates.TemplateResponse(
-        "app/calendar_week.html",
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
         {
-            "request": request,
             "tz_name": tz_name,
             "week_label": week_label,
             "now_chip": now_chip,
@@ -906,6 +1376,7 @@ def app_calendar_week(
             "toggle_done_url": toggle_done_url,
         },
     )
+    return templates.TemplateResponse("app/calendar_week.html", context)
 
 
 @router.get("/reviews", response_class=HTMLResponse)
@@ -916,21 +1387,31 @@ def app_reviews_list(
 ):
     tenant = str(current_user.tenant_id)
 
+    # Gebruik dezelfde businessregel als derive_status:
+    # - expliciete status NEEDS_REVIEW
+    # - of needs_review_hard-flag actief
     leads = (
         db.query(Lead)
         .filter(
-            Lead.status == "NEEDS_REVIEW",
+            or_(
+                Lead.status == "NEEDS_REVIEW",
+                getattr(Lead, "needs_review_hard", None) == True,  # noqa: E712
+            ),
             or_(Lead.tenant_id == tenant, Lead.tenant_id == "public"),
         )
-        .order_by(desc(Lead.updated_at), desc(Lead.id))
+        # MVP: sorteer simpel en robuust op primaire sleutel
+        .order_by(desc(Lead.id))
         .limit(200)
         .all()
     )
 
-    return templates.TemplateResponse(
-        "app/reviews_list.html",
-        {"request": request, "leads": leads},
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
+        {"leads": leads},
     )
+    return templates.TemplateResponse("app/reviews_list.html", context)
 
 
 @router.get("/reviews/{lead_id}", response_class=HTMLResponse)
@@ -1042,10 +1523,11 @@ def app_review_detail(
     except Exception:
         intake = {}
 
-    return templates.TemplateResponse(
-        "app/review_detail.html",
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
         {
-            "request": request,
             "lead": lead,
             "reasons": reasons,
             "uploads": uploads,
@@ -1055,6 +1537,7 @@ def app_review_detail(
             "intake": intake,
         },
     )
+    return templates.TemplateResponse("app/review_detail.html", context)
 
 
 @router.post("/reviews/{lead_id}/generate-estimate")
@@ -1222,18 +1705,16 @@ def edit_estimate_get(
         .first()
     )
     if not lead:
-        raise HTTPException(404)
+        raise HTTPException(status_code=404, detail="Lead not found")
 
-    overrides = {}
-    try:
-        overrides = json.loads(lead.estimate_overrides_json or "{}")
-    except Exception:
-        overrides = {}
-
-    return templates.TemplateResponse(
-        "app/estimate_edit.html",
-        {"request": request, "lead": lead, "overrides": overrides},
+    overrides = get_estimate_overrides(lead)
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
+        {"lead": lead, "overrides": overrides},
     )
+    return templates.TemplateResponse("app/estimate_edit.html", context)
 
 
 @router.post("/leads/{lead_id}/edit-estimate")
@@ -1251,13 +1732,18 @@ def edit_estimate_post(
         .first()
     )
     if not lead:
-        raise HTTPException(404)
+        raise HTTPException(status_code=404, detail="Lead not found")
 
-    overrides = {}
-    try:
-        overrides = json.loads(lead.estimate_overrides_json or "{}")
-    except Exception:
-        overrides = {}
+    overrides = get_estimate_overrides(lead)
+
+    old_html_key = getattr(lead, "estimate_html_key", None)
+    has_json = bool(getattr(lead, "estimate_json", None))
+    logger.info(
+        "EDIT_ESTIMATE_POST_START lead_id=%s old_html_key=%r has_estimate_json=%s",
+        getattr(lead, "id", None),
+        old_html_key,
+        has_json,
+    )
 
     overrides["public_notes"] = (public_notes or "").strip()
     overrides["discount_percent"] = (
@@ -1268,10 +1754,23 @@ def edit_estimate_post(
     )
 
     lead.estimate_overrides_json = json.dumps(overrides, ensure_ascii=False)
-    lead.updated_at = datetime.utcnow()
-    db.commit()
+    lead.updated_at = _utcnow()
 
-    # optional: clear html to force re-render on next open
-    # lead.estimate_html_key = None; db.commit()
+    # Re-render quote HTML with overrides applied, if possible
+    new_html_key, rendered = render_quote_html_for_lead(lead, overrides)
+    if rendered and new_html_key:
+        lead.estimate_html_key = new_html_key
+
+    db.add(lead)
+    db.commit()
+    db.refresh(lead)
+
+    logger.info(
+        "EDIT_ESTIMATE_POST_DONE lead_id=%s old_html_key=%r new_html_key=%r rendered=%s",
+        getattr(lead, "id", None),
+        old_html_key,
+        getattr(lead, "estimate_html_key", None),
+        rendered,
+    )
 
     return RedirectResponse(url=f"/app/leads/{lead_id}", status_code=303)

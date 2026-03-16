@@ -31,11 +31,13 @@ from app.services.storage import (
     get_storage,
     head_ok,
 )
+import logging
 
 # -----------------------------------------------------------------------------
 # Router
 # -----------------------------------------------------------------------------
 router = APIRouter(prefix="/uploads", tags=["uploads"])
+logger = logging.getLogger(__name__)
 
 S3_BUCKET = settings.S3_BUCKET
 S3_REGION = settings.AWS_REGION
@@ -252,10 +254,17 @@ async def complete_upload(
     """
     Called by frontend AFTER upload succeeds.
     Validates object exists + metadata, then writes UploadRecord + LeadFile.
+    Paintly-specific: triggert auto-generation van conceptofferte
+    zodra er minimaal één upload is én er nog geen estimate_html_key is.
     """
-    _, tenant_id = _lead_and_tenant(db, int(req.lead_id))
+    lead, tenant_id = _lead_and_tenant(db, int(req.lead_id))
 
     if not req.object_key or "/" not in req.object_key:
+        logger.warning(
+            "UPLOAD_COMPLETE_BAD_OBJECT_KEY lead_id=%s object_key=%r",
+            req.lead_id,
+            req.object_key,
+        )
         raise HTTPException(status_code=400, detail="bad_object_key")
 
     prefix = f"{tenant_id}/"
@@ -268,7 +277,19 @@ async def complete_upload(
 
     ok, meta, err = head_ok(st, tenant_id, key_without_tenant)
     if not ok:
-        raise HTTPException(status_code=400, detail=f"upload_not_verified:{err}")
+        logger.warning(
+            "UPLOAD_COMPLETE_NOT_VERIFIED lead_id=%s tenant=%s key=%s err=%s backend=%s",
+            req.lead_id,
+            tenant_id,
+            key_without_tenant,
+            err,
+            type(st).__name__,
+        )
+        # In S3-prod houden we de verificatie streng; lokaal laten we tweede check niet falen.
+        if not isinstance(st, LocalStorage):
+            raise HTTPException(status_code=400, detail=f"upload_not_verified:{err}")
+        # Local backend: ga best-effort verder met lege meta; size/type vullen we zo goed mogelijk.
+        meta = meta or {}
 
     # ✅ Always define these (avoid UnboundLocalError)
     meta = meta or {}
@@ -313,21 +334,65 @@ async def complete_upload(
         existing.s3_metadata = meta
         db.add(existing)
         db.commit()
-        return {"status": "ok", "object_key": req.object_key, "updated": True}
+    else:
+        rec = UploadRecord(
+            tenant_id=tenant_id,
+            lead_id=int(req.lead_id),
+            object_key=req.object_key,
+            size=size_bytes,
+            mime=content_type,
+            status=UploadStatus.uploaded,
+            s3_metadata=meta,
+        )
+        db.add(rec)
+        db.commit()
 
-    rec = UploadRecord(
-        tenant_id=tenant_id,
-        lead_id=int(req.lead_id),
-        object_key=req.object_key,
-        size=size_bytes,
-        mime=content_type,
-        status=UploadStatus.uploaded,
-        s3_metadata=meta,
-    )
-    db.add(rec)
-    db.commit()
+    # ------------------------------------------------------------------
+    # Paintly-specific auto-generation timing:
+    # - Alleen voor vertical "paintly"
+    # - Alleen als er nu minimaal 1 LeadFile is
+    # - Alleen als er nog geen estimate_html_key is
+    # ------------------------------------------------------------------
+    try:
+        vertical = (getattr(lead, "vertical", "") or "").strip().lower()
+        if vertical == "paintly":
+            from app.verticals.paintly.adapter import PaintlyAdapter
 
-    return {"status": "ok", "object_key": req.object_key, "created": True}
+            # Reload lead state after file/record writes
+            db.refresh(lead)
+
+            has_estimate = bool(getattr(lead, "estimate_html_key", None))
+            if not has_estimate:
+                files_count = (
+                    db.query(LeadFile)
+                    .filter(LeadFile.lead_id == int(req.lead_id))
+                    .count()
+                )
+                if files_count > 0:
+                    logger.info(
+                        "AUTO_COMPUTE_UPLOAD_TRIGGER_START lead=%s tenant=%s files=%s",
+                        lead.id,
+                        tenant_id,
+                        files_count,
+                    )
+                    adapter = PaintlyAdapter()
+                    adapter.compute_quote(db, int(req.lead_id))
+                    logger.info(
+                        "AUTO_COMPUTE_UPLOAD_TRIGGER_DONE lead=%s status=%s",
+                        lead.id,
+                        getattr(lead, "status", None),
+                    )
+    except Exception as e:
+        # Best-effort: fouten in auto-compute mogen uploads/complete niet breken
+        logger.exception(
+            "AUTO_COMPUTE_UPLOAD_TRIGGER_FAILED lead=%s error=%s",
+            getattr(lead, "id", None),
+            f"{type(e).__name__}:{e}",
+        )
+
+    return {"status": "ok", "object_key": req.object_key}
+
+    # (return hierboven al gedaan)
 
 
 # -----------------------------------------------------------------------------

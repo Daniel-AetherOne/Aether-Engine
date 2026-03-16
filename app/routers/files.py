@@ -1,12 +1,13 @@
 # app/routers/files.py
 from typing import Dict, Any
-from uuid import uuid4
 
 from fastapi import APIRouter, Query, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.core.settings import settings
 from app.services.s3 import generate_intake_upload_key, create_presigned_post
+from app.services.storage import get_storage, LocalStorage
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -74,3 +75,24 @@ def presign_upload(
         fields=presigned["fields"],
         key=key,
     )
+
+
+@router.get("/{tenant_id}/{file_path:path}")
+def serve_local_file(tenant_id: str, file_path: str):
+    """
+    Serve files from local storage when STORAGE_BACKEND=local.
+    LocalStorage.public_url() generates /files/{tenant_id}/{key}, which is handled here.
+    """
+    storage = get_storage()
+
+    # Only support LocalStorage here; S3 uses its own public URLs and won't hit this route.
+    if not isinstance(storage, LocalStorage):
+        raise HTTPException(status_code=404, detail="Local file serving not enabled")
+
+    key = (file_path or "").lstrip("/")
+    full_path = storage._full_path(tenant_id, key)  # type: ignore[attr-defined]
+
+    if not full_path.exists() or not full_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(path=str(full_path))

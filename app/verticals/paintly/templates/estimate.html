@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{{ copy.doc_title if copy and copy.doc_title else "Schilderofferte" }}</title>
+  <title>{{ copy.doc_title if copy and copy.doc_title else "Conceptofferte schilderwerk" }}</title>
 
   <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -37,7 +37,7 @@
   {% set lead_email = (customer.email if customer and customer.email else (lead.email if lead and lead.email else '')) %}
   {% set lead_phone = (customer.phone if customer and customer.phone else (lead.phone if lead and lead.phone else '')) %}
 
-  <div class="mx-auto max-w-7xl px-4 py-6 md:py-8">
+  <div class="w-full max-w-none px-8 py-6 md:py-8">
 
     <!-- Top bar -->
     <div class="mb-6 rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm print-card">
@@ -52,7 +52,10 @@
 
           <div>
             <div class="text-[22px] font-semibold tracking-tight text-slate-900">
-              {{ company.name if company and company.name else "Paintly" }}
+              Paintly
+            </div>
+            <div class="mt-0.5 text-sm text-slate-500">
+              {{ company.name if company and company.name else "Schilderbedrijf" }}
             </div>
             <div class="mt-1 text-sm text-slate-500">
               {% if company.phone %}{{ company.phone }}{% endif %}
@@ -133,9 +136,9 @@
             </svg>
           </div>
           <div class="flex-1">
-            <div class="text-base font-semibold text-emerald-900">Vaste prijs offerte</div>
+            <div class="text-base font-semibold text-emerald-900">AI-gegenereerde conceptofferte</div>
             <div class="mt-1 text-sm text-emerald-800">
-              {{ copy.opener_pricing_ready if copy and copy.opener_pricing_ready else "Deze offerte is gebaseerd op ingediende foto's en standaard aannames. De definitieve prijs kan worden aangepast na ter plaatse verificatie." }}
+              Deze conceptofferte is automatisch opgesteld op basis van de ingestuurde foto's en projectgegevens. De definitieve prijs kan na verificatie nog worden aangepast.
             </div>
           </div>
         </div>
@@ -147,18 +150,26 @@
       <div class="border-b border-slate-100 px-6 py-5">
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div class="text-sm text-slate-400">Offerte</div>
-            <h1 class="mt-1 text-[30px] font-semibold tracking-tight text-slate-900">
-              {{ copy.doc_title if copy and copy.doc_title else "Schilderofferte" }}
+            <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">CONCEPTOFFERTE</div>
+            <h1 class="mt-1 text-[32px] font-semibold tracking-tight text-slate-900">
+              {{ copy.doc_title if copy and copy.doc_title else "Concept offerte – schilderwerk" }}
             </h1>
-            <div class="mt-2 flex items-center gap-2 text-sm text-slate-500">
-              <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-              {{ project.location if project and project.location else "—" }}
+            <p class="mt-2 text-sm text-slate-500">
+              Deze conceptofferte is automatisch gegenereerd op basis van de ingestuurde foto's.
+            </p>
+            <div class="mt-2 text-sm text-slate-500">
+              AI analyse · Zekerheid: Hoog
             </div>
+            {% if project and project.address %}
+              <div class="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                {{ project.address }}
+              </div>
+            {% endif %}
           </div>
 
           <div class="flex flex-wrap gap-2">
@@ -184,7 +195,7 @@
         {% if pricing_ready %}
           <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-            Gedetailleerde offerte
+            AI-gegenereerde conceptofferte
           </span>
         {% elif is_provisional %}
           <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-600">
@@ -209,7 +220,7 @@
       <div class="px-6 py-6">
         {% if show_prices %}
           <div class="flex flex-wrap items-baseline gap-3">
-            <span class="text-4xl font-semibold tracking-tight text-slate-900">
+            <span class="text-5xl font-semibold tracking-tight text-slate-900">
               {{ fmt_eur(vat.total_incl_vat if vat and vat.total_incl_vat is not none else 0) }}
             </span>
             {% if is_provisional %}
@@ -342,7 +353,8 @@
                         {% if is_row_provisional or is_meaningless_job_qty %}
                           <span class="text-slate-400">—</span>
                         {% else %}
-                          {{ fmt_qty(item.quantity, item.unit) }} {{ item.unit }}
+                          {% set display_unit = 'm²' if item.unit == 'sqm' else item.unit %}
+                          {{ fmt_qty(item.quantity, item.unit) }} {{ display_unit }}
                         {% endif %}
                       </td>
 
@@ -473,10 +485,12 @@
             <div class="h-px bg-slate-100"></div>
 
             <div class="space-y-3">
-              <div class="flex justify-between gap-4 text-sm">
-                <span class="text-slate-500">Locatie</span>
-                <span class="text-right text-slate-900">{{ project.location if project and project.location else "—" }}</span>
-              </div>
+              {% if project and project.address %}
+                <div class="flex justify-between gap-4 text-sm">
+                  <span class="text-slate-500">Locatie</span>
+                  <span class="text-right text-slate-900">{{ project.address }}</span>
+                </div>
+              {% endif %}
               {% if project and project.square_meters %}
                 <div class="flex justify-between gap-4 text-sm">
                   <span class="text-slate-500">Oppervlakte</span>
@@ -572,9 +586,9 @@
             </div>
 
             <div class="text-center text-xs text-slate-400">
-              <p>Gegenereerd door Paintly</p>
+              <p>Gegenereerd door Paintly AI</p>
               {% if project and project.lead_id %}
-                <p class="mt-1">Lead #{{ project.lead_id }}</p>
+                <p class="mt-1">Referentie: Offerte #{{ project.lead_id }}</p>
               {% endif %}
             </div>
           </div>

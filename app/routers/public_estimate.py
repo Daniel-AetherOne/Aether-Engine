@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
+import logging
 
 from app.core.settings import settings
 from app.db import get_db
@@ -11,7 +12,7 @@ from app.models.lead import Lead
 from app.models.user import User
 from app.models.job import Job
 from app.services.email_service import send_email, EmailSendError
-from app.services.storage import get_storage, get_text
+from app.services.storage import get_storage, get_text, LocalStorage
 from app.services.workflow import (
     ensure_job_for_lead,
     mark_lead_accepted,
@@ -21,6 +22,10 @@ from app.verticals.paintly.email_render import render_estimate_accepted_email
 from app.workflow.status import apply_workflow
 
 router = APIRouter(prefix="/e", tags=["public_estimate"])
+# Alias router for simple customer-friendly quote URL (/q/{public_token})
+router_q = APIRouter(prefix="/q", tags=["public_quote"])
+
+logger = logging.getLogger(__name__)
 
 
 async def send_painter_accept_email(
@@ -85,20 +90,191 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
     if not lead:
         raise HTTPException(status_code=404, detail="Not found")
 
-    html_key = getattr(lead, "estimate_html_key", None)
+    # DEMO-SAFE OVERRIDE:
+    # - Als de lead in NEEDS_REVIEW staat, of als de estimate-meta aangeeft
+    #   dat er duidelijke wandschade / heavy prep aanwezig is, tonen we geen
+    #   volledige offerte maar een simpele "review vereist"-pagina.
+    try:
+        status_upper = (lead.status or "").upper()
+        meta_reasons = []
+        raw_json_lower = ""
+        try:
+            import json as _json
+
+            raw = getattr(lead, "estimate_json", None)
+            if isinstance(raw, str) and raw.strip():
+                raw_json_lower = raw.lower()
+                est = _json.loads(raw)
+                if isinstance(est, dict):
+                    meta = est.get("meta") or {}
+                    if isinstance(meta, dict):
+                        rr = meta.get("needs_review_reasons") or []
+                        if isinstance(rr, list):
+                            meta_reasons = rr
+        except Exception:
+            meta_reasons = []
+
+        severe_structural_reasons = {
+            "substrate_visible",
+            "peeling_wallcovering_detected",
+            "repair_work_required",
+            "surface_damage_detected",
+        }
+
+        # Sterke string-gebaseerde fallback voor demo:
+        damage_keywords = [
+            "wallpaper",
+            "wallpaper_removal",
+            "peeling",
+            "exposed_plaster",
+            "substrate",
+            "damaged",
+            "repair",
+            "heavy_prep",
+            "plaster_visible",
+            "loose_wallcovering",
+        ]
+        strong_damage_hit = bool(
+            raw_json_lower
+            and any(kw in raw_json_lower for kw in damage_keywords)
+        )
+
+        meta_has_wall_repair = "wall_repair_or_wallpaper_likely" in meta_reasons
+
+        if (
+            (status_upper == "NEEDS_REVIEW")
+            and (
+                any(r in severe_structural_reasons for r in meta_reasons)
+                or meta_has_wall_repair
+            )
+        ) or strong_damage_hit:
+            return HTMLResponse(
+                content="""
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Offerte in review — Paintly</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
+  <div class="flex min-h-screen items-center justify-center px-4">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M12 5a7 7 0 00-7 7v5h14v-5a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base font-semibold text-slate-900">Je offerte wordt handmatig gecontroleerd</h1>
+          <p class="mt-1 text-xs text-slate-500">
+            We hebben je aanvraag ontvangen. Door de staat van de wanden is een korte handmatige review nodig
+            voordat we een definitieve prijs kunnen tonen.
+          </p>
+        </div>
+      </div>
+      <div class="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        In de meeste gevallen ontvang je binnen korte tijd een bijgewerkte offerte per e-mail.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+                """,
+                status_code=200,
+            )
+    except Exception:
+        # Failsafe: als de review-check faalt, val terug op normale render-flow.
+        pass
+
+    html_key = (getattr(lead, "estimate_html_key", None) or "").strip()
     if not html_key:
         raise HTTPException(status_code=404, detail="Estimate not found")
 
     mark_lead_viewed(db, lead)
     db.commit()
 
+    # Normaliseer tenant_id + key op dezelfde manier als de interne HTML-flow:
+    # - tenant_id fallback naar "default"
+    # - strip eventuele tenant-prefix uit html_key
+    tenant_id = str((lead.tenant_id or "").strip() or "default")
+    key = html_key
+    prefix = f"{tenant_id}/"
+    if key.startswith(prefix):
+        key = key[len(prefix) :]
+
+    logger.info(
+        "PUBLIC_ESTIMATE_ROUTE lead_id=%s html_key_raw=%r key_norm=%r",
+        getattr(lead, "id", None),
+        html_key,
+        key,
+    )
+
     storage = get_storage()
 
-    try:
-        html = get_text(storage, tenant_id=str(lead.tenant_id), key=html_key)
-    except Exception:
-        return HTMLResponse(
-            content=f"""
+    # ================
+    # HTML laden
+    # ================
+    html = None
+    iframe_url = None
+
+    # Gedetailleerde debug-logging vóór het laden
+    logger.info(
+        "PUBLIC_ESTIMATE_LOAD_ATTEMPT lead_id=%s tenant_raw=%r tenant_norm=%s "
+        "html_key_raw=%r key_norm=%r storage=%s",
+        getattr(lead, "id", None),
+        getattr(lead, "tenant_id", None),
+        tenant_id,
+        html_key,
+        key,
+        type(storage).__name__,
+    )
+
+    if isinstance(storage, LocalStorage):
+        # LocalStorage: gebruik dezelfde publieke URL-strategie als de interne flow
+        # (public_url) in plaats van download/get_text, om local_not_found issues te vermijden.
+        try:
+            iframe_url = storage.public_url(tenant_id=tenant_id, key=key)
+        except Exception as e:
+            logger.exception(
+                "PUBLIC_ESTIMATE_LOCAL_URL_FAILED lead_id=%s tenant=%s key=%s exc=%r",
+                getattr(lead, "id", None),
+                tenant_id,
+                key,
+                e,
+            )
+            return HTMLResponse(
+                content=f"""
+<div style="max-width:900px;margin:40px auto;font-family:system-ui;">
+  <h2>Estimate temporarily unavailable</h2>
+  <p class="muted">We couldn't build a public URL for this estimate file.</p>
+  <pre style="background:#f6f6f6;padding:12px;border-radius:10px;overflow:auto;">{html_key}</pre>
+  <p>Please contact the contractor and ask them to resend the estimate.</p>
+</div>
+""",
+                status_code=200,
+            )
+    else:
+        try:
+            html = get_text(storage, tenant_id=tenant_id, key=key)
+        except Exception as e:
+            # Log de exacte exception + traceback met alle relevante context
+            logger.exception(
+                "PUBLIC_ESTIMATE_LOAD_FAILED lead_id=%s tenant_raw=%r tenant_norm=%s "
+                "html_key_raw=%r key_norm=%r storage=%s exc=%r",
+                getattr(lead, "id", None),
+                getattr(lead, "tenant_id", None),
+                tenant_id,
+                html_key,
+                key,
+                type(storage).__name__,
+                e,
+            )
+            return HTMLResponse(
+                content=f"""
 <div style="max-width:900px;margin:40px auto;font-family:system-ui;">
   <h2>Estimate temporarily unavailable</h2>
   <p class="muted">We couldn't load this estimate file.</p>
@@ -106,11 +282,15 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
   <p>Please contact the contractor and ask them to resend the estimate.</p>
 </div>
 """,
-            status_code=200,
-        )
+                status_code=200,
+            )
 
     lead_status = (lead.status or "").upper()
-    show_accept = lead_status not in {"ACCEPTED", "COMPLETED", "CANCELLED", "DONE"}
+    # Concept vs verstuurd:
+    # - concept: offerte mag bekeken worden, maar nog niet geaccepteerd
+    # - verstuurd: offerte is naar klant verstuurd → accept-knop toegestaan
+    is_sent = lead_status in {"SENT", "VIEWED"} or bool(getattr(lead, "sent_at", None))
+    show_accept = is_sent and lead_status not in {"ACCEPTED", "COMPLETED", "CANCELLED", "DONE"}
 
     accepted_param = (request.query_params.get("accepted") or "").strip() == "1"
     show_accepted_banner = (lead_status == "ACCEPTED") or accepted_param
@@ -134,6 +314,14 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
   </div>
 </div>
 """
+
+    # Bodycontent: inline HTML (S3) of iframe (LocalStorage)
+    if iframe_url:
+        body_html = f"""
+<iframe src="{iframe_url}" style="width:100%;min-height:100vh;border:0;display:block;" loading="lazy"></iframe>
+"""
+    else:
+        body_html = html
 
     if show_accept:
         accept_bar = """
@@ -227,9 +415,19 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
             token=lead.public_token
         )
 
-        return HTMLResponse(content=accept_bar + html)
+        return HTMLResponse(content=accept_bar + body_html)
 
-    return HTMLResponse(content=accepted_banner + html)
+    return HTMLResponse(content=accepted_banner + body_html)
+
+
+@router_q.get("/{token}", response_class=HTMLResponse)
+def public_quote_alias(token: str):
+    """
+    MVP-public route for customers: /q/{public_token}
+    Keeps implementation DRY by delegating to existing /e/{token} handler.
+    """
+    # Use a 302 redirect so bookmarks continue to work even if /e implementation evolves.
+    return RedirectResponse(url=f"/e/{token}", status_code=302)
 
 
 @router.post("/{token}/accept")

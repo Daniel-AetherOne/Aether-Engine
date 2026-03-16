@@ -56,28 +56,28 @@ def _default_company() -> Dict[str, Any]:
 
 def _default_copy() -> Dict[str, Any]:
     return {
-        "doc_title": "Painting Estimate",
-        "scope_label": "Scope",
-        "exclusions_label": "Exclusions",
-        "labor_label": "Labor",
-        "materials_label": "Materials",
+        "doc_title": "Concept offerte – schilderwerk",
+        "scope_label": "Werkzaamheden",
+        "exclusions_label": "Niet inbegrepen",
+        "labor_label": "Arbeid",
+        "materials_label": "Materialen",
     }
 
 
 def _default_scope_bullets() -> List[str]:
     return [
-        "Protect floors and nearby surfaces",
-        "Standard prep (light sanding where needed)",
-        "Two-coat application where applicable",
-        "Cleanup and haul-away of light debris",
+        "Bescherming van vloeren en omliggende oppervlakken",
+        "Standaard voorbereiding (licht schuren waar nodig)",
+        "Twee verflagen waar nodig",
+        "Opruimen en afvoeren van licht afval",
     ]
 
 
 def _default_exclusions() -> List[str]:
     return [
-        "Major drywall/wood repairs",
-        "Mold remediation",
-        "Moving heavy furniture",
+        "Groot herstelwerk aan muren of hout",
+        "Schimmelbehandeling",
+        "Verplaatsen van zware meubels",
     ]
 
 
@@ -508,6 +508,27 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
     project_desc = _clean_text(project_desc_raw)
     address = _clean_text(address_raw)
 
+    # 1) Dedicated address veld (intake "address") heeft voorrang.
+    # 2) Zo niet: bouw adres uit losse velden (street/zip/city).
+    # 3) Zo niet: probeer "Adres: ..." uit de projectbeschrijving te parsen (demo fallback).
+    if not address:
+        street = _clean_text(lead_payload.get("street") or "")
+        zip_code = _clean_text(lead_payload.get("zip") or "")
+        city = _clean_text(lead_payload.get("city") or "")
+        parts = [p for p in (street, zip_code, city) if p]
+        fallback_address = ", ".join(parts)
+        if fallback_address:
+            address = fallback_address
+
+    # DEMO: laatste redmiddel – haal adres uit beschrijving met een "Adres: ..." prefix.
+    if not address and project_desc_raw:
+        try:
+            m = re.search(r"Adres[:\-\s]+(.+)", project_desc_raw, flags=re.IGNORECASE)
+            if m:
+                address = _clean_text(m.group(1))
+        except Exception:
+            pass
+
     if address and project_desc.lower().startswith("address:"):
         tmp = project_desc[len("address:") :].strip()
         if address.lower() in tmp.lower():
@@ -569,6 +590,7 @@ def step_render_v1(state: PipelineState, step: StepConfig, assets: dict) -> Step
         "location": location,
         "square_feet": sqft,
         "description": project_desc or None,
+        "address": address or None,
     }
 
     # -------------------------
@@ -748,15 +770,27 @@ def _decide_paintly_needs_review(
         "no_surfaces",
     }
 
+    # Hard blockers coming from structural wall condition / heavy prep signals
+    # surfaced by vision aggregation (e.g. loslatend behang, blootliggende
+    # ondergrond, zware herstelwerken).
+    HARD_STRUCTURAL_REASONS = {
+        # Alleen expliciete, zware schadecodes tellen hier als hard blockers.
+        "substrate_visible",
+        "peeling_wallcovering_detected",
+        "repair_work_required",
+        "surface_damage_detected",
+    }
+
     # Hard blockers coming from photo quality (true absence of photos)
     HARD_PHOTO_REASONS = {
         "no_photos",
     }
 
     hard_reason_present = any(
-        r in HARD_ESTIMATE_REASONS
-        or r in HARD_AGGREGATE_REASONS
-        or r in HARD_PHOTO_REASONS
+        (r in HARD_ESTIMATE_REASONS)
+        or (r in HARD_AGGREGATE_REASONS)
+        or (r in HARD_PHOTO_REASONS)
+        or (r in HARD_STRUCTURAL_REASONS)
         for r in merged_reasons
     )
 

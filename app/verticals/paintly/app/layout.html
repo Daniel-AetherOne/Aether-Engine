@@ -3,9 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ title or "Paintly App" }}</title>
+  <title>
+    {% if title %}
+      {{ title }} — {{ company_name or "Paintly" }}
+    {% else %}
+      Paintly dashboard — {{ company_name or "Paintly" }}
+    {% endif %}
+  </title>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; margin: 24px; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 24px; background:#f1f5f9; }
     header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 18px; }
     a { color: inherit; }
     .badge { padding: 4px 10px; border-radius: 999px; font-size: 12px; border: 1px solid #ddd; }
@@ -21,8 +27,10 @@
 <body>
   <header>
     <div>
-      <div style="font-weight:700;">Paintly App</div>
-      <div class="muted">painters_us</div>
+      <div style="font-weight:700;">
+        Paintly — {{ company_name or "Paintly" }}
+      </div>
+      <div class="muted">AI-gestuurde offertes &amp; planning</div>
     </div>
     <div>
       <form method="post" action="/auth/logout" style="display:inline;">

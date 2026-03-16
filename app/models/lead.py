@@ -54,6 +54,11 @@ class Lead(Base):
         String(1024), nullable=True
     )
 
+    # manual estimate overrides (JSON payload for UI overrides like notes/discount/manual total)
+    estimate_overrides_json: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True
+    )
+
     # public share / lifecycle
     public_token: Mapped[Optional[str]] = mapped_column(
         String(64), unique=True, index=True, nullable=True

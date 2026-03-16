@@ -203,27 +203,21 @@ def publish_quote(
     inc("publish_requests_total")
     logger.info("LEAD %s publish_requested status=%s", lead.id, lead.status)
 
-    # Idempotent: al klaar -> direct terug
+    # Idempotent: al klaar -> direct naar lead detail offerteview
     if lead.status in ("SUCCEEDED", "NEEDS_REVIEW"):
         inc("publish_idempotent_total")
-        return {
-            "lead_id": lead.id,
-            "status": lead.status,
-            "next": {
-                "status": f"/quotes/{lead.id}/status",
-                "json": f"/quotes/{lead.id}/json",
-                "html": f"/quotes/{lead.id}/html",
-            },
-        }
+        return RedirectResponse(
+            url=f"/app/leads/{lead.id}/estimate",
+            status_code=303,
+        )
 
-    # Als al bezig -> direct terug
+    # Als al bezig -> direct naar lead detail offerteview
     if lead.status == "RUNNING":
         inc("publish_already_running_total")
-        return {
-            "lead_id": lead.id,
-            "status": lead.status,
-            "next": {"status": f"/quotes/{lead.id}/status"},
-        }
+        return RedirectResponse(
+            url=f"/app/leads/{lead.id}/estimate",
+            status_code=303,
+        )
 
     files = db.query(LeadFile).filter(LeadFile.lead_id == lead.id).all()
     if not files:
@@ -330,15 +324,11 @@ def publish_quote(
             lead.estimate_html_key,
         )
 
-        return {
-            "lead_id": lead.id,
-            "status": lead.status,
-            "next": {
-                "status": f"/quotes/{lead.id}/status",
-                "json": f"/quotes/{lead.id}/json",
-                "html": f"/quotes/{lead.id}/html",
-            },
-        }
+        # Na succesvolle compute_quote: redirect direct naar lead detail offerteview
+        return RedirectResponse(
+            url=f"/app/leads/{lead.id}/estimate",
+            status_code=303,
+        )
 
     except Exception as e:
         # keep exception details visible for internal debugging

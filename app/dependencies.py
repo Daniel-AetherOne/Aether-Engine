@@ -6,7 +6,6 @@ from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, Request
 
-from app.services.s3 import S3Service
 from app.services.storage import Storage, get_storage
 from app.services.tenant_service import TenantService
 
@@ -95,6 +94,9 @@ async def get_tenant_storage_path(
 
 
 @lru_cache(maxsize=1)
-def get_s3_service() -> S3Service:
-    """Singleton S3 client for FastAPI DI."""
-    return S3Service()
+def get_s3_service():
+    """
+    Legacy alias kept for backward compatibility.
+    The dedicated S3Service class has been removed; no-op placeholder.
+    """
+    raise RuntimeError("get_s3_service is no longer supported; use storage APIs instead.")

@@ -227,12 +227,13 @@
               </div>
 
               <div>
-                <label for="job_type" class="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Soort werk</label>
+                <label for="job_type" class="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Type werkzaamheden</label>
                 <select id="job_type" name="job_type"
                         class="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100">
-                  <option value="interior">Binnenwerk</option>
-                  <option value="exterior">Buitenwerk</option>
-                  <option value="both">Beide</option>
+                  <option value="interior">Binnen</option>
+                  <option value="exterior">Buiten</option>
+                  <option value="both">Binnen &amp; buiten</option>
+                  <option value="other">Anders</option>
                 </select>
               </div>
             </div>
@@ -255,10 +256,11 @@
             </div>
 
             <div class="p-5">
-              <label for="address" class="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Toelichting bij het project *</label>
-              <textarea id="address" name="address" required rows="5"
+              <label for="project_description" class="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Toelichting bij het project *</label>
+              <textarea id="project_description" name="project_description" required rows="5"
                         class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 resize-y"
                         placeholder="Voorbeeld: Woonkamer + gang. Alleen wanden. Bestaande verf in goede staat. Graag kleine reparaties meenemen. Plafonds 2.6m hoog."></textarea>
+              <input type="hidden" name="address" id="fullAddress" value="" />
               <p class="mt-2 text-xs text-slate-500">
                 Handig om te vermelden: aantal kamers, plafondhoogte, kozijnen/deuren, voorbereidingswerk, bereikbaarheid.
               </p>
@@ -432,7 +434,7 @@
     const MAX_BYTES = 15 * 1024 * 1024;
     const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-    const form = document.getElementById('intakeForm');
+      const form = document.getElementById('intakeForm');
     const fileInput = document.getElementById('files');
     const fileList = document.getElementById('fileList');
     const uploadStatus = document.getElementById('uploadStatus');
@@ -711,6 +713,18 @@ uploadStatus.textContent = `✓ ${totalUploaded} foto('s) gereed`;
         return;
       }
 
+      // Toon demo-veilige AI-overlay vóór we de echte submit uitvoeren.
+      try {
+        const overlay = document.getElementById('aiOverlay');
+        if (overlay) {
+          overlay.style.display = 'flex';
+        }
+      } catch (err) {
+        console.warn('AI overlay failed to show', err);
+      }
+      // Korte kunstmatige wachttijd zodat de demo altijd een AI-analyse laat zien.
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
       const oldBtnText = submitBtn.innerHTML;
 
       try {
@@ -725,14 +739,23 @@ uploadStatus.textContent = `✓ ${totalUploaded} foto('s) gereed`;
         const state = (form.querySelector('#state')?.value || '').trim();
         const zip = (form.querySelector('#zip')?.value || '').trim();
 
-        const notes = form.querySelector('#address');
-        const oneLine = [street, city, state, zip].filter(Boolean).join(', ');
+        const oneLine = [street, zip, city].filter(Boolean).join(', ');
+
+        const notes = form.querySelector('#project_description');
         if (oneLine && notes && !notes.value.includes(oneLine)) {
           notes.value = `Adres: ${oneLine}\n\n${notes.value || ''}`.trim();
         }
 
+        const fullAddressInput = document.getElementById('fullAddress');
+        if (fullAddressInput) {
+          fullAddressInput.value = oneLine;
+        }
+
         const formData = new FormData(form);
         formData.set("lead_id", String(id));
+        if (oneLine) {
+          formData.set("address", oneLine);
+        }
 		
 		console.log(
   "photo_keys before submit:",
@@ -759,11 +782,11 @@ console.log(
         }
 
         if (data?.lead_id) {
-          window.location.href = `/quotes/${data.lead_id}/status?autostart=1`;
+          window.location.href = `/quotes/${data.lead_id}/status?autostart=1&demo=1`;
           return;
         }
         if (leadId) {
-          window.location.href = `/quotes/${leadId}/status?autostart=1`;
+          window.location.href = `/quotes/${leadId}/status?autostart=1&demo=1`;
           return;
         }
         showErr('Onverwachte reactie van de server.');
@@ -819,5 +842,77 @@ console.log(
       refreshEuConfig();
     })();
   </script>
+  <!-- Demo-safe full-screen AI analysis overlay -->
+  <div id="aiOverlay" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    background:rgba(15,23,42,0.92);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    color:#e5e7eb;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    align-items:center;
+    justify-content:center;
+  ">
+    <div style="
+      max-width:420px;
+      width:100%;
+      margin:0 16px;
+      border-radius:24px;
+      padding:22px 24px 20px 24px;
+      background:rgba(15,23,42,0.98);
+      box-shadow:0 24px 60px rgba(15,23,42,0.85);
+      border:1px solid rgba(148,163,184,0.45);
+    ">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="
+          height:32px;
+          width:32px;
+          border-radius:999px;
+          background:linear-gradient(135deg,#0ea5e9,#6366f1);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        ">
+          <div style="
+            height:16px;
+            width:16px;
+            border-radius:999px;
+            border:2px solid rgba(248,250,252,0.7);
+            border-top-color:transparent;
+            animation:ai-spin 0.9s linear infinite;
+          "></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:14px;font-weight:600;color:#f9fafb;">
+            AI analyseert uw foto's...
+          </div>
+          <div style="font-size:11px;color:#cbd5f5;">
+            Dit duurt meestal maar een paar seconden.
+          </div>
+        </div>
+      </div>
+      <ul style="
+        margin:0;
+        padding-left:18px;
+        font-size:12px;
+        line-height:1.8;
+        color:#e2e8f0;
+      ">
+        <li>Oppervlak bepalen...</li>
+        <li>Voorbereiding inschatten...</li>
+        <li>Conceptofferte opstellen...</li>
+      </ul>
+    </div>
+  </div>
+
+  <style>
+  @keyframes ai-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  </style>
 </body>
 </html>

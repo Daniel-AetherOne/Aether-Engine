@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+import secrets
 
 from fastapi import APIRouter, Request, HTTPException, Depends, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -15,6 +16,7 @@ from app.verticals.paintly.eu_config import resolve_eu_config  # ✅ ADD
 from app.auth.optional_user import get_optional_user
 from app.models.user import User
 from app.models.tenant import Tenant
+from app.models.lead import Lead as LeadModel
 
 router = APIRouter(prefix="/intake", tags=["intake"])
 logger = logging.getLogger(__name__)
@@ -47,7 +49,16 @@ def _wants_json(request: Request) -> bool:
 
 
 def _status_url(lead_id: str) -> str:
-    return "/app/leads"
+    """
+    Bepaalt de redirect na intake submit.
+
+    Voor de Paintly-demo sturen we na intake altijd eerst naar de
+    AI-gestuurde statuspagina, zodat de klant de analyse/progress
+    ziet voordat de offerte klaar is.
+
+    Let op: voor JSON flows wordt deze URL alleen als 'next.status' meegegeven.
+    """
+    return f"/quotes/{lead_id}/status?autostart=1&demo=1"
 
 
 def _get_vertical_or_404(vertical: str):
@@ -106,6 +117,11 @@ async def _create_lead_impl(
         result.tenant_id,
     )
 
+    # Bepaal redirect:
+    # DEMO-MODUS:
+    # - Na intake altijd eerst naar de AI-gestuurde statuspagina,
+    #   zodat de klant de analyse/progress ziet voordat de uiteindelijke
+    #   offerte of NEEDS_REVIEW-status zichtbaar wordt.
     status_url = _status_url(result.lead_id)
 
     if _wants_json(request):
@@ -190,7 +206,25 @@ async def create_lead_by_tenant_slug(
             result.tenant_id,
         )
 
+        # Publieke tenant-intake: stuur klant naar publieke conceptofferte (Paintly-specifiek)
         status_url = _status_url(result.lead_id)
+        try:
+            lead_id_int = int(result.lead_id)
+            lead = db.query(LeadModel).filter(LeadModel.id == lead_id_int).first()
+        except Exception:
+            lead = None
+
+        if lead is not None and (getattr(lead, "vertical", "") or "").lower() == "paintly":
+            # Zorg dat er een public_token is voor publieke offerte-url
+            if not getattr(lead, "public_token", None):
+                lead.public_token = secrets.token_hex(16)
+                db.add(lead)
+                db.commit()
+                db.refresh(lead)
+
+            public_token = getattr(lead, "public_token", None)
+            if public_token:
+                status_url = f"/e/{public_token}"
 
         if _wants_json(request):
             return JSONResponse(

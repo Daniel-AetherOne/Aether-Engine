@@ -159,7 +159,45 @@ def render_estimate_html_v2(
         "needs_review": needs_review_flag,
     }
 
-    vat = _calc_vat(pricing)
+    # If an explicit override_total_incl_vat is present in meta, recompute VAT from that.
+    override_total = None
+    try:
+        if isinstance(meta, dict) and meta.get("override_total_incl_vat") is not None:
+            override_total = _money(meta.get("override_total_incl_vat"))
+    except Exception:
+        override_total = None
+
+    if override_total is not None and override_total > 0:
+        # Reverse-calc VAT components from override_total
+        vat_rate = _pick_vat_rate(pricing)
+        one_plus = Decimal("1") + vat_rate
+        subtotal_excl = (override_total / one_plus).quantize(MONEY_Q, rounding=ROUND_HALF_UP)
+        vat_amount = (override_total - subtotal_excl).quantize(MONEY_Q, rounding=ROUND_HALF_UP)
+        vat = {
+            "subtotal_excl_vat": float(subtotal_excl),
+            "vat_rate": float(vat_rate),
+            "vat_amount": float(vat_amount),
+            "total_incl_vat": float(override_total),
+        }
+    else:
+        vat = _calc_vat(pricing)
+
+    # Debug: log final pricing/meta/vat snapshot before templating
+    try:
+        from app.verticals.paintly.router_app import logger as paintly_logger  # type: ignore
+    except Exception:
+        paintly_logger = None
+
+    if paintly_logger:
+        try:
+            paintly_logger.info(
+                "RENDER_ESTIMATE_HTML_V2_SNAPSHOT totals=%r meta=%r vat=%r",
+                pricing.get("totals"),
+                meta,
+                vat,
+            )
+        except Exception:
+            pass
 
     tmpl = _jinja_env().get_template("estimate.html")
     html = tmpl.render(

@@ -45,7 +45,7 @@
       <div class="border-b border-slate-100 px-6 py-6">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div class="text-sm text-slate-400">Offerte</div>
+            <div class="text-sm text-slate-400">AI-analyse</div>
             <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900" id="headline">
               We verwerken uw offerte…
             </h1>
@@ -60,7 +60,7 @@
               <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" id="statusPing"></span>
               <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500" id="statusDot"></span>
             </span>
-            <span id="statusText">Bezig met verwerken</span>
+            <span id="statusText">AI analyseert uw foto's…</span>
           </div>
         </div>
       </div>
@@ -112,7 +112,7 @@
             <div class="h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div id="barFill" class="h-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all duration-500" style="width: 10%"></div>
             </div>
-            <p class="text-xs text-slate-500" id="progressHint">Voorbereiden…</p>
+            <p class="text-xs text-slate-500" id="progressHint">AI analyseert uw foto's…</p>
           </div>
         </div>
 
@@ -286,8 +286,8 @@
     }
 
     function renderRunning(status) {
-      setHeadline("We verwerken uw offerte…");
-      setSubhead("Deze pagina wordt automatisch bijgewerkt. U kunt deze open laten staan.");
+      setHeadline("AI analyseert uw aanvraag…");
+      setSubhead("We analyseren uw foto's en gegevens om een conceptofferte op te stellen. Deze pagina wordt automatisch bijgewerkt.");
       setActions(`
         <span class="inline-flex items-center gap-2 text-sm text-slate-500">
           <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -299,13 +299,13 @@
 
       if (status === "NEW") {
         setProgress(1);
-        progressHint.textContent = "Starten…";
+        progressHint.textContent = "AI analyseert uw foto's…";
       } else if (status === "RUNNING") {
         setProgress(3);
-        progressHint.textContent = "Offerte genereren met AI…";
+        progressHint.textContent = "Conceptofferte opstellen…";
       } else {
         setProgress(2);
-        progressHint.textContent = "Foto's analyseren…";
+        progressHint.textContent = "Oppervlak en voorbereiding inschatten…";
       }
     }
 
@@ -315,7 +315,7 @@
       progressBox.style.display = "none";
 
       setActions(`
-        <a href="/quotes/${leadId}/html" class="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+        <a href="/app/leads/${leadId}/estimate" class="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
           Bekijk offerte
         </a>

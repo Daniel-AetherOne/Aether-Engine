@@ -10,13 +10,13 @@
         <div class="text-sm text-slate-400">Review</div>
         <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">Review wachtrij</h1>
         <div class="mt-2 text-sm text-slate-500">
-          Leads die handmatige review nodig hebben voordat een offerte kan worden gegenereerd
+          Offertes die handmatige review nodig hebben voordat ze naar de klant worden verstuurd
         </div>
       </div>
 
       <a class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
          href="/app/leads">
-        Terug naar leads
+        Terug naar offertes
       </a>
     </div>
   </div>
@@ -25,14 +25,14 @@
   {% if not leads or leads|length == 0 %}
     <div class="rounded-[26px] border border-slate-200/70 bg-white p-8 shadow-sm">
       <div class="max-w-xl">
-        <h2 class="text-lg font-semibold text-slate-900">Geen leads hoeven gereviewd te worden</h2>
+        <h2 class="text-lg font-semibold text-slate-900">Geen offertes hoeven gereviewd te worden</h2>
         <p class="mt-2 text-sm text-slate-500">
-          Wanneer de AI niet zeker is, verschijnen leads hier voor een snelle handmatige controle.
+          Wanneer de AI niet zeker is, verschijnen offertes hier voor een snelle handmatige controle.
         </p>
         <div class="mt-5">
           <a class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
              href="/app/leads">
-            Bekijk leads
+            Bekijk offertes
           </a>
         </div>
       </div>
@@ -49,7 +49,7 @@
           </svg>
         </div>
         <div>
-          <div class="text-sm font-semibold text-slate-900">Leads in review</div>
+          <div class="text-sm font-semibold text-slate-900">Offertes in review</div>
           <div class="text-xs text-slate-400">Controleer en genereer handmatig een offerte</div>
         </div>
       </div>
@@ -60,7 +60,7 @@
         <thead>
           <tr class="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
             <th class="px-5 py-4 text-left font-medium">Klant</th>
-            <th class="px-5 py-4 text-left font-medium">Lead</th>
+            <th class="px-5 py-4 text-left font-medium">Offerte</th>
             <th class="px-5 py-4 text-left font-medium">Bijgewerkt</th>
             <th class="px-5 py-4 text-left font-medium">Status</th>
             <th class="px-5 py-4 text-right font-medium">Actie</th>
@@ -82,7 +82,7 @@
               </div>
             </td>
 
-            <!-- Lead -->
+            <!-- Offerte -->
             <td class="px-5 py-4 align-top">
               <div class="text-sm font-medium text-slate-900">
                 #{{ (lead.id|string)[:8] }}

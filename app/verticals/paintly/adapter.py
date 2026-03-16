@@ -206,7 +206,32 @@ class PaintlyAdapter(VerticalAdapter):
 
             lead.estimate_html_key = html_key
 
+            # Basis: volg de engine-uitkomst.
             needs_review = bool(result.get("needs_review", False))
+
+            # DEMO-SIMPLIFICATIE:
+            # - Standaard flow: SUCCEEDED (geen automatische review meer forceren).
+            # - Alleen wanneer expliciet demo_force_review is gezet in het
+            #   intake_payload, forceren we NEEDS_REVIEW voor demo-doeleinden.
+            try:
+                demo_force = False
+                try:
+                    payload = json.loads(lead.intake_payload or "{}")
+                except Exception:
+                    payload = {}
+                flag = payload.get("demo_force_review") or payload.get(
+                    "demo_review"
+                )
+                demo_force = bool(flag)
+                if demo_force:
+                    needs_review = True
+                else:
+                    # Normale demo-flow: nooit NEEDS_REVIEW forceren.
+                    needs_review = False
+            except Exception:
+                # Failsafe: als er iets misgaat, liever SUCCEEDED dan een kapotte flow.
+                needs_review = False
+
             lead.status = "NEEDS_REVIEW" if needs_review else "SUCCEEDED"
 
             lead.error_message = None
@@ -262,15 +287,24 @@ class PaintlyAdapter(VerticalAdapter):
 
         square_meters = _parse_square_meters(form_dict)
 
+        # Combine losse adresvelden tot één leesbare adresregel voor de engine.
+        street = (form_dict.get("street") or "").strip()
+        city = (form_dict.get("city") or "").strip()
+        state = (form_dict.get("state") or "").strip()
+        zip_code = (form_dict.get("zip") or "").strip()
+        address_parts = [p for p in [street, zip_code, city] if p]
+        full_address = ", ".join(address_parts) if address_parts else None
+
         payload_data = {
             "tenant_id": tenant_id,
             "name": form_dict.get("name"),
             "email": form_dict.get("email"),
             "phone": form_dict.get("phone"),
-            "street": form_dict.get("street"),
-            "city": form_dict.get("city"),
-            "state": form_dict.get("state"),
-            "zip": form_dict.get("zip"),
+            "street": street or None,
+            "city": city or None,
+            "state": state or None,
+            "zip": zip_code or None,
+            "address": full_address,
             "project_description": form_dict.get("project_description")
             or form_dict.get("address"),
             "object_keys": object_keys,
@@ -376,15 +410,24 @@ class PaintlyAdapter(VerticalAdapter):
         object_keys = _extract_object_keys_from_form(form, tenant_id=tenant_id)
         square_meters = _parse_square_meters(form_dict)
 
+        # Combine losse adresvelden tot één leesbare adresregel voor de engine.
+        street = (form_dict.get("street") or "").strip()
+        city = (form_dict.get("city") or "").strip()
+        state = (form_dict.get("state") or "").strip()
+        zip_code = (form_dict.get("zip") or "").strip()
+        address_parts = [p for p in [street, zip_code, city] if p]
+        full_address = ", ".join(address_parts) if address_parts else None
+
         payload_data = {
             "tenant_id": tenant_id,
             "name": form_dict.get("name"),
             "email": form_dict.get("email"),
             "phone": form_dict.get("phone"),
-            "street": form_dict.get("street"),
-            "city": form_dict.get("city"),
-            "state": form_dict.get("state"),
-            "zip": form_dict.get("zip"),
+            "street": street or None,
+            "city": city or None,
+            "state": state or None,
+            "zip": zip_code or None,
+            "address": full_address,
             "project_description": form_dict.get("project_description")
             or form_dict.get("address"),
             "object_keys": object_keys,

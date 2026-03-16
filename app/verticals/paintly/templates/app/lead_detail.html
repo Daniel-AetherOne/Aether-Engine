@@ -1,7 +1,7 @@
 {% extends "app/layout.html" %}
 {% block content %}
 
-<div class="space-y-6">
+<div class="mx-auto max-w-6xl px-4 lg:px-6 py-4 space-y-6">
 
   {% set sent = request.query_params.get('sent') %}
   {% set send_error = request.query_params.get('send_error') %}
@@ -42,65 +42,39 @@
     </div>
   </div>
 
-  <!-- Header -->
-  <div class="flex flex-wrap items-center gap-2">
-  {% if lead.public_token %}
-    <a class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-       href="/e/{{ lead.public_token }}" target="_blank">
-      <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-      </svg>
-      Publiek bekijken
-    </a>
-
-    <button class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-            type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
-      <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-      </svg>
-      Link kopiëren
-    </button>
-  {% endif %}
-
-  {% if lead.estimate_html_key %}
-    <a class="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
-       href="/app/leads/{{ lead.id }}/estimate" target="_blank">
-      <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-      </svg>
-      Offerte openen
-    </a>
-
-    <a class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-       href="/app/leads/{{ lead.id }}/edit-estimate">
-      <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5h2M12 7v10m-7 0h14M5 17V9a2 2 0 012-2h10a2 2 0 012 2v8"/>
-      </svg>
-      Offerte bewerken
-    </a>
-
-    <form id="sendEstimateFormTop" method="post" action="/app/leads/{{ lead.id }}/send" class="m-0">
-      <button id="sendEstimateBtnTop"
-              class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
-              type="submit">
-        <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-        </svg>
-        Offerte versturen
-      </button>
-    </form>
-  {% else %}
-    <form method="post" action="/quotes/publish/{{ lead.id }}" class="m-0">
-      <button class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-              type="submit">
-        <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6v12m6-6H6"/>
-        </svg>
-        Genereer offerte
-      </button>
-    </form>
-  {% endif %}
-</div>
+  <!-- Header / sticky actions -->
+  <div class="sticky top-0 z-40 mb-4 bg-[#f1f5f9]/95 pb-3 pt-1 backdrop-blur">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Offerte</div>
+        <div class="text-lg font-semibold text-slate-900">Offerte #{{ lead.id }}</div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        {% if quote_ui and quote_ui.can_view %}
+          <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+             href="/app/leads/{{ lead.id }}/estimate" target="_blank">
+            Bekijk offerte
+          </a>
+        {% endif %}
+        {% if lead.public_token %}
+          <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+             href="/e/{{ lead.public_token }}" target="_blank">
+            Publiek bekijken
+          </a>
+          <button class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                  type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
+            Link kopiëren
+          </button>
+        {% endif %}
+        {% if lead.estimate_html_key %}
+          <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+             href="/app/leads/{{ lead.id }}/edit-estimate">
+            Offerte bewerken
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 
   <!-- Alerts -->
   {% if sent == '1' %}
@@ -164,19 +138,69 @@
 
       <!-- Lead card -->
       <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-              </svg>
-            </div>
-            <div>
-              <div class="text-sm font-semibold text-slate-900">Lead #{{ lead.id }}</div>
-              <div class="text-xs text-slate-400">Klantgegevens</div>
+        <div class="border-b border-slate-100 px-5 py-4">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-slate-900">Offerte #{{ lead.id }}</div>
+                <div class="text-xs text-slate-400">Overzicht & klantgegevens</div>
+              </div>
             </div>
           </div>
 
+          <!-- Summary stat row -->
+          <div class="mt-4 grid gap-3 sm:grid-cols-4">
+            <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
+              <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Totaal bedrag</div>
+              <div class="mt-1 text-sm font-semibold text-slate-900">
+                {% if effective_total_display %}
+                  {{ effective_total_display }}
+                {% elif lead.total_amount_display %}
+                  {{ lead.total_amount_display }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
+              <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Oppervlakte</div>
+              <div class="mt-1 text-sm font-semibold text-slate-900">
+                {% if square_meters %}{{ square_meters }} m²{% else %}—{% endif %}
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
+              <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Type werkzaamheden</div>
+              <div class="mt-1 text-sm font-semibold text-slate-900">
+                {{ job_type or "—" }}
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
+              <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Status</div>
+              {% set q = quote_ui or {} %}
+              {% set qs = q.quote_status or 'none' %}
+              {% if qs == 'review' %}
+                <div class="mt-1 inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
+                  Controle nodig
+                </div>
+              {% elif qs in ['generated','sent','accepted'] %}
+                <div class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+                  AI gecontroleerd
+                </div>
+              {% else %}
+                <div class="mt-1 text-sm font-semibold text-slate-900">
+                  —
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           {% set st = (lead.status or '').upper() %}
           {% set status_labels = {
             'ACCEPTED': 'Geaccepteerd',
@@ -248,34 +272,169 @@
 
           <div>
             <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Projectomschrijving</div>
+            {% set raw_notes = lead.notes or "" %}
+            {% set lines = raw_notes.split('\n') %}
+            {% set first_line = (lines[0] if lines else '') %}
+            {% if (first_line|trim)[:6] == 'Adres:' %}
+              {% set _ = lines.pop(0) %}
+            {% endif %}
+            {% set clean_notes = (lines|join('\n'))|trim %}
             <div class="mt-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700 whitespace-pre-line">
-              {{ lead.notes or "Geen omschrijving opgegeven" }}
+              {{ clean_notes or "Geen omschrijving opgegeven" }}
             </div>
           </div>
 
-          {% if lead.files %}
-            <div class="border-t border-slate-100 pt-5">
-              <div class="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Uploads</div>
-              <div class="space-y-2">
-                {% for file in lead.files %}
-                  <div class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                    <div class="min-w-0">
-                      <div class="truncate text-sm font-medium text-slate-900">{{ file.s3_key.split('/')[-1] }}</div>
-                      <div class="mt-1 text-xs text-slate-500">{{ file.content_type }}{% if file.size_bytes %} · {{ file.size_bytes }} bytes{% endif %}</div>
-                    </div>
+          {% if estimate_overrides %}
+          <div class="border-t border-slate-100 pt-5">
+            <div class="mb-2 flex items-center justify-between">
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Handmatige offerte-aanpassingen</div>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div>
+                <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Publieke notities</div>
+                <div class="mt-2 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-700 whitespace-pre-line">
+                  {{ estimate_overrides.public_notes or "Geen extra notities" }}
+                </div>
+              </div>
+
+              <div>
+                <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Korting (%)</div>
+                <div class="mt-2 text-sm font-medium text-slate-900">
+                  {% if estimate_overrides.discount_percent is not none %}
+                    {{ estimate_overrides.discount_percent }}%
+                  {% else %}
+                    —
+                  {% endif %}
+                </div>
+              </div>
+
+              <div>
+                <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Handmatig totaal</div>
+                <div class="mt-2 text-sm font-medium text-slate-900">
+                  {% if estimate_overrides.manual_total is not none %}
+                    € {{ "%.2f"|format(estimate_overrides.manual_total) }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </div>
+                {% if effective_total_display %}
+                  <div class="mt-1 text-xs text-slate-500">
+                    Effectief totaal (incl. btw): <span class="font-semibold text-slate-900">{{ effective_total_display }}</span>
                   </div>
-                {% endfor %}
+                {% endif %}
               </div>
             </div>
+          </div>
           {% endif %}
 
-        
-          {% if lead.estimate_html_key %}
-            <div class="border-t border-slate-100 pt-5">
-              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Offerte sleutel</div>
-              <code class="mt-2 block break-all rounded-xl bg-slate-100 px-3 py-2 text-xs font-mono text-slate-600">{{ lead.estimate_html_key }}</code>
+          <div class="border-t border-slate-100 pt-5">
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Foto’s</div>
+              <div class="text-xs text-slate-400">
+                {{ (photo_previews|length) if photo_previews else 0 }} bestanden
+              </div>
             </div>
-          {% endif %}
+
+            {% if photo_previews and photo_previews|length > 0 %}
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {% for p in photo_previews %}
+                  <a href="{{ p.url }}" target="_blank"
+                     class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                    <img src="{{ p.url }}" alt="{{ p.name or 'Foto' }}"
+                         class="h-28 w-full object-cover transition duration-200 group-hover:scale-[1.02]" />
+                    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent p-2">
+                      <div class="truncate text-[11px] font-medium text-white">
+                        {{ p.name or 'Foto openen' }}
+                      </div>
+                    </div>
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                Geen foto's beschikbaar.
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="border-t border-slate-100 pt-5">
+            {% set q = quote_ui or {} %}
+            {% set qs = q.quote_status or 'none' %}
+            {% set quote_labels = {
+            'none': 'Geen offerte',
+            'generated': 'AI gecontroleerd',
+            'review': 'Controle nodig',
+            'sent': 'Verstuurd naar klant',
+            'accepted': 'Geaccepteerd'
+            } %}
+            {% if qs == 'accepted' %}
+              {% set qbadge = 'bg-emerald-50 text-emerald-600' %}
+            {% elif qs == 'review' %}
+              {% set qbadge = 'bg-amber-50 text-amber-600' %}
+            {% elif qs == 'sent' %}
+              {% set qbadge = 'bg-amber-50 text-amber-600' %}
+            {% elif qs == 'generated' %}
+              {% set qbadge = 'bg-sky-50 text-sky-600' %}
+            {% else %}
+              {% set qbadge = 'bg-slate-100 text-slate-600' %}
+            {% endif %}
+
+            <div class="mb-2 flex items-center justify-between">
+              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Offerte acties</div>
+              <span class="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium {{ qbadge }}">
+                {{ quote_labels.get(qs, 'Geen offerte') }}
+              </span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              {% if q.can_generate %}
+                <form method="post" action="/quotes/publish/{{ lead.id }}" class="m-0">
+                  <button class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+                          type="submit">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6v12m6-6H6"/>
+                    </svg>
+                    Genereer offerte
+                  </button>
+                </form>
+              {% endif %}
+
+              {% if q.can_view %}
+                <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                   href="/app/leads/{{ lead.id }}/estimate" target="_blank">
+                  <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  Bekijk offerte
+                </a>
+              {% endif %}
+
+              {% if q.can_send %}
+                <form method="post" action="/app/leads/{{ lead.id }}/send" class="m-0">
+                  <button class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+                          type="submit">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                    Offerte versturen
+                  </button>
+                </form>
+              {% endif %}
+
+              {% if q.can_regenerate %}
+                <form method="post" action="/app/reviews/{{ lead.id }}/generate-estimate" class="m-0">
+                  <button class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                          type="submit">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582M20 20v-5h-.581M5 9a7 7 0 0112.95-2M19 15a7 7 0 01-12.95 2"/>
+                    </svg>
+                    Offerte opnieuw genereren
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
 
           {% if lead.public_token %}
             <div class="border-t border-slate-100 pt-5">

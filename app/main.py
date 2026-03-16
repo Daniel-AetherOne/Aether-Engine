@@ -252,7 +252,11 @@ if settings.ENABLE_DEV_ROUTES:
 @app.on_event("startup")
 def on_startup():
     assert_no_static_aws_keys_in_env()
-    Base.metadata.create_all(bind=engine)
+    # Only auto-create tables when explicitly enabled (default: true for local dev).
+    # In multi-worker Gunicorn deployments with SQLite, set
+    # SQLALCHEMY_CREATE_ALL_AT_STARTUP=false to avoid concurrent schema creation.
+    if _env_truthy("SQLALCHEMY_CREATE_ALL_AT_STARTUP", "true"):
+        Base.metadata.create_all(bind=engine)
 
     # start background worker (dev)
     start_worker()

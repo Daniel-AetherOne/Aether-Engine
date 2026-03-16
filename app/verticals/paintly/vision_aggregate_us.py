@@ -372,6 +372,62 @@ def aggregate_images_to_quote_inputs(
         needs_review = True
         review_reasons.append("wall_repair_or_wallpaper_likely")
 
+        # DEMO: alleen duidelijke, sterke structurele schade krijgt extra
+        # expliciete redenen. Lichte krassen / vlekken mogen niet als
+        # zware schade tellen.
+        severe_keywords = {
+            "exposed_plaster",
+            "stuc_zichtbaar",
+            "peeling_wallcovering",
+            "wallpaper_removal",
+            "behang_verwijderen",
+            "loslatend",
+            "peeling",
+            "schade",
+            "damage",
+            "repair",
+            "plamuur",
+            "filler",
+            "rough_wall",
+            "ruwe_muur",
+        }
+
+        severe_hit = False
+        for p in preds:
+            issues = p.get("issues") or []
+            if isinstance(issues, str):
+                issues = [issues]
+            try:
+                for issue in issues:
+                    s = str(issue).strip().lower()
+                    if any(kw in s for kw in severe_keywords):
+                        severe_hit = True
+                        break
+                if severe_hit:
+                    break
+            except Exception:
+                continue
+
+            for key in ("label", "description", "notes", "summary"):
+                val = p.get(key)
+                if not val:
+                    continue
+                try:
+                    s = str(val).strip().lower()
+                except Exception:
+                    continue
+                if any(kw in s for kw in severe_keywords):
+                    severe_hit = True
+                    break
+            if severe_hit:
+                break
+
+        if severe_hit:
+            review_reasons.append("substrate_visible")
+            review_reasons.append("peeling_wallcovering_detected")
+            review_reasons.append("repair_work_required")
+            review_reasons.append("surface_damage_detected")
+
     # Confidence-based review (new, explicit)
     if overall < 0.55:
         needs_review = True

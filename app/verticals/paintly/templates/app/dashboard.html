@@ -9,7 +9,7 @@
       <div>
         <div class="text-sm text-slate-400">Home</div>
         <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">
-          Welkom terug, <span class="text-sky-500">Daniel</span>!
+          Welkom terug
         </h1>
       </div>
 
@@ -26,36 +26,14 @@
           </svg>
         </button>
 
-        <form method="post" action="/app/dev/set_timezone" class="flex items-center gap-2">
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
-              </svg>
-            </div>
-            <input
-              name="tz"
-              value="Europe/Amsterdam"
-              class="h-10 w-48 rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-            />
-          </div>
-
-          <button
-            type="submit"
-            class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-          >
-            Tijdzone
-          </button>
-        </form>
-
         <a
-          href="/app/leads/new"
+          href="/intake/paintly"
           class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
         >
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5"/>
           </svg>
-          Nieuwe lead
+          Nieuwe offerte
         </a>
       </div>
     </div>
@@ -72,7 +50,7 @@
         <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
           <div class="flex items-start justify-between">
             <div>
-              <div class="text-[15px] font-medium text-slate-800">Nieuwe leads</div>
+              <div class="text-[15px] font-medium text-slate-800">Nieuwe offertes</div>
               <div class="mt-5 flex items-center gap-4">
                 <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,7 +201,7 @@
                     {% if j.customer_name %}
                       {{ j.customer_name }}
                     {% elif j.lead_id %}
-                      <a href="/app/leads/{{ j.lead_id }}" class="hover:text-slate-700">Lead #{{ j.lead_id }}</a>
+                      <a href="/app/leads/{{ j.lead_id }}" class="hover:text-slate-700">Offerte #{{ j.lead_id }}</a>
                     {% else %}
                       —
                     {% endif %}
@@ -250,12 +228,12 @@
         </div>
       </div>
 
-      <!-- Leads -->
+      <!-- Offertes -->
       <div class="rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <div>
-            <h2 class="text-lg font-semibold text-slate-900">Recente leads</h2>
-            <p class="mt-1 text-sm text-slate-400">Laatste aanvragen</p>
+            <h2 class="text-lg font-semibold text-slate-900">Recente offertes</h2>
+            <p class="mt-1 text-sm text-slate-400">Laatste offertes</p>
           </div>
           <a href="/app/leads" class="text-sm font-medium text-slate-500 transition hover:text-slate-800">Alles bekijken</a>
         </div>
@@ -279,7 +257,7 @@
 
             <div class="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <a href="/app/leads/{{ l.id }}" class="font-medium text-slate-800 transition hover:text-sky-600">Lead #{{ l.id }}</a>
+                <a href="/app/leads/{{ l.id }}" class="font-medium text-slate-800 transition hover:text-sky-600">Offerte #{{ l.id }}</a>
                 <div class="mt-1 text-sm text-slate-500">{{ l.name or 'Onbekende klant' }}</div>
               </div>
               <div class="flex items-center gap-3">
@@ -291,66 +269,13 @@
             </div>
           {% else %}
             <div class="px-5 py-12 text-center text-sm text-slate-400">
-              Nog geen leads
+              Nog geen offertes
             </div>
           {% endfor %}
         </div>
       </div>
 
     </div>
-
-    <!-- Right column -->
-    <aside class="xl:col-span-3">
-      <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-slate-900">Planning</h2>
-            <p class="mt-1 text-sm text-slate-400">Vandaag</p>
-          </div>
-          <button class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-50">
-            Vandaag
-          </button>
-        </div>
-
-        <div class="mt-5 space-y-5">
-          <div class="border-t border-slate-100 pt-4">
-            <span class="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-500">Critical</span>
-            <div class="mt-3">
-              <div class="text-sm font-semibold text-slate-800">Offerte opvolgen</div>
-              <div class="mt-1 text-xs text-slate-400">Bel klant over openstaande offerte</div>
-            </div>
-            <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
-              <span>Sales</span>
-              <span>09:00 - 09:30</span>
-            </div>
-          </div>
-
-          <div class="border-t border-slate-100 pt-4">
-            <span class="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-500">Urgent</span>
-            <div class="mt-3">
-              <div class="text-sm font-semibold text-slate-800">Klus bevestigen</div>
-              <div class="mt-1 text-xs text-slate-400">Planning vastzetten met klant</div>
-            </div>
-            <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
-              <span>Planning</span>
-              <span>10:30 - 12:00</span>
-            </div>
-          </div>
-
-          <div class="border-t border-slate-100 pt-4">
-            <span class="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-500">Routine</span>
-            <div class="mt-3">
-              <div class="text-sm font-semibold text-slate-800">Administratie</div>
-              <div class="mt-1 text-xs text-slate-400">Notities en statusupdates verwerken</div>
-            </div>
-            <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
-              <span>Backoffice</span>
-              <span>12:00 - 13:00</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </aside>
 
   </div>
 </div>
