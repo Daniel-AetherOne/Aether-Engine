@@ -277,6 +277,68 @@
 
     </div>
 
+    <!-- Right column: billing usage -->
+    {% if billing_usage_summary %}
+      <div class="space-y-6 xl:col-span-3">
+        <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-[15px] font-medium text-slate-800">Gebruik deze maand</div>
+              <p class="mt-1 text-xs text-slate-400">
+                Plan:
+                <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                  {{ billing_usage_summary.plan_label }}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-5 space-y-3 text-sm text-slate-600">
+            {% if not billing_usage_summary.is_unlimited %}
+              <div class="font-medium">
+                {{ billing_usage_summary.quotes_sent }} van {{ billing_usage_summary.quote_limit }} offertes gebruikt
+              </div>
+
+              <div class="mt-1">
+                <div class="h-2 w-full rounded-full bg-slate-100">
+                  <div
+                    class="h-2 rounded-full bg-sky-500 transition-all"
+                    style="width: {{ billing_usage_summary.usage_percent }}%;"
+                  ></div>
+                </div>
+                <div class="mt-1 text-xs text-slate-400">
+                  {{ billing_usage_summary.usage_percent }}% gebruikt · Nog {{ billing_usage_summary.quotes_remaining }} offertes over
+                </div>
+
+                {% if billing_usage_summary.usage_percent >= 100 %}
+                  <div class="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    Je maandlimiet is bereikt. Upgrade je plan om meer offertes te versturen.
+                  </div>
+                {% elif billing_usage_summary.usage_percent >= 80 %}
+                  <div class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    Je zit bijna aan je maandlimiet.
+                  </div>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="font-medium">
+                Onbeperkt aantal offertes
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="mt-5">
+            <a
+              href="/app/billing"
+              class="inline-flex w-full items-center justify-center rounded-xl bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+            >
+              Upgrade plan
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
   </div>
 </div>
 

@@ -32,6 +32,7 @@ from app.core.settings import settings
 from app.dependencies import tenant_service
 from app.config.plans import PLANS
 from app.services.usage_service import get_or_create_usage, increment_usage
+from app.services.billing_summary_service import get_billing_usage_summary
 from app.verticals.paintly.email_render import render_estimate_ready_email
 from app.verticals.paintly.estimate_email import (
     send_estimate_ready_email_to_customer,
@@ -580,13 +581,89 @@ def app_dashboard(
         for l in leads
     ]
 
+    tenant = db.query(Tenant).filter(Tenant.id == str(current_user.tenant_id)).first()
+    billing_usage_summary = (
+        get_billing_usage_summary(db, tenant) if tenant is not None else None
+    )
+
     context = _dashboard_context(
         request,
         current_user,
         db,
-        {"kpis": kpis, "jobs": jobs_vm, "leads": leads_vm},
+        {
+            "kpis": kpis,
+            "jobs": jobs_vm,
+            "leads": leads_vm,
+            "billing_usage_summary": billing_usage_summary,
+        },
     )
     return templates.TemplateResponse("app/dashboard.html", context)
+
+
+@router.get("/billing", response_class=HTMLResponse)
+def app_billing(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    tenant = (
+        db.query(Tenant)
+        .filter(Tenant.id == str(current_user.tenant_id))
+        .first()
+    )
+    current_plan_code = getattr(tenant, "plan_code", None) if tenant is not None else None
+    current_plan_code = current_plan_code or "starter_99"
+
+    plans = [
+        {
+            "code": "starter_99",
+            "name": "Starter",
+            "price_label": "€99 / maand",
+            "quote_limit_label": "99 offertes / maand",
+            "features": ["Basic sending only"],
+        },
+        {
+            "code": "pro_199",
+            "name": "Pro",
+            "price_label": "€199 / maand",
+            "quote_limit_label": "200 offertes / maand",
+            "features": ["PDF export", "Branding/logo"],
+        },
+        {
+            "code": "business_399",
+            "name": "Business",
+            "price_label": "€399 / maand",
+            "quote_limit_label": "Onbeperkt offertes / maand",
+            "features": ["PDF export", "Branding/logo", "Whitelabel"],
+        },
+    ]
+
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
+        {"plans": plans, "current_plan_code": current_plan_code},
+    )
+    return templates.TemplateResponse("app/billing.html", context)
+
+
+@router.post("/billing/upgrade/{plan_code}")
+def app_billing_upgrade(
+    plan_code: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    valid_plans = {"starter_99", "pro_199", "business_399"}
+    if plan_code not in valid_plans:
+        raise HTTPException(status_code=400, detail="Invalid plan code")
+
+    # Future: Stripe Checkout session creation and tenant plan update.
+
+    return RedirectResponse(
+        url="/app/billing?upgrade=coming_soon",
+        status_code=303,
+    )
 
 
 @router.get("/leads", response_class=HTMLResponse)
