@@ -30,6 +30,8 @@ from app.models.upload_record import UploadRecord, UploadStatus
 
 from app.core.settings import settings
 from app.dependencies import tenant_service
+from app.config.plans import PLANS
+from app.services.usage_service import get_or_create_usage, increment_usage
 from app.verticals.paintly.email_render import render_estimate_ready_email
 from app.verticals.paintly.estimate_email import (
     send_estimate_ready_email_to_customer,
@@ -870,6 +872,32 @@ def send_estimate(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
+    # Plan-based usage limit check (before sending)
+    tenant = db.query(Tenant).filter(Tenant.id == lead.tenant_id).first()
+    plan_code = getattr(tenant, "plan_code", None) if tenant is not None else None
+    plan_key = plan_code or "starter_99"
+
+    usage = get_or_create_usage(db, str(lead.tenant_id))
+    plan = PLANS.get(plan_key) or PLANS["starter_99"]
+    quote_limit = plan.get("quote_limit")
+
+    logger.info(
+        "SEND_ESTIMATE_USAGE_CHECK lead_id=%s tenant_id=%s tenant_plan_code=%s "
+        "plan_key=%s quotes_sent=%s quote_limit=%s",
+        lead.id,
+        lead.tenant_id,
+        plan_code,
+        plan_key,
+        getattr(usage, "quotes_sent", None),
+        quote_limit,
+    )
+
+    if quote_limit is not None and usage.quotes_sent >= int(quote_limit):
+        return RedirectResponse(
+            url=f"/app/leads/{lead_id}?send_error=quote_limit",
+            status_code=303,
+        )
+
     if not lead.estimate_html_key:
         # Geen offerte beschikbaar om te versturen -> nette melding op lead detail
         return RedirectResponse(
@@ -909,6 +937,9 @@ def send_estimate(
         )
 
     background_tasks.add_task(_send)
+
+    # Increment usage only after a successful send has been scheduled
+    increment_usage(db, str(lead.tenant_id))
 
     # mark as sent
     lead.status = "SENT"
