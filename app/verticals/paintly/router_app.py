@@ -682,6 +682,7 @@ def app_lead_detail(
     done_display = (
         _utc_to_local_human(getattr(job, "done_at", None), tz_name) if job else ""
     )
+    sent_display = _utc_to_local_human(getattr(lead, "sent_at", None), tz_name)
 
     # -------------------------
     # Photo previews (MVP)
@@ -761,10 +762,10 @@ def app_lead_detail(
 
     can_generate = not has_estimate
     can_view = has_estimate
-    # Only allow sending if estimate is fully succeeded (not in review) and email present
+    # Allow sending (and re-sending) while the estimate is ready and not accepted, with a valid email
     can_send = (
         has_estimate
-        and raw_status == "SUCCEEDED"
+        and raw_status in {"SUCCEEDED", "SENT", "VIEWED"}
         and bool((getattr(lead, "email", "") or "").strip())
     )
     # Allow regeneration while not accepted
@@ -795,6 +796,7 @@ def app_lead_detail(
             "scheduled_display": scheduled_display,
             "started_display": started_display,
             "done_display": done_display,
+            "sent_display": sent_display,
             "estimate_overrides": overrides,
             "effective_total_display": effective_total_display,
         },

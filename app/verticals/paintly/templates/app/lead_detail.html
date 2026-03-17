@@ -381,7 +381,14 @@
             {% endif %}
 
             <div class="mb-2 flex items-center justify-between">
-              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Offerte acties</div>
+              <div>
+                <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Offerte acties</div>
+                {% if lead.sent_at %}
+                  <div class="mt-0.5 text-[11px] text-slate-500">
+                    Laatst verstuurd: {{ sent_display }} <span class="text-slate-400">({{ tz_name }})</span>
+                  </div>
+                {% endif %}
+              </div>
               <span class="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium {{ qbadge }}">
                 {{ quote_labels.get(qs, 'Geen offerte') }}
               </span>
@@ -411,13 +418,18 @@
               {% endif %}
 
               {% if q.can_send %}
-                <form method="post" action="/app/leads/{{ lead.id }}/send" class="m-0">
-                  <button class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+                <form method="post" action="/app/leads/{{ lead.id }}/send" class="m-0" id="sendEstimateFormTop">
+                  <button id="sendEstimateBtnTop"
+                          class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
                           type="submit">
                     <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                     </svg>
-                    Offerte versturen
+                    {% if q.quote_status == 'sent' %}
+                      Offerte opnieuw versturen
+                    {% else %}
+                      Offerte versturen
+                    {% endif %}
                   </button>
                 </form>
               {% endif %}
