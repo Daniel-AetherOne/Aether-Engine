@@ -281,6 +281,18 @@ def _apply_overrides_to_estimate_dict(estimate: dict, overrides: dict) -> dict:
     meta = dict(pricing.get("meta") or {})
     meta["overrides"] = overrides
     meta["override_total_incl_vat"] = float(total_dec)
+
+    # If a manual total or discount was applied, treat this estimate as
+    # manually finalized: clear AI review flags so the public quote shows
+    # a concrete price instead of "review required"/"nader te bepalen".
+    if manual_total is not None or discount_percent is not None:
+        pricing["needs_review"] = False
+        meta["needs_review"] = False
+        meta["needs_review_reasons"] = []
+        meta["review_reasons"] = []
+        if isinstance(pricing.get("review_reasons"), list):
+            pricing["review_reasons"] = []
+
     pricing["meta"] = meta
 
     # Debug log adjusted totals for verification
@@ -1755,6 +1767,23 @@ def edit_estimate_post(
 
     lead.estimate_overrides_json = json.dumps(overrides, ensure_ascii=False)
     lead.updated_at = _utcnow()
+
+    # If a manual total or discount is applied, also mark the intake payload
+    # as manually overridden so future pipeline runs can skip AI-driven review.
+    if overrides["manual_total"] is not None or overrides["discount_percent"] is not None:
+        try:
+            payload = {}
+            raw_payload = getattr(lead, "intake_payload", None)
+            if isinstance(raw_payload, str) and raw_payload.strip():
+                payload = json.loads(raw_payload)
+            elif isinstance(raw_payload, dict):
+                payload = dict(raw_payload)
+
+            payload["manual_override"] = True
+            lead.intake_payload = json.dumps(payload, ensure_ascii=False)
+        except Exception:
+            # Non-fatal: if we can't update intake_payload, continue with overrides only.
+            pass
 
     # Re-render quote HTML with overrides applied, if possible
     new_html_key, rendered = render_quote_html_for_lead(lead, overrides)

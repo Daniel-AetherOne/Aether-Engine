@@ -178,9 +178,21 @@ def intake_by_tenant_slug(
     tenant_slug: str,
     db: Session = Depends(get_db),
 ):
+    # Temporary debug logging to diagnose slug lookup in production
+    logger.info("INTAKE slug GET hit", extra={"tenant_slug": tenant_slug})
     tenant = get_tenant_by_slug(db, tenant_slug)
     if not tenant:
+        logger.warning("INTAKE slug GET tenant not found", extra={"tenant_slug": tenant_slug})
         raise HTTPException(status_code=404, detail="Tenant not found")
+
+    logger.info(
+        "INTAKE slug GET tenant resolved",
+        extra={
+            "tenant_slug": tenant_slug,
+            "tenant_id": getattr(tenant, "id", None),
+            "tenant_company_name": getattr(tenant, "company_name", None),
+        },
+    )
 
     v = _get_vertical_or_404(DEFAULT_VERTICAL)
 
@@ -203,9 +215,20 @@ async def create_lead_by_tenant_slug(
     db: Session = Depends(get_db),
 ):
     try:
+        logger.info("INTAKE slug POST hit", extra={"tenant_slug": tenant_slug})
         tenant = get_tenant_by_slug(db, tenant_slug)
         if not tenant:
+            logger.warning("INTAKE slug POST tenant not found", extra={"tenant_slug": tenant_slug})
             raise HTTPException(status_code=404, detail="Tenant not found")
+
+        logger.info(
+            "INTAKE slug POST tenant resolved",
+            extra={
+                "tenant_slug": tenant_slug,
+                "tenant_id": getattr(tenant, "id", None),
+                "tenant_company_name": getattr(tenant, "company_name", None),
+            },
+        )
 
         v = _get_vertical_or_404(DEFAULT_VERTICAL)
 
