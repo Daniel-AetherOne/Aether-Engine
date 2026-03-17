@@ -203,15 +203,28 @@ def publish_quote(
     lead = _load_lead(db, lead_id)
 
     # Plan-based usage limit check (before sending)
-    tenant_id = str((getattr(lead, "tenant_id", "") or "").strip() or "default")
-    usage = get_or_create_usage(db, tenant_id)
+    raw_tenant_id = str((getattr(lead, "tenant_id", "") or "").strip())
+    tenant_id = raw_tenant_id or "default"
 
-    tenant: Tenant | None = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    # Usage is strictly tracked per real tenant id (no default fallback here)
+    usage = get_or_create_usage(db, raw_tenant_id)
+
+    tenant: Tenant | None = db.query(Tenant).filter(Tenant.id == raw_tenant_id).first()
     plan_code = getattr(tenant, "plan_code", None) if tenant is not None else None
     plan_key = plan_code or "starter_99"
     plan = PLANS.get(plan_key) or PLANS["starter_99"]
 
     quote_limit = plan.get("quote_limit")
+    logger.info(
+        "USAGE_CHECK lead_id=%s tenant_id=%s tenant_plan_code=%s plan_key=%s "
+        "quotes_sent=%s quote_limit=%s",
+        lead.id,
+        raw_tenant_id,
+        plan_code,
+        plan_key,
+        getattr(usage, "quotes_sent", None),
+        quote_limit,
+    )
     if quote_limit is not None and usage.quotes_sent >= int(quote_limit):
         raise HTTPException(
             status_code=402,
