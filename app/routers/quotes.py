@@ -13,11 +13,13 @@ from sqlalchemy.orm import Session
 
 from app.core.settings import settings
 from app.db import get_db
-from app.models import Lead, LeadFile
+from app.models import Lead, LeadFile, Tenant
 from app.services.storage import get_storage, head_ok, MAX_BYTES, ALLOWED_CONTENT_TYPES
 from app.services.metrics import inc  # ✅ FASE 6 metrics
 from app.verticals.registry import get as get_vertical
 from app.core.settings import settings
+from app.config.plans import PLANS
+from app.services.usage_service import get_or_create_usage, increment_usage
 from app.verticals.paintly.estimate_email import (
     send_estimate_ready_email_to_customer,
 )
@@ -200,6 +202,22 @@ def publish_quote(
 ):
     lead = _load_lead(db, lead_id)
 
+    # Plan-based usage limit check (before sending)
+    tenant_id = str((getattr(lead, "tenant_id", "") or "").strip() or "default")
+    usage = get_or_create_usage(db, tenant_id)
+
+    tenant: Tenant | None = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    plan_code = getattr(tenant, "plan_code", None) if tenant is not None else None
+    plan_key = plan_code or "starter_99"
+    plan = PLANS.get(plan_key) or PLANS["starter_99"]
+
+    quote_limit = plan.get("quote_limit")
+    if quote_limit is not None and usage.quotes_sent >= int(quote_limit):
+        raise HTTPException(
+            status_code=402,
+            detail="Quote limit reached for current plan",
+        )
+
     inc("publish_requests_total")
     logger.info("LEAD %s publish_requested status=%s", lead.id, lead.status)
 
@@ -278,7 +296,7 @@ def publish_quote(
         lead.updated_at = datetime.utcnow()
         db.commit()
 
-        # If the quote fully succeeded, send the customer "estimate ready" email.
+        # If the quote fully succeeded, send the customer "estimate ready" email
         if lead.status == "SUCCEEDED":
             to_email = (getattr(lead, "email", "") or "").strip()
             if to_email:
@@ -311,6 +329,14 @@ def publish_quote(
                     )
 
                 background.add_task(_send)
+
+                # Increment usage only after a successful send has been scheduled
+                increment_usage(
+                    db,
+                    tenant_id=str(
+                        (getattr(lead, "tenant_id", "") or "").strip() or "default"
+                    ),
+                )
 
         if lead.status == "NEEDS_REVIEW":
             inc("quotes_needs_review_total")
