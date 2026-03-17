@@ -2,7 +2,7 @@
 
 PLANS = {
     "starter_99": {
-        "quote_limit": 20,
+        "quote_limit": 1,
         "features": {
             "pdf": False,
             "branding": False,
@@ -26,4 +26,3 @@ PLANS = {
         },
     },
 }
-
