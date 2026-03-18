@@ -6,7 +6,7 @@ import datetime as dt
 from typing import Any
 from sqlalchemy.orm import Session
 
-from app.models import Lead
+from app.models import Lead, Tenant
 from app.tasks.vision_task import run_vision_for_lead
 
 from app.verticals.paintly.vision_aggregate_us import (
@@ -18,6 +18,8 @@ from app.verticals.paintly.pricing_output_builder import build_pricing_output
 from app.verticals.paintly.needs_review import needs_review_from_output
 
 from app.services.storage import get_storage
+from app.billing.entitlements import Action, check_entitlement
+from app.dependencies import tenant_service
 
 
 def _ensure_obj(x: Any) -> Any:
@@ -205,7 +207,50 @@ def compute_quote_for_lead(db: Session, lead: Lead, render_html: bool = True) ->
         estimate["meta"] = meta
 
     # --------------------------------------------------
-    # 5) Optional HTML render + store
+    # 5) Branding (logo) gating via entitlement
+    # --------------------------------------------------
+    if isinstance(estimate, dict):
+        try:
+            tenant_row: Tenant | None = (
+                db.query(Tenant).filter(Tenant.id == lead.tenant_id).first()
+            )
+        except Exception:
+            tenant_row = None
+
+        if tenant_row is not None:
+            class _BrandingCtx:
+                # Minimal TenantUsageLike context for USE_BRANDING entitlement
+                def __init__(self, tenant_obj: Tenant):
+                    self.plan_code = getattr(tenant_obj, "plan_code", None)
+                    self.subscription_status = getattr(tenant_obj, "subscription_status", None)
+                    self.quotes_sent = None
+                    self.quote_limit = None
+
+            branding_ctx = _BrandingCtx(tenant_row)
+            ent = check_entitlement(branding_ctx, Action.USE_BRANDING.value)
+            if ent.allowed:
+                # Only when entitlement is granted do we apply custom logo branding.
+                ts = tenant_service.get_tenant(str(lead.tenant_id))
+                logo_url = getattr(ts, "logo_url", None) if ts is not None else None
+                if logo_url:
+                    company = estimate.get("company") or estimate.get("tenant") or {}
+                    if not isinstance(company, dict):
+                        company = {}
+                    company = dict(company)
+                    company["logo_url"] = logo_url
+                    estimate["company"] = company
+
+            # Whitelabel flag is also derived from entitlement (fail-closed).
+            wl = check_entitlement(branding_ctx, Action.USE_WHITELABEL.value)
+            company = estimate.get("company") or estimate.get("tenant") or {}
+            if not isinstance(company, dict):
+                company = {}
+            company = dict(company)
+            company["whitelabel_enabled"] = bool(wl.allowed)
+            estimate["company"] = company
+
+    # --------------------------------------------------
+    # 6) Optional HTML render + store
     # --------------------------------------------------
     html_key = None
 

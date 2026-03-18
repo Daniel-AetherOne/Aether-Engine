@@ -266,3 +266,133 @@ def render_estimate_html(estimate: Dict[str, Any]) -> str:
         customer=customer,
         token=token,
     )
+
+
+def render_estimate_pdf_html(estimate: Dict[str, Any]) -> str:
+    """
+    Dedicated PDF-friendly HTML renderer for WeasyPrint.
+
+    Uses a simpler, document-style template (estimate_pdf.html) instead of the
+    web-optimized dashboard template.
+    """
+    estimate = estimate or {}
+    if not isinstance(estimate, dict):
+        raise TypeError("estimate must be dict")
+
+    pricing = estimate
+    meta = pricing.get("meta") if isinstance(pricing.get("meta"), dict) else {}
+
+    project = {
+        "lead_id": meta.get("estimate_id"),
+        "estimate_id": meta.get("estimate_id"),
+        "location": estimate.get("location") or "—",
+        "date": meta.get("date"),
+        "valid_until": meta.get("valid_until"),
+        "square_meters": meta.get("area_m2") or estimate.get("square_meters"),
+        "description": estimate.get("description"),
+        "address": estimate.get("address") or meta.get("address"),
+    }
+
+    company = estimate.get("company") or estimate.get("tenant") or {}
+    lead = estimate.get("lead") or {}
+    customer = estimate.get("customer") or {}
+    token = estimate.get("token")
+
+    pricing = pricing or {}
+    pdf_pricing = pricing  # reuse existing helpers
+
+    # Reuse existing computation helpers from render_estimate_html_v2
+    meta = pdf_pricing.get("meta") if isinstance(pdf_pricing.get("meta"), dict) else {}
+    needs_review_flag = bool(pdf_pricing.get("needs_review", False))
+    review_reasons = pdf_pricing.get("review_reasons")
+    if review_reasons is None:
+        review_reasons = (
+            meta.get("needs_review_reasons") or meta.get("review_reasons") or []
+        )
+    if isinstance(review_reasons, str):
+        review_reasons = [review_reasons]
+    elif not isinstance(review_reasons, list):
+        review_reasons = [str(review_reasons)]
+    review_reasons = [str(x) for x in review_reasons if x is not None]
+    pricing_ready = (not needs_review_flag) and (len(review_reasons) == 0)
+
+    scope_bullets = _as_list(getattr(PAINTLY_SCOPE_ASSUMPTIONS, "included", None))
+    if not scope_bullets:
+        scope_bullets = [
+            "Voorbereiding van oppervlakken waar nodig (licht schuren/bijwerken).",
+            "Aanbrengen van afwerklagen op de genoemde oppervlakken.",
+            "Standaard afplakken/beschermen en oplever-schoonmaak.",
+        ]
+
+    exclusions = _as_list(getattr(PAINTLY_ESTIMATE_DISCLAIMER, "bullets", None))
+
+    subtotals = (
+        pdf_pricing.get("subtotals")
+        if isinstance(pdf_pricing.get("subtotals"), dict)
+        else {}
+    )
+    pricing_labor = float(_money(subtotals.get("labor")))
+    pricing_materials = float(_money(subtotals.get("materials")))
+
+    decision_vars = pdf_pricing.get("decision_vars")
+    if decision_vars is None and isinstance(meta.get("decision_vars"), dict):
+        decision_vars = meta.get("decision_vars")
+
+    assumptions_ctx = {
+        "prep_level": (decision_vars or {}).get("prep_level"),
+        "complexity_level": (decision_vars or {}).get("complexity_level"),
+        "access_risk": (decision_vars or {}).get("access_risk"),
+        "review_reasons": review_reasons,
+        "needs_review": needs_review_flag,
+    }
+
+    override_total = None
+    try:
+        if isinstance(meta, dict) and meta.get("override_total_incl_vat") is not None:
+            override_total = _money(meta.get("override_total_incl_vat"))
+    except Exception:
+        override_total = None
+
+    if override_total is not None and override_total > 0:
+        vat_rate = _pick_vat_rate(pdf_pricing)
+        one_plus = Decimal("1") + vat_rate
+        subtotal_excl = (override_total / one_plus).quantize(
+            MONEY_Q, rounding=ROUND_HALF_UP
+        )
+        vat_amount = (override_total - subtotal_excl).quantize(
+            MONEY_Q, rounding=ROUND_HALF_UP
+        )
+        vat = {
+            "subtotal_excl_vat": float(subtotal_excl),
+            "vat_rate": float(vat_rate),
+            "vat_amount": float(vat_amount),
+            "total_incl_vat": float(override_total),
+        }
+    else:
+        vat = _calc_vat(pdf_pricing)
+
+    tmpl = _jinja_env().get_template("estimate_pdf.html")
+    html = tmpl.render(
+        pricing_ready=pricing_ready,
+        pricing=pdf_pricing,
+        vat=vat,
+        pricing_labor=pricing_labor,
+        pricing_materials=pricing_materials,
+        copy=PAINTLY_ESTIMATE_COPY,
+        needs_review=PAINTLY_NEEDS_REVIEW_COPY,
+        scope_bullets=scope_bullets,
+        exclusions=exclusions,
+        project=project,
+        company=company,
+        lead=lead or {},
+        customer=customer or {},
+        token=token,
+        needs_review_flag=needs_review_flag,
+        review_reasons=review_reasons,
+        decision_vars=decision_vars or {},
+        assumptions_ctx=assumptions_ctx,
+    )
+
+    if "{{" in html or "{%" in html:
+        raise RuntimeError("Estimate PDF HTML still contains Jinja tags.")
+    return html

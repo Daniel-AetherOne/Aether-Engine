@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  app:
+    image: paintly-local
+    build: .
+    ports:
+      - "8001:8080"
+    env_file:
+      - .env
+    environment:
+      APP_BASE_URL: "http://127.0.0.1:8001"
+      APP_PUBLIC_BASE_URL: "http://127.0.0.1:8001"
+      GUNICORN_CMD_ARGS: "--workers 1 --reload"
+    volumes:
+      - .:/app
+      - ./dev.db:/app/dev.db
+      - ./data:/app/data

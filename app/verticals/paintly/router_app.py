@@ -9,13 +9,16 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import datetime, timezone, timedelta
 import logging
 import json
+import stripe
+import os
 
 from fastapi import BackgroundTasks
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, Query
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.auth.deps import require_user_html
 from app.db import get_db
@@ -29,6 +32,11 @@ from app.models.lead import LeadFile
 from app.models.upload_record import UploadRecord, UploadStatus
 
 from app.core.settings import settings
+from app.core.stripe_config import (
+    APP_BASE_URL,
+    PLAN_PRICE_MAPPING,
+    ensure_stripe_api_key,
+)
 from app.dependencies import tenant_service
 from app.config.plans import PLANS
 from app.services.usage_service import get_or_create_usage, increment_usage
@@ -37,6 +45,11 @@ from app.verticals.paintly.email_render import render_estimate_ready_email
 from app.verticals.paintly.estimate_email import (
     send_estimate_ready_email_to_customer,
 )
+from app.verticals.paintly.render_estimate import render_estimate_pdf_html
+from app.billing.features import Feature, tenant_has_feature
+from app.billing.ui import tenant_entitlements, tenant_feature_flags, tenant_feature_ui
+from app.billing.entitlements import Action, check_entitlement
+from app.billing.dependencies import require_entitlement
 
 
 router = APIRouter(
@@ -586,6 +599,39 @@ def app_dashboard(
         get_billing_usage_summary(db, tenant) if tenant is not None else None
     )
 
+    current_plan_code = getattr(tenant, "plan_code", None) if tenant is not None else None
+    current_plan_code = current_plan_code or "starter_99"
+
+    subscription_status = (
+        getattr(tenant, "subscription_status", None) if tenant is not None else None
+    )
+    subscription_status = subscription_status or "inactive"
+
+    trial_ends_at = getattr(tenant, "trial_ends_at", None) if tenant is not None else None
+    trial_days_left: int | None
+    if not trial_ends_at:
+        trial_days_left = None
+    else:
+        from datetime import datetime, timezone
+
+        if getattr(trial_ends_at, "tzinfo", None) is None:
+            trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
+
+        now = datetime.now(timezone.utc)
+        delta = trial_ends_at - now
+        trial_days_left = max(int(delta.days), 0)
+
+    usage = get_or_create_usage(db, str(current_user.tenant_id))
+    quotes_sent_this_month = int(getattr(usage, "quotes_sent", 0) or 0)
+
+    plan = PLANS.get(current_plan_code) or PLANS.get("starter_99") or {}
+    quote_limit = plan.get("quote_limit")
+    quotes_remaining = (
+        None
+        if quote_limit is None
+        else max(int(quote_limit) - int(quotes_sent_this_month), 0)
+    )
+
     context = _dashboard_context(
         request,
         current_user,
@@ -595,6 +641,16 @@ def app_dashboard(
             "jobs": jobs_vm,
             "leads": leads_vm,
             "billing_usage_summary": billing_usage_summary,
+            "current_plan_code": current_plan_code,
+            "subscription_status": subscription_status,
+            "trial_ends_at": trial_ends_at,
+            "trial_days_left": trial_days_left,
+            "quotes_sent_this_month": quotes_sent_this_month,
+            "quote_limit": quote_limit,
+            "quotes_remaining": quotes_remaining,
+            "feature_flags": tenant_feature_flags(tenant),
+            "features": tenant_feature_ui(tenant),
+            "entitlements": tenant_entitlements(tenant),
         },
     )
     return templates.TemplateResponse("app/dashboard.html", context)
@@ -606,13 +662,43 @@ def app_billing(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
 ):
+    send_error = (request.query_params.get("send_error") or "").strip()
+    billing_status_error = send_error == "billing_status"
+    portal_error = (request.query_params.get("portal_error") or "").strip()
+    portal_error_no_customer = portal_error == "no_customer"
+
     tenant = (
         db.query(Tenant)
         .filter(Tenant.id == str(current_user.tenant_id))
         .first()
     )
-    current_plan_code = getattr(tenant, "plan_code", None) if tenant is not None else None
+
+    current_plan_code = (
+        getattr(tenant, "plan_code", None) if tenant is not None else None
+    )
     current_plan_code = current_plan_code or "starter_99"
+
+    subscription_status = (
+        getattr(tenant, "subscription_status", None) if tenant is not None else None
+    )
+    subscription_status = subscription_status or "inactive"
+
+    trial_ends_at = getattr(tenant, "trial_ends_at", None) if tenant is not None else None
+
+    trial_days_left: int | None
+    if not trial_ends_at:
+        trial_days_left = None
+    else:
+        from datetime import datetime, timezone
+
+        if getattr(trial_ends_at, "tzinfo", None) is None:
+            trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
+
+        now = datetime.now(timezone.utc)
+        delta = trial_ends_at - now
+        trial_days_left = max(int(delta.days), 0)
+
+    is_paid_or_trialing = subscription_status in ("trialing", "active")
 
     plans = [
         {
@@ -642,9 +728,59 @@ def app_billing(
         request,
         current_user,
         db,
-        {"plans": plans, "current_plan_code": current_plan_code},
+        {
+            "plans": plans,
+            "current_plan_code": current_plan_code,
+            "subscription_status": subscription_status,
+            "trial_ends_at": trial_ends_at,
+            "trial_days_left": trial_days_left,
+            "is_paid_or_trialing": is_paid_or_trialing,
+            "billing_status_error": billing_status_error,
+            "portal_error_no_customer": portal_error_no_customer,
+            "feature_flags": tenant_feature_flags(tenant),
+            "features": tenant_feature_ui(tenant),
+        },
     )
     return templates.TemplateResponse("app/billing.html", context)
+
+
+@router.post("/billing/portal")
+def app_billing_portal(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    tenant = (
+        db.query(Tenant)
+        .filter(Tenant.id == current_user.tenant_id)
+        .first()
+    )
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    customer_id = getattr(tenant, "stripe_customer_id", None)
+    if not customer_id:
+        raise HTTPException(status_code=400, detail="no_customer")
+
+    try:
+        ensure_stripe_api_key()
+        base = (os.getenv("APP_BASE_URL") or settings.APP_PUBLIC_BASE_URL or str(request.base_url)).rstrip("/")
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=f"{base}/app/billing",
+        )
+    except stripe.error.StripeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Stripe error during Billing Portal session creation",
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Stripe configuration error",
+        ) from exc
+
+    return {"portal_url": session.url}
 
 
 @router.post("/billing/upgrade/{plan_code}")
@@ -654,16 +790,52 @@ def app_billing_upgrade(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
 ):
-    valid_plans = {"starter_99", "pro_199", "business_399"}
-    if plan_code not in valid_plans:
-        raise HTTPException(status_code=400, detail="Invalid plan code")
+    price_id = PLAN_PRICE_MAPPING.get(plan_code)
+    if not price_id:
+        raise HTTPException(status_code=400, detail="Invalid or unavailable plan code")
 
-    # Future: Stripe Checkout session creation and tenant plan update.
-
-    return RedirectResponse(
-        url="/app/billing?upgrade=coming_soon",
-        status_code=303,
+    tenant = (
+        db.query(Tenant)
+        .filter(Tenant.id == current_user.tenant_id)
+        .first()
     )
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    try:
+        ensure_stripe_api_key()
+        base = (os.getenv("APP_BASE_URL") or settings.APP_PUBLIC_BASE_URL or str(request.base_url)).rstrip("/")
+
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=f"{base}/app/billing?checkout=success",
+            cancel_url=f"{base}/app/billing?checkout=cancel",
+            client_reference_id=str(tenant.id),
+            metadata={
+                "tenant_id": str(tenant.id),
+                "target_plan_code": plan_code,
+            },
+            subscription_data={
+                "trial_period_days": 14,
+                "metadata": {
+                    "tenant_id": str(tenant.id),
+                    "plan_code": plan_code,
+                },
+            },
+        )
+    except stripe.error.StripeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Stripe error during Checkout session creation",
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Stripe configuration error",
+        ) from exc
+
+    return {"checkout_url": session.url}
 
 
 @router.get("/leads", response_class=HTMLResponse)
@@ -860,6 +1032,13 @@ def app_lead_detail(
         "public_quote_url": public_quote_url,
     }
 
+    # Tenant-level entitlements for per-lead UI (PDF export button, etc.).
+    tenant = (
+        db.query(Tenant)
+        .filter(Tenant.id == str(current_user.tenant_id))
+        .first()
+    )
+
     context = _dashboard_context(
         request,
         current_user,
@@ -878,6 +1057,7 @@ def app_lead_detail(
             "sent_display": sent_display,
             "estimate_overrides": overrides,
             "effective_total_display": effective_total_display,
+            "entitlements": tenant_entitlements(tenant),
         },
     )
     return templates.TemplateResponse("app/lead_detail.html", context)
@@ -928,6 +1108,145 @@ def app_lead_estimate(
     return resp
 
 
+@router.get("/leads/{lead_id}/export-pdf")
+def export_lead_estimate_pdf(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    tenant: Tenant = Depends(require_entitlement(Action.EXPORT_PDF.value)),
+):
+    """
+    Download the lead estimate as PDF (premium: requires EXPORT_PDF entitlement).
+
+    Returns 403 with entitlement payload if the tenant does not have PDF export.
+
+    Smoke test: GET /app/leads/<lead_id>/export-pdf
+    - As Pro/Business tenant with a lead that has estimate_html_key -> 200 + PDF.
+    - As Starter (or inactive) -> 403 with detail.error "entitlement_denied".
+    - Missing lead or no estimate -> 404.
+    """
+    lead = (
+        db.query(Lead)
+        .filter(Lead.id == lead_id, Lead.tenant_id == tenant.id)
+        .first()
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Prefer structured estimate_json for PDF rendering; fall back to stored HTML only
+    # when JSON is unavailable for legacy records.
+    estimate_json = getattr(lead, "estimate_json", None)
+    html_content: str | None = None
+
+    if estimate_json:
+        try:
+            estimate = json.loads(estimate_json)
+        except Exception as e:
+            logger.warning(
+                "export_pdf_estimate_json_parse_failed lead_id=%s reason=%s",
+                lead_id,
+                type(e).__name__,
+            )
+        else:
+            try:
+                html_content = render_estimate_pdf_html(estimate)
+            except Exception as e:
+                logger.exception(
+                    "export_pdf_render_estimate_pdf_html_failed lead_id=%s",
+                    lead_id,
+                )
+                raise HTTPException(
+                    status_code=500, detail="PDF template rendering failed"
+                ) from e
+
+    if html_content is None:
+        html_key = (getattr(lead, "estimate_html_key", None) or "").strip()
+        if not html_key:
+            raise HTTPException(status_code=404, detail="Estimate not found")
+
+        tenant_id = str(tenant.id)
+        storage = get_storage()
+        try:
+            html_content = get_text(storage, tenant_id=tenant_id, key=html_key)
+        except Exception as e:
+            logger.warning(
+                "export_pdf_get_html_failed lead_id=%s reason=%s",
+                lead_id,
+                type(e).__name__,
+            )
+            raise HTTPException(status_code=404, detail="Estimate file not found") from e
+
+    try:
+        from weasyprint import HTML
+
+        pdf_bytes = HTML(string=html_content).write_pdf()
+    except OSError as e:
+        # Typical root cause: missing native libs (eg on Windows dev or slim Linux images)
+        # such as libgobject-2.0-0 / cairo / pango.
+        logger.error(
+            "export_pdf_native_deps_missing lead_id=%s err=%s",
+            lead_id,
+            str(e),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="PDF generation is temporarily unavailable on this server.",
+        ) from e
+    except Exception as e:
+        logger.exception("export_pdf_render_failed lead_id=%s", lead_id)
+        raise HTTPException(status_code=500, detail="PDF generation failed") from e
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="estimate-{lead_id}.pdf"',
+            "Content-Length": str(len(pdf_bytes)),
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+class BrandingUpdate(BaseModel):
+    """
+    Small payload for updating tenant branding (logo URL).
+
+    Backend enforcement is via USE_BRANDING entitlement; UI usage of logo_url
+    in templates/PDFs should always respect the same entitlement.
+    """
+
+    logo_url: str | None = None
+
+
+@router.post("/settings/branding")
+def update_branding_settings(
+    payload: BrandingUpdate,
+    current_user: User = Depends(require_user_html),
+    tenant: Tenant = Depends(require_entitlement(Action.USE_BRANDING.value)),
+):
+    """
+    Update branding settings (currently: logo_url) for the current tenant.
+
+    - Protected by USE_BRANDING entitlement.
+    - Writes into the shared TenantService config used by Paintly.
+
+    Smoke test:
+    - Starter tenant: 403 with error \"entitlement_denied\".
+    - Pro/Business tenant: 200 and JSON payload with updated logo_url.
+    """
+    tenant_id = getattr(current_user, "tenant_id", None)
+    if tenant_id is None:
+        raise HTTPException(status_code=400, detail="Tenant id missing")
+
+    # TenantService keeps in-memory + JSON-backed TenantSettings.
+    # We only update when a concrete TenantSettings exists for this tenant id.
+    updated = tenant_service.update_tenant(str(tenant_id), logo_url=payload.logo_url)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Tenant settings not found")
+
+    logger.info("branding_updated tenant_id=%s", tenant_id)
+    return {"logo_url": updated.logo_url}
+
+
 from fastapi import BackgroundTasks
 
 
@@ -949,8 +1268,11 @@ def send_estimate(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    # Plan-based usage limit check (before sending)
     tenant = db.query(Tenant).filter(Tenant.id == lead.tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # Plan-based usage limit check (before sending)
     plan_code = getattr(tenant, "plan_code", None) if tenant is not None else None
     plan_key = plan_code or "starter_99"
 
@@ -969,11 +1291,35 @@ def send_estimate(
         quote_limit,
     )
 
-    if quote_limit is not None and usage.quotes_sent >= int(quote_limit):
-        return RedirectResponse(
-            url=f"/app/leads/{lead_id}?send_error=quote_limit",
-            status_code=303,
-        )
+    # Centralized entitlement check (subscription + feature + usage/paywall)
+    class _SendQuoteContext:
+        def __init__(self, tenant_obj: Tenant, quotes_sent: int | None, limit: int | None):
+            self.plan_code = getattr(tenant_obj, "plan_code", None)
+            self.subscription_status = getattr(tenant_obj, "subscription_status", None)
+            self.quotes_sent = quotes_sent
+            self.quote_limit = limit
+
+    ctx = _SendQuoteContext(
+        tenant_obj=tenant,
+        quotes_sent=getattr(usage, "quotes_sent", None),
+        limit=quote_limit if quote_limit is not None else None,
+    )
+    ent = check_entitlement(ctx, Action.SEND_QUOTE.value)
+    if not ent.allowed:
+        # Preserve existing UX while using centralized reasoning
+        if ent.reason == "subscription_inactive":
+            return RedirectResponse(
+                url="/app/billing?send_error=billing_status",
+                status_code=303,
+            )
+        if ent.reason == "usage_limit_reached":
+            return RedirectResponse(
+                url=f"/app/leads/{lead_id}?send_error=quote_limit",
+                status_code=303,
+            )
+
+        upgrade_url = ent.upgrade_url or f"/app/billing?upgrade=1&feature={Feature.BASIC_SENDING.value}"
+        return RedirectResponse(url=upgrade_url, status_code=303)
 
     if not lead.estimate_html_key:
         # Geen offerte beschikbaar om te versturen -> nette melding op lead detail

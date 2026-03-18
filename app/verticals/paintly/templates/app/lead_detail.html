@@ -56,6 +56,20 @@
             Bekijk offerte
           </a>
         {% endif %}
+        {% set ent = (entitlements.export_pdf if entitlements is defined and entitlements else None) %}
+        {% if quote_ui and quote_ui.can_view %}
+          {% if ent and ent.allowed %}
+            <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+               href="/app/leads/{{ lead.id }}/export-pdf" target="_blank">
+              Download PDF
+            </a>
+          {% else %}
+            <a class="inline-flex h-9 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-400 cursor-not-allowed"
+               href="{{ (ent.upgrade_url if ent and ent.upgrade_url else '/app/billing?upgrade=1&feature=PDF_EXPORT') }}">
+              Beschikbaar vanaf Pro
+            </a>
+          {% endif %}
+        {% endif %}
         {% if lead.public_token %}
           <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
              href="/e/{{ lead.public_token }}" target="_blank">

@@ -13,6 +13,78 @@
     </div>
   </div>
 
+  {% if billing_status_error %}
+    <div class="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      Je abonnement is niet actief. Start of upgrade een plan om offertes te verzenden.
+    </div>
+  {% endif %}
+
+  {% if portal_error_no_customer %}
+    <div class="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      Er is nog geen Stripe klant gekoppeld aan dit account.
+    </div>
+  {% endif %}
+
+  <!-- Statuskaart -->
+  <div class="rounded-[24px] border border-slate-200/70 bg-slate-50 px-5 py-4">
+    <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div class="space-y-1">
+        <div class="text-xs font-medium uppercase tracking-wide text-slate-400">
+          Huidige status
+        </div>
+        <div class="text-sm text-slate-700">
+          <span class="font-semibold">Plan:</span>
+          <span class="ml-1">{{ current_plan_code }}</span>
+        </div>
+        <div class="text-sm text-slate-700">
+          <span class="font-semibold">Abonnement:</span>
+          <span class="ml-1">
+            {{ subscription_status }}
+          </span>
+        </div>
+        {% if trial_days_left is not none or trial_ends_at %}
+          <div class="text-sm text-slate-700">
+            {% if trial_days_left is not none %}
+              <span class="font-semibold">Trial dagen over:</span>
+              <span class="ml-1">{{ trial_days_left }}</span>
+            {% endif %}
+            {% if trial_ends_at %}
+              <span class="ml-3 text-xs text-slate-500">
+                (tot {{ trial_ends_at }})
+              </span>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="mt-2 text-sm md:mt-0">
+        {% if subscription_status == "trialing" %}
+          <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+            Trial actief
+          </span>
+        {% elif subscription_status == "active" %}
+          <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+            Abonnement actief
+          </span>
+        {% else %}
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+            Nog geen actief abonnement
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <button
+      type="button"
+      onclick="openBillingPortal()"
+      class="inline-flex w-full items-center justify-center rounded-xl bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+    >
+      Beheer abonnement
+    </button>
+  </div>
+
   <div class="grid gap-6 md:grid-cols-3">
     {% for plan in plans %}
       {% set is_current = (plan.code == current_plan_code) %}
@@ -61,20 +133,95 @@
               Huidig plan
             </button>
           {% else %}
-            <form method="post" action="/app/billing/upgrade/{{ plan.code }}">
-              <button
-                type="submit"
-                class="inline-flex w-full items-center justify-center rounded-xl bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-              >
-                Upgrade
-              </button>
-            </form>
+            <button
+              type="button"
+              onclick="upgradePlan('{{ plan.code }}')"
+              class="inline-flex w-full items-center justify-center rounded-xl bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+            >
+              Upgrade plan
+            </button>
           {% endif %}
         </div>
       </div>
     {% endfor %}
   </div>
 </div>
+
+<script>
+  async function upgradePlan(planCode) {
+    try {
+      const response = await fetch(`/app/billing/upgrade/${planCode}`, {
+        method: "POST",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      if (!response.ok) {
+        let message = "Upgrade mislukt. Probeer het later opnieuw.";
+        try {
+          const errorData = await response.json();
+          if (errorData && errorData.detail) {
+            message = `Upgrade mislukt: ${errorData.detail}`;
+          }
+        } catch (e) {
+          // ignore JSON parse errors
+        }
+        alert(message);
+        return;
+      }
+
+      const data = await response.json();
+      if (!data || !data.checkout_url) {
+        alert("Geen geldige checkout URL ontvangen van de server.");
+        return;
+      }
+
+      window.location.href = data.checkout_url;
+    } catch (err) {
+      alert("Er ging iets mis bij het starten van de upgrade.");
+    }
+  }
+
+  async function openBillingPortal() {
+    try {
+      const response = await fetch(`/app/billing/portal`, {
+        method: "POST",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      if (!response.ok) {
+        let detail = "";
+        try {
+          const errorData = await response.json();
+          detail = (errorData && errorData.detail) ? String(errorData.detail) : "";
+        } catch (e) {
+          // ignore JSON parse errors
+        }
+
+        if (detail === "no_customer") {
+          window.location.href = "/app/billing?portal_error=no_customer";
+          return;
+        }
+
+        alert("Kon billing portal niet openen. Probeer het later opnieuw.");
+        return;
+      }
+
+      const data = await response.json();
+      if (!data || !data.portal_url) {
+        alert("Geen geldige portal URL ontvangen van de server.");
+        return;
+      }
+
+      window.location.href = data.portal_url;
+    } catch (err) {
+      alert("Er ging iets mis bij het openen van de billing portal.");
+    }
+  }
+</script>
 
 {% endblock %}
 

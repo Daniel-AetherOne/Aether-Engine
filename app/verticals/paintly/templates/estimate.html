@@ -6,22 +6,110 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{{ copy.doc_title if copy and copy.doc_title else "Conceptofferte schilderwerk" }}</title>
 
-  <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
+  {% set wl = (company.whitelabel_enabled if company and company.whitelabel_enabled is defined else false) %}
+  {% if not wl %}
+    <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
+  {% endif %}
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    @media print {
-      .no-print { display: none !important; }
-      a { text-decoration: none; color: inherit; }
-      body { background: white !important; }
-      .shadow-sm, .shadow-lg { box-shadow: none !important; }
-      .print-card {
-        border-radius: 0 !important;
-        border: 1px solid #e2e8f0 !important;
-      }
+    /* Base tweaks */
+    html { scroll-behavior: smooth; }
+
+    @page {
+      size: A4;
+      margin: 14mm 12mm;
     }
 
-    html { scroll-behavior: smooth; }
+    @media print {
+      html, body {
+        background: white !important;
+      }
+
+      body {
+        margin: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .no-print { display: none !important; }
+      a { text-decoration: none; color: inherit; }
+
+      /* Eén kolom document-flow voor PDF */
+      .pdf-root {
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 0;
+      }
+
+      .pdf-root .grid,
+      .pdf-root .flex {
+        display: block !important;
+      }
+
+      /* Verwijder zware UI-styling in print */
+      .shadow-sm,
+      .shadow-lg {
+        box-shadow: none !important;
+      }
+
+      .print-card {
+        border-radius: 2px !important;
+        border: 1px solid #e2e8f0 !important;
+      }
+
+      /* Secties: compacte, consistente marges */
+      .pdf-section {
+        margin-bottom: 10px !important;
+      }
+
+      /* Tabellen: volle breedte, nette randen, rijen samenhouden waar mogelijk */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        page-break-inside: auto;
+      }
+
+      th, td {
+        padding: 6px 8px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      thead th {
+        background: #f1f5f9;
+        font-weight: 600;
+      }
+
+      tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      /* Sidebar: geen sticky gedrag in PDF */
+      .lg\\:sticky {
+        position: static !important;
+        top: auto !important;
+      }
+
+      /* Minder verticale ruimte uit web-UI klassen */
+      .mb-6 {
+        margin-bottom: 10px !important;
+      }
+      .py-6, .py-5, .py-4 {
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+      }
+
+      /* Hoofdcontent + sidebar onder elkaar in print */
+      .lg\\:grid-cols-\\[1fr_360px\\] {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* Tabellen mogen breed zijn; geen scrollcontainers in PDF */
+      .overflow-x-auto {
+        overflow: visible !important;
+      }
+    }
   </style>
 </head>
 
@@ -37,22 +125,32 @@
   {% set lead_email = (customer.email if customer and customer.email else (lead.email if lead and lead.email else '')) %}
   {% set lead_phone = (customer.phone if customer and customer.phone else (lead.phone if lead and lead.phone else '')) %}
 
-  <div class="w-full max-w-none px-8 py-6 md:py-8">
+  <div class="w-full max-w-none px-8 py-6 md:py-8 pdf-root">
 
     <!-- Top bar -->
-    <div class="mb-6 rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm print-card">
+    <div class="mb-6 rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm print-card pdf-section pdf-keep-together">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-4">
+          {% if company and company.logo_url %}
+          <div class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
+            <img src="{{ company.logo_url }}" alt="{{ company.name or 'Bedrijfslogo' }}" class="h-full w-full object-contain">
+          </div>
+          {% else %}
           <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-sm">
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
             </svg>
           </div>
+          {% endif %}
 
           <div>
             <div class="text-[22px] font-semibold tracking-tight text-slate-900">
-              Paintly
+              {% if wl %}
+                {{ (company.name if company and company.name else "Schilderbedrijf") }}
+              {% else %}
+                Paintly
+              {% endif %}
             </div>
             <div class="mt-0.5 text-sm text-slate-500">
               {{ company.name if company and company.name else "Schilderbedrijf" }}
@@ -82,7 +180,7 @@
 
     <!-- Status banner -->
     {% if not pricing_ready and not is_provisional %}
-      <div class="mb-6 rounded-[24px] border border-amber-200 bg-amber-50 px-5 py-4 print-card">
+      <div class="mb-6 rounded-[24px] border border-amber-200 bg-amber-50 px-5 py-4 print-card pdf-section pdf-keep-together">
         <div class="flex items-start gap-3">
           <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,7 +208,7 @@
         </div>
       </div>
     {% elif is_provisional %}
-      <div class="mb-6 rounded-[24px] border border-amber-200 bg-amber-50 px-5 py-4 print-card">
+      <div class="mb-6 rounded-[24px] border border-amber-200 bg-amber-50 px-5 py-4 print-card pdf-section pdf-keep-together">
         <div class="flex items-start gap-3">
           <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,7 +225,7 @@
         </div>
       </div>
     {% else %}
-      <div class="mb-6 rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 print-card">
+      <div class="mb-6 rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 print-card pdf-section pdf-keep-together">
         <div class="flex items-start gap-3">
           <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +244,7 @@
     {% endif %}
 
     <!-- Document header -->
-    <div class="mb-6 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white shadow-sm print-card">
+    <div class="mb-6 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white shadow-sm print-card pdf-section pdf-keep-together">
       <div class="border-b border-slate-100 px-6 py-5">
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -282,13 +380,13 @@
     </div>
 
     <!-- Main content -->
-    <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div class="grid gap-6 lg:grid-cols-[1fr_360px] pdf-section">
 
       <!-- Left -->
       <div class="space-y-6">
 
         <!-- Itemized breakdown -->
-        <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm print-card">
+        <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm print-card pdf-section">
           <div class="border-b border-slate-100 px-5 py-4">
             <div class="flex items-center gap-3">
               <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
@@ -389,7 +487,7 @@
         </div>
 
         <!-- Scope & exclusions -->
-        <div class="grid gap-6 md:grid-cols-2">
+        <div class="grid gap-6 md:grid-cols-2 pdf-section">
           <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm print-card">
             <div class="mb-3 flex items-center gap-3">
               <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-500">
@@ -448,7 +546,7 @@
 
       <!-- Right sidebar -->
       <aside class="space-y-6">
-        <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm print-card lg:sticky lg:top-6">
+        <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm print-card lg:sticky lg:top-6 pdf-section">
 
           <!-- Customer info -->
           <div class="border-b border-slate-100 px-5 py-4">
@@ -586,7 +684,9 @@
             </div>
 
             <div class="text-center text-xs text-slate-400">
-              <p>Gegenereerd door Paintly AI</p>
+              {% if not wl %}
+                <p>Gegenereerd door Paintly AI</p>
+              {% endif %}
               {% if project and project.lead_id %}
                 <p class="mt-1">Referentie: Offerte #{{ project.lead_id }}</p>
               {% endif %}

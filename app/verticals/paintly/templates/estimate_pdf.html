@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ copy.doc_title if copy and copy.doc_title else "Offerte schilderwerk" }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm 12mm;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 11pt;
+      line-height: 1.4;
+      color: #0f172a;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 6px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    h1 {
+      font-size: 18pt;
+    }
+
+    h2 {
+      font-size: 13pt;
+      margin-top: 12px;
+    }
+
+    h3 {
+      font-size: 11pt;
+      margin-top: 8px;
+    }
+
+    p {
+      margin: 0 0 6px;
+    }
+
+    .section {
+      margin-bottom: 10px;
+    }
+
+    .muted {
+      color: #6b7280;
+      font-size: 9pt;
+    }
+
+    .small {
+      font-size: 9pt;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+    }
+
+    th, td {
+      padding: 5px 6px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+      font-size: 10pt;
+    }
+
+    thead th {
+      background: #f3f4f6;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    ul {
+      margin: 0 0 4px 18px;
+      padding: 0;
+    }
+
+    li {
+      margin-bottom: 2px;
+    }
+
+    .totals-table td {
+      border: 0;
+      padding: 2px 0;
+    }
+
+    .totals-table tr.total-row td {
+      padding-top: 4px;
+      border-top: 1px solid #e5e7eb;
+      font-weight: 600;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .text-soft {
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="section">
+    <h1>Offerte schilderwerk</h1>
+    <p class="small text-soft">
+      Referentie:
+      {% if project and project.estimate_id %}
+        #{{ project.estimate_id }}
+      {% elif project and project.lead_id %}
+        #{{ project.lead_id }}
+      {% endif %}
+    </p>
+    {% if project and project.date %}
+      <p class="small text-soft">Datum: {{ project.date }}</p>
+    {% endif %}
+    {% if project and project.valid_until %}
+      <p class="small text-soft">Geldig t/m: {{ project.valid_until }}</p>
+    {% endif %}
+  </div>
+
+  <!-- Bedrijfsinfo -->
+  <div class="section">
+    <h2>Uitvoerder</h2>
+    <p>
+      {{ company.name if company and company.name else "Schilderbedrijf" }}<br/>
+      {% if company.phone %}Tel: {{ company.phone }}<br/>{% endif %}
+      {% if company.email %}E-mail: {{ company.email }}{% endif %}
+    </p>
+  </div>
+
+  <!-- Klant & project -->
+  <div class="section">
+    <h2>Klant & project</h2>
+    <p>
+      <strong>Klant:</strong>
+      {{ (customer.name if customer and customer.name else (lead.name if lead and lead.name else "—")) }}<br/>
+      <strong>E-mail:</strong>
+      {{ (customer.email if customer and customer.email else (lead.email if lead and lead.email else "—")) }}<br/>
+      <strong>Telefoon:</strong>
+      {{ (customer.phone if customer and customer.phone else (lead.phone if lead and lead.phone else "—")) }}
+    </p>
+    <p>
+      {% if project and project.address %}
+        <strong>Locatie:</strong> {{ project.address }}<br/>
+      {% endif %}
+      {% if project and project.square_meters %}
+        <strong>Oppervlakte:</strong> {{ fmt_qty(project.square_meters) }} m²
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- Samenvatting / totaal -->
+  <div class="section">
+    <h2>Samenvatting</h2>
+    {% if pricing_ready %}
+      <p>
+        <strong>Totaal (incl. btw):</strong>
+        {{ fmt_eur(vat.total_incl_vat if vat and vat.total_incl_vat is not none else 0) }}
+      </p>
+      <table class="totals-table">
+        <tr>
+          <td>Subtotaal (excl. btw)</td>
+          <td class="text-right">
+            {{ fmt_eur(vat.subtotal_excl_vat if vat and vat.subtotal_excl_vat is not none else 0) }}
+          </td>
+        </tr>
+        <tr>
+          <td>Arbeid</td>
+          <td class="text-right">
+            {{ fmt_eur(pricing_labor) }}
+          </td>
+        </tr>
+        <tr>
+          <td>Materialen</td>
+          <td class="text-right">
+            {{ fmt_eur(pricing_materials) }}
+          </td>
+        </tr>
+        <tr>
+          <td>BTW ({{ ((vat.vat_rate if vat and vat.vat_rate is not none else 0) * 100) | round(0) }}%)</td>
+          <td class="text-right">
+            {{ fmt_eur(vat.vat_amount if vat and vat.vat_amount is not none else 0) }}
+          </td>
+        </tr>
+        <tr class="total-row">
+          <td>Totaal (incl. btw)</td>
+          <td class="text-right">
+            {{ fmt_eur(vat.total_incl_vat if vat and vat.total_incl_vat is not none else 0) }}
+          </td>
+        </tr>
+      </table>
+    {% else %}
+      <p class="muted">
+        De prijs wordt definitief na een korte review van oppervlakken, voorbereiding en bereikbaarheid.
+      </p>
+      {% if review_reasons and (review_reasons | length) > 0 %}
+        <ul>
+          {% for r in review_reasons %}
+            <li>{{ r }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <!-- Specificatie -->
+  <div class="section">
+    <h2>Gedetailleerde specificatie</h2>
+    {% if pricing and pricing.line_items and (pricing.line_items | length) > 0 %}
+      <table>
+        <thead>
+          <tr>
+            <th>Ruimte / onderdeel</th>
+            <th>Hoeveelheid</th>
+            <th class="text-right">Prijs</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in pricing.line_items %}
+            {% set unit = (item.unit if item and item.unit else '') %}
+            {% set qty = (item.quantity if item and item.quantity is defined else None) %}
+            {% set is_row_provisional = needs_review_flag %}
+            {% set is_meaningless_job_qty = (unit == 'job' and (qty == 1 or qty == 1.0 or qty == '1' or qty == '1.0')) %}
+            <tr>
+              <td>
+                <strong>{{ item.label }}</strong>
+                {% if item.description %}
+                  <div class="small text-soft">{{ item.description }}</div>
+                {% endif %}
+              </td>
+              <td>
+                {% if is_row_provisional or is_meaningless_job_qty %}
+                  —
+                {% else %}
+                  {% set display_unit = 'm²' if item.unit == 'sqm' else item.unit %}
+                  {{ fmt_qty(item.quantity, item.unit) }} {{ display_unit }}
+                {% endif %}
+              </td>
+              <td class="text-right">
+                {% if pricing_ready and item.total %}
+                  {{ fmt_eur(item.total) }}
+                {% else %}
+                  <span class="text-soft small">nader te bepalen</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">Nog geen regels beschikbaar.</p>
+    {% endif %}
+  </div>
+
+  <!-- Inbegrepen werkzaamheden -->
+  <div class="section">
+    <h2>Inbegrepen werkzaamheden</h2>
+    {% if scope_bullets %}
+      <ul>
+        {% for b in scope_bullets %}
+          <li>{{ b }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Volgens afspraak.</p>
+    {% endif %}
+  </div>
+
+  <!-- Niet inbegrepen -->
+  <div class="section">
+    <h2>Niet inbegrepen</h2>
+    {% if exclusions %}
+      <ul>
+        {% for x in exclusions %}
+          <li>{{ x }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Geen aanvullende uitsluitingen.</p>
+    {% endif %}
+  </div>
+
+  <!-- Omschrijving / toelichting -->
+  {% if project and project.description %}
+    <div class="section">
+      <h2>Projectomschrijving</h2>
+      <p>{{ project.description }}</p>
+    </div>
+  {% endif %}
+
+  <!-- Slot -->
+  <div class="section small text-soft">
+    <p>
+      Deze offerte is automatisch opgesteld op basis van ingestuurde foto's en projectgegevens.
+      De definitieve prijs kan na verificatie nog worden aangepast.
+    </p>
+    {% if project and project.lead_id %}
+      <p>Referentie: Offerte #{{ project.lead_id }}</p>
+    {% endif %}
+  </div>
+</body>
+</html>
+
