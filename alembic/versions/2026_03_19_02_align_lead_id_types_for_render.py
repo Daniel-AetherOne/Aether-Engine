@@ -31,7 +31,7 @@ def upgrade() -> None:
     if not inspector.has_table("leads"):
         return
 
-    lead_tables = ["lead_files", "lead_training_records", "jobs"]
+    lead_tables = ["lead_files", "lead_training_records", "jobs", "upload_records"]
 
     # Drop FK constraints to leads.id before type conversion.
     dropped_fks: list[tuple[str, str, list[str], list[str], str | None]] = []
