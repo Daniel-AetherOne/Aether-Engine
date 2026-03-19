@@ -45,6 +45,7 @@ from app.routers import billing
 from app.routers import stripe_webhook
 from app.observability.metrics import router as metrics_router
 from app.routers import internal
+from app.routers import processing
 
 
 # --- AWS safety guard (geen static keys) ---
@@ -161,6 +162,7 @@ app.include_router(files.router)
 app.include_router(intake.router)
 app.include_router(metrics_router)  # /metrics
 app.include_router(internal.router)
+app.include_router(processing.router)
 app.include_router(auth_router)
 app.include_router(app_me_router)
 app.include_router(tenant_pricing.router)

@@ -782,11 +782,11 @@ console.log(
         }
 
         if (data?.lead_id) {
-          window.location.href = `/quotes/${data.lead_id}/status?autostart=1&demo=1`;
+          window.location.href = `/processing/${data.lead_id}`;
           return;
         }
         if (leadId) {
-          window.location.href = `/quotes/${leadId}/status?autostart=1&demo=1`;
+          window.location.href = `/processing/${leadId}`;
           return;
         }
         showErr('Onverwachte reactie van de server.');

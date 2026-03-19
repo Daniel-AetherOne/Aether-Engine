@@ -5,11 +5,12 @@ import logging
 import uuid
 import secrets
 
-from fastapi import APIRouter, Request, HTTPException, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Request, HTTPException, Depends, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 
-from app.db import get_db
+from app.db import get_db, SessionLocal
+from app.models import LeadFile
 from app.verticals.registry import get as get_vertical
 from app.verticals.paintly.eu_config import resolve_eu_config  # ✅ ADD
 
@@ -22,6 +23,28 @@ router = APIRouter(prefix="/intake", tags=["intake"])
 logger = logging.getLogger(__name__)
 
 DEFAULT_VERTICAL = "paintly"
+
+
+def _start_processing_for_lead_sync(lead_id: str) -> None:
+    """
+    Start de bestaande quote-processing in background.
+
+    We maken een nieuwe DB session aan, omdat FastAPI BackgroundTasks
+    request-scoped dependencies (zoals de `db` uit `Depends(get_db)`) niet veilig hergebruikt.
+    """
+    db = SessionLocal()
+    try:
+        from app.routers.quotes import publish_quote
+
+        publish_quote(
+            lead_id=lead_id,
+            background=BackgroundTasks(),
+            db=db,
+        )
+    except Exception:
+        logger.exception("Background processing failed lead=%s", lead_id)
+    finally:
+        db.close()
 
 
 def _normalize_vertical_id(vertical: str) -> str:
@@ -52,13 +75,12 @@ def _status_url(lead_id: str) -> str:
     """
     Bepaalt de redirect na intake submit.
 
-    Voor de Paintly-demo sturen we na intake altijd eerst naar de
-    AI-gestuurde statuspagina, zodat de klant de analyse/progress
-    ziet voordat de offerte klaar is.
+    Flow:
+      intake submit -> /processing/{lead_id}
 
     Let op: voor JSON flows wordt deze URL alleen als 'next.status' meegegeven.
     """
-    return f"/quotes/{lead_id}/status?autostart=1&demo=1"
+    return f"/processing/{lead_id}"
 
 
 def _get_vertical_or_404(vertical: str):
@@ -84,6 +106,7 @@ async def _create_lead_impl(
     vertical: str,
     db: Session,
     user: User | None,
+    background: BackgroundTasks,
 ):
     v = _get_vertical_or_404(vertical)
 
@@ -109,6 +132,16 @@ async def _create_lead_impl(
             db,
             tenant_id=tenant_id,
         )
+
+    # Start processing alleen als de lead al uploadbestanden heeft.
+    # Dit voorkomt dat "draft lead" bij het uploaden van foto's meteen faalt.
+    try:
+        files_count = db.query(LeadFile).filter(LeadFile.lead_id == result.lead_id).count()
+    except Exception:
+        files_count = 0
+
+    if files_count > 0:
+        background.add_task(_start_processing_for_lead_sync, result.lead_id)
 
     logger.info(
         "INTAKE created lead=%s vertical=%s tenant=%s",
@@ -164,12 +197,15 @@ def legacy_intake_by_tenant_slug_redirect(tenant_slug: str):
 async def legacy_create_lead_by_tenant_slug(
     request: Request,
     tenant_slug: str,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """
     Legacy POST entrypoint; reuse primary slug handler to avoid logic duplication.
     """
-    return await create_lead_by_tenant_slug(request=request, tenant_slug=tenant_slug, db=db)
+    return await create_lead_by_tenant_slug(
+        request=request, tenant_slug=tenant_slug, db=db, background=background
+    )
 
 
 @router.get("/{tenant_slug}", response_class=HTMLResponse)
@@ -212,6 +248,7 @@ def intake_by_tenant_slug(
 async def create_lead_by_tenant_slug(
     request: Request,
     tenant_slug: str,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     try:
@@ -252,6 +289,17 @@ async def create_lead_by_tenant_slug(
             result.tenant_id,
         )
 
+        # Start processing alleen als de lead al echte uploads heeft.
+        try:
+            files_count = (
+                db.query(LeadFile).filter(LeadFile.lead_id == result.lead_id).count()
+            )
+        except Exception:
+            files_count = 0
+
+        if files_count > 0:
+            background.add_task(_start_processing_for_lead_sync, result.lead_id)
+
         # Publieke tenant-intake: stuur klant naar publieke conceptofferte (Paintly-specifiek)
         status_url = _status_url(result.lead_id)
         try:
@@ -269,8 +317,7 @@ async def create_lead_by_tenant_slug(
                 db.refresh(lead)
 
             public_token = getattr(lead, "public_token", None)
-            if public_token:
-                status_url = f"/e/{public_token}"
+            # redirect moet altijd naar /processing, public /e/{token} komt pas later via /offerte/{lead_id}
 
         if _wants_json(request):
             return JSONResponse(
@@ -322,11 +369,12 @@ def intake_by_vertical(
 async def create_lead_by_vertical(
     request: Request,
     vertical: str,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User | None = Depends(get_optional_user),
 ):
     try:
-        return await _create_lead_impl(request, vertical, db, user)
+        return await _create_lead_impl(request, vertical, db, user, background)
     except HTTPException:
         raise
     except Exception as e:
@@ -337,11 +385,12 @@ async def create_lead_by_vertical(
 @router.post("/lead")
 async def create_lead_legacy(
     request: Request,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User | None = Depends(get_optional_user),
 ):
     try:
-        return await _create_lead_impl(request, DEFAULT_VERTICAL, db, user)
+        return await _create_lead_impl(request, DEFAULT_VERTICAL, db, user, background)
     except HTTPException:
         raise
     except Exception as e:
