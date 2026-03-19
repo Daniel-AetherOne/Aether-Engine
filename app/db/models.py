@@ -1,6 +1,11 @@
-from sqlalchemy import String, Numeric
-from sqlalchemy.orm import Mapped, mapped_column
+from datetime import datetime
 from decimal import Decimal
+
+from sqlalchemy import DateTime, Numeric, String
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db import Base
+
 
 class Tenant(Base):
     __tablename__ = "tenants"
@@ -9,6 +14,7 @@ class Tenant(Base):
     default_country: Mapped[str] = mapped_column(String(2), default="NL")
     default_timezone: Mapped[str] = mapped_column(String, default="Europe/Amsterdam")
     default_currency: Mapped[str] = mapped_column(String(3), default="EUR")
+
 
 class Lead(Base):
     __tablename__ = "leads"

@@ -142,7 +142,7 @@
 
   <script>
     // ✅ Jinja safe
-    const leadId = Number({{ lead_id | tojson }});
+    const leadId = String({{ lead_id | tojson }});
     const autostart = Number({{ (autostart or 0) | int | tojson }});
 
     let publishStarted = false;

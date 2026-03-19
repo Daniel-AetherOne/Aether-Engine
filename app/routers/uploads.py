@@ -76,7 +76,7 @@ class PresignRequest(BaseModel):
 
 
 class UploadCompleteRequest(BaseModel):
-    lead_id: int
+    lead_id: str
     object_key: str  # tenant-prefixed key, bv "tenant/uploads/....jpg"
 
 
@@ -108,8 +108,8 @@ def _validate_content_type(ctype: str) -> None:
         raise HTTPException(status_code=415, detail=f"unsupported_content_type:{ctype}")
 
 
-def _lead_and_tenant(db: Session, lead_id: int) -> tuple[Lead, str]:
-    lead = db.query(Lead).filter(Lead.id == int(lead_id)).first()
+def _lead_and_tenant(db: Session, lead_id: str) -> tuple[Lead, str]:
+    lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="lead_not_found")
 
@@ -155,7 +155,7 @@ async def presign_upload(
     if not req.lead_id:
         raise HTTPException(status_code=400, detail="lead_id_required")
 
-    _, tenant_id = _lead_and_tenant(db, int(req.lead_id))
+    _, tenant_id = _lead_and_tenant(db, req.lead_id)
 
     ctype = req.content_type or _guess_content_type(req.filename)
 
@@ -257,7 +257,8 @@ async def complete_upload(
     Paintly-specific: triggert auto-generation van conceptofferte
     zodra er minimaal één upload is én er nog geen estimate_html_key is.
     """
-    lead, tenant_id = _lead_and_tenant(db, int(req.lead_id))
+    lead, tenant_id = _lead_and_tenant(db, req.lead_id)
+    lead_id_value = str(getattr(lead, "id", req.lead_id) or req.lead_id)
 
     if not req.object_key or "/" not in req.object_key:
         logger.warning(
@@ -304,7 +305,7 @@ async def complete_upload(
 
     lf = (
         db.query(LeadFile)
-        .filter(LeadFile.lead_id == int(req.lead_id))
+        .filter(LeadFile.lead_id == req.lead_id)
         .filter(LeadFile.s3_key == key_without_tenant)  # tenant-loos in DB
         .first()
     )
@@ -316,7 +317,7 @@ async def complete_upload(
     else:
         db.add(
             LeadFile(
-                lead_id=int(req.lead_id),
+                lead_id=req.lead_id,
                 s3_key=key_without_tenant,
                 size_bytes=size_bytes,
                 content_type=content_type,
@@ -333,11 +334,15 @@ async def complete_upload(
         existing.status = UploadStatus.uploaded
         existing.s3_metadata = meta
         db.add(existing)
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
     else:
         rec = UploadRecord(
             tenant_id=tenant_id,
-            lead_id=int(req.lead_id),
+            lead_id=req.lead_id,
             object_key=req.object_key,
             size=size_bytes,
             mime=content_type,
@@ -345,7 +350,11 @@ async def complete_upload(
             s3_metadata=meta,
         )
         db.add(rec)
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
     # ------------------------------------------------------------------
     # Paintly-specific auto-generation timing:
@@ -365,28 +374,32 @@ async def complete_upload(
             if not has_estimate:
                 files_count = (
                     db.query(LeadFile)
-                    .filter(LeadFile.lead_id == int(req.lead_id))
+                    .filter(LeadFile.lead_id == req.lead_id)
                     .count()
                 )
                 if files_count > 0:
                     logger.info(
                         "AUTO_COMPUTE_UPLOAD_TRIGGER_START lead=%s tenant=%s files=%s",
-                        lead.id,
+                        lead_id_value,
                         tenant_id,
                         files_count,
                     )
                     adapter = PaintlyAdapter()
-                    adapter.compute_quote(db, int(req.lead_id))
+                    adapter.compute_quote(db, req.lead_id)
                     logger.info(
                         "AUTO_COMPUTE_UPLOAD_TRIGGER_DONE lead=%s status=%s",
-                        lead.id,
+                        lead_id_value,
                         getattr(lead, "status", None),
                     )
     except Exception as e:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         # Best-effort: fouten in auto-compute mogen uploads/complete niet breken
         logger.exception(
             "AUTO_COMPUTE_UPLOAD_TRIGGER_FAILED lead=%s error=%s",
-            getattr(lead, "id", None),
+            lead_id_value,
             f"{type(e).__name__}:{e}",
         )
 
@@ -402,7 +415,7 @@ async def complete_upload(
 async def local_upload(
     key: str = Form(...),  # VOLLEDIGE key met tenant, bv. "acme/uploads/....jpg"
     tenant_id: str = Form(...),
-    lead_id: Optional[int] = Form(None),
+    lead_id: Optional[str] = Form(None),
     content_type: Optional[str] = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -438,7 +451,7 @@ async def local_upload(
 
     # ✅ als lead_id meegegeven is: check dat lead bestaat + tenant matcht
     if lead_id is not None:
-        lead, t = _lead_and_tenant(db, int(lead_id))
+        lead, t = _lead_and_tenant(db, lead_id)
         if str(t) != str(tenant_id):
             raise HTTPException(status_code=403, detail="tenant_mismatch")
 
@@ -459,9 +472,7 @@ async def local_upload(
     if not existing:
         rec = UploadRecord(
             tenant_id=tenant_id,
-            lead_id=(
-                int(lead_id) if lead_id is not None else 0
-            ),  # optioneel: later patchen via /complete of intake
+            lead_id=lead_id or "",
             object_key=object_key,
             size=len(data),
             mime=ctype,
@@ -469,7 +480,7 @@ async def local_upload(
             s3_metadata={"ContentLength": len(data), "ContentType": ctype},
         )
         db.add(rec)
-        db.commit()
+    db.commit()
 
     return {
         "status": "ok",

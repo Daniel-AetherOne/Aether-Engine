@@ -1,7 +1,6 @@
 # app/main.py
 import os
 import time
-from typing import List
 
 from dotenv import load_dotenv
 
@@ -24,7 +23,6 @@ from app.routers import public_intake
 from app.routers.debug_email import router as debug_email_router
 
 from app.security.basic_auth import BasicAuthMiddleware
-from app.security.rate_limit import SimpleRateLimitMiddleware
 from app.core.settings import settings
 from app.core.logging_config import setup_logging, logger
 from app.core.rate_limit import limiter
@@ -65,50 +63,6 @@ def _env_truthy(name: str, default: str = "false") -> bool:
     return val in ("1", "true", "yes", "y", "on")
 
 
-def try_load_ace_routers() -> List[object]:
-    """
-    Lazy-load ACE routers so a broken ACE module can't prevent the app from starting.
-    Returns a list of router objects.
-    """
-    routers: List[object] = []
-    try:
-        from app.verticals.ace.api.audit_admin import router as ace_audit_admin_router
-        from app.verticals.ace.api.datasets_admin import (
-            router as ace_datasets_admin_router,
-        )
-        from app.verticals.ace.api.admin_data import router as ace_admin_data_router
-        from app.verticals.ace.api.quote import (
-            router as ace_quote_router,
-            public_router as ace_public_router,
-        )
-        from app.verticals.ace.api.sales_ui import router as sales_ui_router
-        from app.verticals.ace.api.kpi_overrides import router as ace_kpi_router
-        from app.verticals.ace.api.profiles_admin import (
-            router as ace_profiles_admin_router,
-        )
-        from app.verticals.ace.api.audit_view import router as ace_audit_view_router
-
-        routers.extend(
-            [
-                ace_datasets_admin_router,
-                ace_admin_data_router,
-                ace_quote_router,
-                sales_ui_router,
-                ace_public_router,
-                ace_kpi_router,
-                ace_audit_admin_router,
-                ace_profiles_admin_router,
-                ace_audit_view_router,
-            ]
-        )
-        return routers
-
-    except Exception as e:
-        # Never block Paintly MVP startup because ACE broke
-        logger.exception("ACE router load failed; continuing without ACE", error=str(e))
-        return []
-
-
 # ----------------------------------------------------
 # App init (SINGLETON)
 # ----------------------------------------------------
@@ -136,14 +90,6 @@ async def root():
 app.add_middleware(RequestIdMiddleware)
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
-
-# Keep this middleware; if ACE is disabled it's harmless
-app.add_middleware(
-    SimpleRateLimitMiddleware,
-    path="/api/ace/quote/calculate",
-    limit=30,
-    window_seconds=60,
-)
 
 app.add_middleware(
     BasicAuthMiddleware,
@@ -228,15 +174,6 @@ app.include_router(quote_router)
 app.include_router(onboarding.router)
 app.include_router(billing.router)
 app.include_router(stripe_webhook.router)
-
-# Optional ACE routers
-ACE_ENABLED = _env_truthy("ACE_ENABLED", "false")
-if ACE_ENABLED:
-    for r in try_load_ace_routers():
-        app.include_router(r)
-    logger.info("ACE_ENABLED=true (ACE routers attempted)")
-else:
-    logger.info("ACE_ENABLED=false (ACE routers skipped)")
 
 
 # DEV-only routes (hardening)

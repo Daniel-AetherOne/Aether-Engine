@@ -11,7 +11,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.core.settings import settings
 from app.db import get_db
 from app.models import Lead, LeadFile, Tenant
 from app.services.storage import get_storage, head_ok, MAX_BYTES, ALLOWED_CONTENT_TYPES
@@ -27,7 +26,26 @@ templates = Jinja2Templates(directory="app/templates")
 logger = logging.getLogger(__name__)
 
 
-def _load_lead(db: Session, lead_id: int) -> Lead:
+async def _send_ready_email_task(
+    *,
+    to_email: str,
+    customer_name: str,
+    quote_url: str,
+    company_name: str,
+    lead_id: str,
+    tenant_id: str,
+) -> None:
+    await send_estimate_ready_email_to_customer(
+        to_email=to_email,
+        customer_name=customer_name,
+        quote_url=quote_url,
+        company_name=company_name,
+        lead_id=lead_id,
+        tenant_id=tenant_id,
+    )
+
+
+def _load_lead(db: Session, lead_id: str) -> Lead:
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -135,7 +153,7 @@ def _set_failed(db: Session, lead: Lead, msg: str, http_status: int = 400):
 # FASE 2 — UX endpoints
 # =========================
 @router.get("/{lead_id}/status", response_class=HTMLResponse)
-def quote_status_page(request: Request, lead_id: int, db: Session = Depends(get_db)):
+def quote_status_page(request: Request, lead_id: str, db: Session = Depends(get_db)):
     lead = _load_lead(db, lead_id)
     autostart = int(request.query_params.get("autostart", "1"))
 
@@ -158,21 +176,21 @@ def quote_status_page(request: Request, lead_id: int, db: Session = Depends(get_
 
 
 @router.get("/{lead_id}/status.json")
-def quote_status_json(lead_id: int, db: Session = Depends(get_db)):
+def quote_status_json(lead_id: str, db: Session = Depends(get_db)):
     lead = _load_lead(db, lead_id)
 
     # ✅ server-side autostart: als NEW, start publish
     if lead.status == "NEW":
         logger.info("STATUS_JSON autostart publish lead=%s", lead.id)
         try:
-            publish_quote(lead_id=lead.id, db=db)
+            publish_quote(lead_id=lead.id, background=BackgroundTasks(), db=db)
             # publish_quote commits; reload fresh state for response
             lead = _load_lead(db, lead_id)
         except Exception as e:
             logger.exception("STATUS_JSON publish failed lead=%s", lead.id)
-        lead.status = "FAILED"
-        lead.error_message = str(e)
-        lead.updated_at = datetime.utcnow()
+            lead.status = "FAILED"
+            lead.error_message = str(e)
+            lead.updated_at = datetime.utcnow()
     db.commit()
     lead = _load_lead(db, lead_id)
 
@@ -194,11 +212,12 @@ def quote_status_json(lead_id: int, db: Session = Depends(get_db)):
 # =========================
 @router.post("/publish/{lead_id}")
 def publish_quote(
-    lead_id: int,
+    lead_id: str,
     background: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     lead = _load_lead(db, lead_id)
+    logger.info("PUBLISH_FLOW_START lead=%s", lead.id)
 
     inc("publish_requests_total")
     logger.info("LEAD %s publish_requested status=%s", lead.id, lead.status)
@@ -262,6 +281,7 @@ def publish_quote(
         )
         raw_result = v.compute_quote(db, lead.id)
         logger.info("LEAD %s compute_quote END", lead.id)
+        logger.info("PUBLISH_FLOW_COMPUTE_DONE lead=%s", lead.id)
         print("RAW_RESULT:", raw_result)
 
         estimate_dict, html_key, needs_review = _normalize_compute_result(raw_result)
@@ -299,18 +319,18 @@ def publish_quote(
 
                 customer_name = getattr(lead, "name", "") or ""
                 company_name = "Paintly"
+                lead_id_value = str(lead.id)
+                tenant_id_value = str(getattr(lead, "tenant_id", "") or "")
 
-                async def _send():
-                    await send_estimate_ready_email_to_customer(
-                        to_email=to_email,
-                        customer_name=customer_name,
-                        quote_url=quote_url,
-                        company_name=company_name,
-                        lead_id=lead.id,
-                        tenant_id=str(getattr(lead, "tenant_id", "") or ""),
-                    )
-
-                background.add_task(_send)
+                background.add_task(
+                    _send_ready_email_task,
+                    to_email=to_email,
+                    customer_name=customer_name,
+                    quote_url=quote_url,
+                    company_name=company_name,
+                    lead_id=lead_id_value,
+                    tenant_id=tenant_id_value,
+                )
 
         if lead.status == "NEEDS_REVIEW":
             inc("quotes_needs_review_total")
@@ -323,6 +343,7 @@ def publish_quote(
             lead.status,
             lead.estimate_html_key,
         )
+        logger.info("PUBLISH_FLOW_DONE lead=%s status=%s", lead.id, lead.status)
 
         # Na succesvolle compute_quote: redirect direct naar lead detail offerteview
         return RedirectResponse(
@@ -339,6 +360,7 @@ def publish_quote(
 
         inc("quotes_failed_total")
         logger.exception("LEAD %s publish_failed", lead.id)
+        logger.info("PUBLISH_FLOW_FAILED lead=%s", lead.id)
 
         raise
 
@@ -347,7 +369,7 @@ def publish_quote(
 # ARTIFACTS
 # =========================
 @router.get("/{lead_id}/json")
-def quote_json(lead_id: int, db: Session = Depends(get_db)):
+def quote_json(lead_id: str, db: Session = Depends(get_db)):
     lead = _load_lead(db, lead_id)
     if not getattr(lead, "estimate_json", None):
         raise HTTPException(status_code=404, detail="No estimate yet")
@@ -355,7 +377,7 @@ def quote_json(lead_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{lead_id}/html")
-def quote_html(lead_id: int, db: Session = Depends(get_db)):
+def quote_html(lead_id: str, db: Session = Depends(get_db)):
     lead = _load_lead(db, lead_id)
 
     if lead.status not in ("SUCCEEDED", "NEEDS_REVIEW"):

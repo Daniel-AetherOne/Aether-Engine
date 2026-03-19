@@ -1,1 +1,0 @@
-# pure functions live here

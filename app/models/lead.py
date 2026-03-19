@@ -3,16 +3,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import List, Optional
+from uuid import uuid4
 
-from sqlalchemy import (
-    DateTime,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    func,
-)
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -21,7 +14,11 @@ from app.db import Base
 class Lead(Base):
     __tablename__ = "leads"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[str] = mapped_column(
+        String(100),
+        primary_key=True,
+        default=lambda: uuid4().hex,
+    )
 
     # multi-tenant
     tenant_id: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
@@ -55,8 +52,9 @@ class Lead(Base):
     )
 
     # manual estimate overrides (JSON payload for UI overrides like notes/discount/manual total)
-    estimate_overrides_json: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True
+    estimate_overrides_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    final_price: Mapped[Optional[float]] = mapped_column(
+        Numeric(12, 2), nullable=True
     )
 
     # public share / lifecycle

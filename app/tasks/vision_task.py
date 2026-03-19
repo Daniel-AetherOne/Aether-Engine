@@ -16,7 +16,7 @@ from app.services.storage import get_storage
 logger = logging.getLogger(__name__)
 
 
-def _tmp_dir_for_lead(lead_id: int) -> Path:
+def _tmp_dir_for_lead(lead_id: str) -> Path:
     """
     Cloud Run only guarantees /tmp as writable.
     We keep a per-lead folder for repeatability during one run.
@@ -47,7 +47,7 @@ def _collect_image_paths(files: List[LeadFile], lead: Lead) -> List[str]:
     # 2) fallback: download from Storage via s3_key
     storage = get_storage()
     tenant_id = str(getattr(lead, "tenant_id", "") or "").strip()
-    lead_id = int(getattr(lead, "id"))
+    lead_id = str(getattr(lead, "id"))
 
     logger.info(
         "VISION collect_image_paths: backend=%s tenant_id=%r lead_id=%s files=%s",
@@ -122,7 +122,7 @@ def _paintly_enabled() -> bool:
     return str(v).strip().lower() in {"1", "true", "yes", "y"}
 
 
-def run_vision_for_lead(db: Session, lead_id: int) -> Dict[str, Any]:
+def run_vision_for_lead(db: Session, lead_id: str) -> Dict[str, Any]:
     """
     Runs vision for a lead:
     - loads Lead + LeadFile

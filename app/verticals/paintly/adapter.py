@@ -14,6 +14,7 @@ from app.core.settings import settings
 from app.models import Lead, LeadFile
 from app.schemas.intake import IntakePayload
 from app.tasks.vision_task import run_vision_for_lead
+from app.services.lead_training_service import capture_ml_data
 from aether.engine.facade import compute_quote_for_lead_v15
 from app.verticals.paintly.eu_config import resolve_eu_config
 
@@ -53,6 +54,12 @@ def _extract_object_keys_from_form(form: Any, tenant_id: str) -> List[str]:
 
     # FASE 3 safety: max uploads
     if len(object_keys) > settings.UPLOAD_MAX_FILES:
+        logger.warning(
+            "INTAKE_TOO_MANY_FILES tenant=%s count=%s max=%s",
+            tenant_id,
+            len(object_keys),
+            settings.UPLOAD_MAX_FILES,
+        )
         raise HTTPException(
             status_code=400,
             detail=f"too_many_files:max={settings.UPLOAD_MAX_FILES}",
@@ -123,11 +130,11 @@ class PaintlyAdapter(VerticalAdapter):
             context,
         )
 
-    def run_vision(self, db: Session, lead_id: int) -> dict:
+    def run_vision(self, db: Session, lead_id: str) -> dict:
         return run_vision_for_lead(db, lead_id)
 
-    def compute_quote(self, db: Session, lead_id: int) -> Dict[str, Any]:
-        lead = db.query(Lead).filter(Lead.id == lead_id).first()
+    def compute_quote(self, db: Session, lead_id: str) -> Dict[str, Any]:
+        lead = db.query(Lead).filter(Lead.id == str(lead_id)).first()
         if not lead:
             raise HTTPException(status_code=404, detail="Lead not found")
 
@@ -145,7 +152,7 @@ class PaintlyAdapter(VerticalAdapter):
             )
 
         # Must have uploads
-        files = db.query(LeadFile).filter(LeadFile.lead_id == lead_id).all()
+        files = db.query(LeadFile).filter(LeadFile.lead_id == lead.id).all()
         if not files:
             raise HTTPException(status_code=400, detail="No uploads for lead")
 
@@ -233,8 +240,74 @@ class PaintlyAdapter(VerticalAdapter):
                 needs_review = False
 
             lead.status = "NEEDS_REVIEW" if needs_review else "SUCCEEDED"
-
             lead.error_message = None
+
+            # Best-effort ML training snapshot (dataset capture only)
+            intake_snapshot: Dict[str, Any] = {}
+            try:
+                if "payload" in locals() and isinstance(payload, dict):
+                    intake_snapshot = payload
+                else:
+                    raw_intake = getattr(lead, "intake_payload", None)
+                    if isinstance(raw_intake, str) and raw_intake.strip():
+                        intake_snapshot = json.loads(raw_intake)
+            except Exception:
+                intake_snapshot = {}
+
+            photo_refs: List[str] = [
+                lf.s3_key
+                for lf in files
+                if getattr(lf, "s3_key", None)
+            ]
+
+            structured_estimate_output: Any = estimate_obj
+            if isinstance(structured_estimate_output, str):
+                try:
+                    structured_estimate_output = json.loads(structured_estimate_output)
+                except Exception:
+                    # fall back to raw string if parsing fails
+                    pass
+
+            metadata_json: Dict[str, Any] = {
+                "source": "paintly_adapter.compute_quote",
+                "engine_status": result.get("engine_status"),
+                "needs_review": needs_review,
+                "trace_id": result.get("trace_id"),
+            }
+
+            pricing_result = result.get("debug_pricing_raw")
+            try:
+                capture_ml_data(
+                    db,
+                    tenant_id=str(lead.tenant_id),
+                    lead_id=str(lead.id),
+                    intake_snapshot=intake_snapshot,
+                    photo_refs=photo_refs,
+                    estimate_input=None,
+                    estimate_output=structured_estimate_output,
+                    pricing_result=pricing_result,
+                    metadata_json=metadata_json,
+                )
+            except Exception:
+                # Never break pricing flow on dataset capture failures
+                logger.exception(
+                    "LEAD_TRAINING_CAPTURE_FAILED "
+                    "lead_id=%s tenant_id=%s "
+                    "intake_snapshot=%r photo_refs=%r "
+                    "pricing_result_present=%s pricing_result_type=%s "
+                    "estimate_output_present=%s estimate_output_type=%s",
+                    getattr(lead, "id", None),
+                    getattr(lead, "tenant_id", None),
+                    intake_snapshot,
+                    photo_refs,
+                    pricing_result is not None,
+                    type(pricing_result).__name__ if pricing_result is not None else "NoneType",
+                    structured_estimate_output is not None,
+                    type(structured_estimate_output).__name__
+                    if structured_estimate_output is not None
+                    else "NoneType",
+                )
+
             db.add(lead)
             db.commit()
             db.refresh(lead)
@@ -275,12 +348,9 @@ class PaintlyAdapter(VerticalAdapter):
         tenant_id = (tenant_id or "").strip() or "public"
 
         raw_lead_id = (form_dict.get("lead_id") or "").strip()
-        lead_id_int: int | None = None
+        lead_id_value: str | None = None
         if raw_lead_id:
-            try:
-                lead_id_int = int(raw_lead_id)
-            except Exception:
-                raise HTTPException(status_code=400, detail="invalid_lead_id")
+            lead_id_value = raw_lead_id
 
         # object_keys uit form (tenant-loos)
         object_keys = _extract_object_keys_from_form(form, tenant_id=tenant_id)
@@ -315,16 +385,22 @@ class PaintlyAdapter(VerticalAdapter):
         try:
             _ = IntakePayload(**payload_data)
         except Exception as e:
+            logger.warning(
+                "INTAKE_INVALID_PAYLOAD_UPSERT tenant=%s error=%s fields=%s",
+                tenant_id,
+                str(e),
+                sorted(payload_data.keys()),
+            )
             raise HTTPException(status_code=400, detail=f"Invalid intake payload: {e}")
 
         # CASE A: geen lead_id => create
-        if lead_id_int is None:
+        if lead_id_value is None:
             return await self.create_lead_from_form(request, db, tenant_id=tenant_id)
 
         # CASE B: lead_id => update bestaande lead (tenant-scoped!)
         lead = (
             db.query(Lead)
-            .filter(Lead.id == lead_id_int)
+            .filter(Lead.id == lead_id_value)
             .filter(Lead.tenant_id == tenant_id)
             .first()
         )
@@ -336,6 +412,13 @@ class PaintlyAdapter(VerticalAdapter):
             lead.vertical = self.vertical_id
 
         if lead.vertical != self.vertical_id:
+            logger.warning(
+                "INTAKE_VERTICAL_MISMATCH tenant=%s lead_id=%s have=%s expected=%s",
+                tenant_id,
+                getattr(lead, "id", None),
+                lead.vertical,
+                self.vertical_id,
+            )
             raise HTTPException(
                 status_code=400,
                 detail=f"Lead vertical mismatch: {lead.vertical} (expected {self.vertical_id})",
@@ -438,6 +521,12 @@ class PaintlyAdapter(VerticalAdapter):
         try:
             payload = IntakePayload(**payload_data)
         except Exception as e:
+            logger.warning(
+                "INTAKE_INVALID_PAYLOAD_CREATE tenant=%s error=%s fields=%s",
+                tenant_id,
+                str(e),
+                sorted(payload_data.keys()),
+            )
             raise HTTPException(status_code=400, detail=f"Invalid intake payload: {e}")
 
         # ✅ EU config toevoegen aan payload (self-contained)
