@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 from sqlalchemy.dialects import postgresql
 
 
@@ -24,12 +25,22 @@ def upgrade() -> None:
     bind = op.get_bind()
     dialect_name = bind.dialect.name if bind and bind.dialect else ""
     json_type = postgresql.JSONB if dialect_name == "postgresql" else sa.JSON
+    lead_id_type: sa.types.TypeEngine = sa.String(length=100)
+
+    # Keep FK column type exactly aligned with leads.id in target DB.
+    inspector = inspect(bind)
+    for column in inspector.get_columns("leads"):
+        if column.get("name") == "id":
+            reflected_type = column.get("type")
+            if reflected_type is not None:
+                lead_id_type = reflected_type
+            break
 
     op.create_table(
         "lead_training_records",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("tenant_id", sa.String(length=100), nullable=False),
-        sa.Column("lead_id", sa.String(length=100), nullable=False),
+        sa.Column("lead_id", lead_id_type, nullable=False),
         sa.Column("capture_version", sa.String(length=50), nullable=True),
         sa.Column("outcome", sa.String(length=32), nullable=True),
         sa.Column("outcome_reason", sa.Text(), nullable=True),
