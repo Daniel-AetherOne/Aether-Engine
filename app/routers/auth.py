@@ -124,6 +124,8 @@ def register_form(
         email=email_norm,
         phone=phone_clean,
         slug=slug,
+        plan_code="starter_99",
+        subscription_status="trialing",
         pricing_json={
             "walls_rate_eur_per_sqm": float(walls_rate_eur_per_sqm),
         },

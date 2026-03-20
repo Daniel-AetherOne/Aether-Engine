@@ -50,6 +50,8 @@ def create_tenant_with_pricing(db: Session, payload: TenantOnboardingCreate) -> 
         email=email,
         phone=phone,
         slug=unique_slug,
+        plan_code="starter_99",
+        subscription_status="trialing",
         pricing_json={
             "walls_rate_eur_per_sqm": float(payload.walls_rate_eur_per_sqm),
         },

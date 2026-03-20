@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from typing import Iterable, Mapping, Protocol
+import logging
 
 
 class Feature(StrEnum):
@@ -18,12 +19,14 @@ class Feature(StrEnum):
 
 
 FeatureName = str
+logger = logging.getLogger(__name__)
 
 
 PLAN_FEATURES: Mapping[str, frozenset[FeatureName]] = {
     "starter_99": frozenset(
         {
             Feature.BASIC_SENDING.value,
+            Feature.PDF_EXPORT.value,
         }
     ),
     "pro_199": frozenset(
@@ -45,6 +48,13 @@ PLAN_FEATURES: Mapping[str, frozenset[FeatureName]] = {
 
 
 _ACCESSIBLE_STATUSES: frozenset[str] = frozenset({"active", "trialing"})
+_PLAN_CODE_ALIASES: Mapping[str, str] = {
+    "starter": "starter_99",
+    "starter_monthly": "starter_99",
+    "starter-yearly": "starter_99",
+    "pro": "pro_199",
+    "business": "business_399",
+}
 
 
 def is_subscription_accessible(subscription_status: str | None) -> bool:
@@ -77,9 +87,9 @@ def get_plan_features(plan_code: str | None) -> set[FeatureName]:
     """
 
     code = (plan_code or "").strip()
-    if not code:
-        return set()
-    features = PLAN_FEATURES.get(code)
+    # Default to Starter when plan code is missing in dev/runtime records.
+    normalized = _PLAN_CODE_ALIASES.get(code.lower(), code) if code else "starter_99"
+    features = PLAN_FEATURES.get(normalized)
     return set(features) if features else set()
 
 
@@ -109,9 +119,31 @@ def tenant_has_feature(tenant: TenantLike, feature: str) -> bool:
     - Then check whether the tenant plan includes the feature
     """
 
-    if not is_subscription_accessible(getattr(tenant, "subscription_status", None)):
+    subscription_status = getattr(tenant, "subscription_status", None)
+    plan_code = getattr(tenant, "plan_code", None)
+    resolved_features = sorted(get_plan_features(plan_code))
+    if not is_subscription_accessible(subscription_status):
+        if feature == Feature.PDF_EXPORT.value:
+            logger.info(
+                "PDF_TENANT_HAS_FEATURE plan_code=%s subscription_status=%s feature=%s resolved_features=%s result=%s",
+                plan_code,
+                subscription_status,
+                feature,
+                resolved_features,
+                False,
+            )
         return False
-    return plan_supports_feature(getattr(tenant, "plan_code", None), feature)
+    result = plan_supports_feature(plan_code, feature)
+    if feature == Feature.PDF_EXPORT.value:
+        logger.info(
+            "PDF_TENANT_HAS_FEATURE plan_code=%s subscription_status=%s feature=%s resolved_features=%s result=%s",
+            plan_code,
+            subscription_status,
+            feature,
+            resolved_features,
+            result,
+        )
+    return result
 
 
 def tenant_missing_features(tenant: TenantLike, features: Iterable[str]) -> list[str]:

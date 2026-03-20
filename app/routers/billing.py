@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
+from app.billing.features import PLAN_FEATURES
 from app.db import get_db
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -48,9 +49,17 @@ def start_trial(
     tenant.stripe_subscription_id = subscription.id
     status: str = getattr(subscription, "status", "trialing")
     tenant.subscription_status = status
-    tenant.plan_code = getattr(subscription, "plan", {}).get("id") if getattr(
+    # Keep internal plan codes stable for entitlement checks.
+    # Stripe subscription payload can return price/plan IDs that do not match
+    # our internal mapping keys.
+    subscription_plan_code = getattr(subscription, "plan", {}).get("id") if getattr(
         subscription, "plan", None
     ) else None
+    tenant.plan_code = (
+        subscription_plan_code
+        if subscription_plan_code in PLAN_FEATURES
+        else (tenant.plan_code or "starter_99")
+    )
 
     trial_end = getattr(subscription, "trial_end", None)
     tenant.trial_ends_at = compute_trial_end(trial_end)

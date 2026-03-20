@@ -4,7 +4,7 @@ PLANS = {
     "starter_99": {
         "quote_limit": 99,
         "features": {
-            "pdf": False,
+            "pdf": True,
             "branding": False,
             "whitelabel": False,
         },

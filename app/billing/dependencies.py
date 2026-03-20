@@ -10,7 +10,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
-from app.billing.features import tenant_has_feature
+from app.billing.features import get_plan_features, tenant_has_feature
 from app.billing.entitlements import EntitlementResult, check_entitlement
 from app.db import get_db
 from app.models.tenant import Tenant
@@ -115,8 +115,31 @@ def require_entitlement(action: str) -> Callable[..., Tenant]:
         db: Session = Depends(get_db),
     ) -> Tenant:
         tenant = _get_tenant_for_user(user=user, db=db)
+        if action == "EXPORT_PDF":
+            logger.info(
+                "PDF_REQUEST_START tenant_id=%s plan_code=%s subscription_status=%s action=%s path=%s",
+                getattr(tenant, "id", None),
+                getattr(tenant, "plan_code", None),
+                getattr(tenant, "subscription_status", None),
+                action,
+                str(request.url.path),
+            )
         result: EntitlementResult = check_entitlement(tenant, action)
+        plan_features = sorted(get_plan_features(getattr(tenant, "plan_code", None)))
         if result.allowed:
+            if action == "EXPORT_PDF":
+                logger.info(
+                    "PDF_ENTITLEMENT_RESULT tenant_id=%s action=%s allowed=%s reason=%s plan_code=%s subscription_status=%s feature=%s features=%s path=%s",
+                    getattr(tenant, "id", None),
+                    result.action,
+                    True,
+                    None,
+                    result.plan_code,
+                    result.subscription_status,
+                    result.feature,
+                    plan_features,
+                    str(request.url.path),
+                )
             return tenant
 
         logger.info(
@@ -131,8 +154,22 @@ def require_entitlement(action: str) -> Callable[..., Tenant]:
                 "usage_limit": result.usage_limit,
                 "usage_current": result.usage_current,
                 "path": str(request.url.path),
+                "features": plan_features,
             },
         )
+        if action == "EXPORT_PDF":
+            logger.info(
+                "PDF_ENTITLEMENT_RESULT tenant_id=%s action=%s allowed=%s reason=%s plan_code=%s subscription_status=%s feature=%s features=%s path=%s",
+                getattr(tenant, "id", None),
+                result.action,
+                False,
+                result.reason,
+                result.plan_code,
+                result.subscription_status,
+                result.feature,
+                plan_features,
+                str(request.url.path),
+            )
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

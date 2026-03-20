@@ -167,6 +167,26 @@ def processing_page(request: Request, lead_id: str, db: Session = Depends(get_db
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
+    # UX polish: if this route is hit again after completion, skip rendering
+    # processing.html and redirect immediately to final route to avoid flash.
+    lead_status = (getattr(lead, "status", "") or "").upper()
+    mapped_status, redirect_url, _ = _map_lead_status_for_ui(
+        lead_status=lead_status, lead_id=str(lead.id)
+    )
+    has_estimate_html = bool((getattr(lead, "estimate_html_key", None) or "").strip())
+    is_done_available = (
+        (lead_status == "SUCCEEDED" and has_estimate_html)
+        or (lead_status == "NEEDS_REVIEW")
+    )
+    if mapped_status == "done" and is_done_available and redirect_url:
+        logger.info(
+            "PROCESSING_ROUTE_EARLY_REDIRECT lead_id=%s status=%s redirect_url=%s",
+            str(lead.id),
+            lead_status,
+            redirect_url,
+        )
+        return RedirectResponse(url=str(redirect_url), status_code=303)
+
     logger.info(
         "PROCESSING_TEMPLATE_RENDER lead_id=%s template=%s",
         str(lead.id),

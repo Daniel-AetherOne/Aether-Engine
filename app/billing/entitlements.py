@@ -2,9 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+import logging
 from typing import Protocol
 
-from app.billing.features import Feature, is_subscription_accessible, tenant_has_feature
+from app.billing.features import (
+    Feature,
+    get_plan_features,
+    is_subscription_accessible,
+    tenant_has_feature,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class Action(StrEnum):
@@ -152,6 +160,7 @@ def check_entitlement(tenant: TenantUsageLike | None, action: str) -> Entitlemen
         )
 
     feature = require_action_feature(act.value)
+    plan_features = sorted(get_plan_features(plan_code))
 
     # SEND_QUOTE: feature + subscription + usage
     if act is Action.SEND_QUOTE:
@@ -216,6 +225,18 @@ def check_entitlement(tenant: TenantUsageLike | None, action: str) -> Entitlemen
         # We intentionally reuse subscription accessibility here so that
         # premium features cannot be used on inactive accounts.
         if not is_subscription_accessible(subscription_status):
+            if act is Action.EXPORT_PDF:
+                logger.info(
+                    "PDF_ENTITLEMENT_CHECK tenant_id=%s plan_code=%s subscription_status=%s action=%s allowed=%s reason=%s feature=%s features=%s",
+                    getattr(tenant, "id", None) if tenant is not None else None,
+                    plan_code,
+                    subscription_status,
+                    act.value,
+                    False,
+                    "subscription_inactive",
+                    feature,
+                    plan_features,
+                )
             return EntitlementResult(
                 allowed=False,
                 action=act.value,
@@ -227,6 +248,18 @@ def check_entitlement(tenant: TenantUsageLike | None, action: str) -> Entitlemen
             )
 
         if tenant is None or not tenant_has_feature(tenant, feature or ""):
+            if act is Action.EXPORT_PDF:
+                logger.info(
+                    "PDF_ENTITLEMENT_CHECK tenant_id=%s plan_code=%s subscription_status=%s action=%s allowed=%s reason=%s feature=%s features=%s",
+                    getattr(tenant, "id", None) if tenant is not None else None,
+                    plan_code,
+                    subscription_status,
+                    act.value,
+                    False,
+                    "feature_not_in_plan",
+                    feature,
+                    plan_features,
+                )
             return EntitlementResult(
                 allowed=False,
                 action=act.value,
@@ -237,6 +270,18 @@ def check_entitlement(tenant: TenantUsageLike | None, action: str) -> Entitlemen
                 subscription_status=subscription_status,
             )
 
+        if act is Action.EXPORT_PDF:
+            logger.info(
+                "PDF_ENTITLEMENT_CHECK tenant_id=%s plan_code=%s subscription_status=%s action=%s allowed=%s reason=%s feature=%s features=%s",
+                getattr(tenant, "id", None) if tenant is not None else None,
+                plan_code,
+                subscription_status,
+                act.value,
+                True,
+                None,
+                feature,
+                plan_features,
+            )
         return EntitlementResult(
             allowed=True,
             action=act.value,

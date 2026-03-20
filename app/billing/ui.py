@@ -28,7 +28,7 @@ class FeatureUI:
 
 _DEFAULT_HINTS: Mapping[str, str] = {
     Feature.BASIC_SENDING.value: "Beschikbaar vanaf Starter",
-    Feature.PDF_EXPORT.value: "Beschikbaar vanaf Pro",
+    Feature.PDF_EXPORT.value: "Beschikbaar vanaf Starter",
     Feature.BRANDING.value: "Beschikbaar vanaf Pro",
     Feature.WHITELABEL.value: "Beschikbaar vanaf Business",
 }

@@ -1128,6 +1128,26 @@ def export_lead_estimate_pdf(
     - As Starter (or inactive) -> 403 with detail.error "entitlement_denied".
     - Missing lead or no estimate -> 404.
     """
+    logger.info(
+        "PDF_EXPORT_ROUTE_ACCESS tenant_id=%s lead_id=%s plan_code=%s subscription_status=%s action=%s",
+        getattr(tenant, "id", None),
+        lead_id,
+        getattr(tenant, "plan_code", None),
+        getattr(tenant, "subscription_status", None),
+        Action.EXPORT_PDF.value,
+    )
+    route_ent = check_entitlement(tenant, Action.EXPORT_PDF.value)
+    logger.info(
+        "PDF_EXPORT_ROUTE_ENTITLEMENT tenant_id=%s lead_id=%s action=%s allowed=%s reason=%s plan_code=%s subscription_status=%s",
+        getattr(tenant, "id", None),
+        lead_id,
+        Action.EXPORT_PDF.value,
+        route_ent.allowed,
+        route_ent.reason,
+        route_ent.plan_code,
+        route_ent.subscription_status,
+    )
+
     lead = (
         db.query(Lead)
         .filter(Lead.id == lead_id, Lead.tenant_id == tenant.id)

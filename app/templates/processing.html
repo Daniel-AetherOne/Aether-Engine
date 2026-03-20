@@ -184,6 +184,7 @@
 
   <script>
     const leadId = String({{ lead_id | tojson }});
+    const initKey = `processing_init_${leadId}`;
 
     const errorBox = document.getElementById("errorBox");
     const errorText = document.getElementById("errorText");
@@ -197,6 +198,7 @@
       // Alleen redirect bij done, nooit naar een andere status-/loading-pagina.
       const url =
         (data && data.redirect_url) ? String(data.redirect_url) : "/thank-you";
+      console.info("[processing] redirect trigger", { leadId, url });
       window.location.href = url;
     }
 
@@ -250,11 +252,18 @@
       }
     }
 
+    if (window[initKey]) {
+      console.info("[processing] duplicate init skipped", { leadId });
+    } else {
+      window[initKey] = true;
+      console.info("[processing] polling init", { leadId });
+
     // setInterval zoals gevraagd (elke 2 seconden)
-    pollIntervalId = setInterval(pollOnceAndAct, 2000);
+      pollIntervalId = setInterval(pollOnceAndAct, 2000);
 
     // Meteen een eerste check (sneller UX)
-    pollOnceAndAct();
+      pollOnceAndAct();
+    }
   </script>
 </body>
 </html>
