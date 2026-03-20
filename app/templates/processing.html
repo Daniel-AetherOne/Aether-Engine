@@ -194,7 +194,9 @@
     }
 
     function redirectToDone(data) {
-      const url = (data && data.redirect_url) ? String(data.redirect_url) : `/thank-you?lead_id=${encodeURIComponent(leadId)}`;
+      // Alleen redirect bij done, nooit naar een andere status-/loading-pagina.
+      const url =
+        (data && data.redirect_url) ? String(data.redirect_url) : "/thank-you";
       window.location.href = url;
     }
 
@@ -218,18 +220,23 @@
 
     let pollIntervalId = null;
 
+    let isStopping = false;
+
     async function pollOnceAndAct() {
       const data = await fetchStatusOnce();
       if (!data) return;
+      if (isStopping) return;
 
       const status = (data.status || "queued").toString();
       if (status === "done") {
+        isStopping = true;
         stopPolling();
         redirectToDone(data);
         return;
       }
 
       if (status === "failed") {
+        isStopping = true;
         stopPolling();
         showFailed(data.error || "Onbekende fout");
         return;

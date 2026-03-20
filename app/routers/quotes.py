@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -86,7 +87,18 @@ def _strip_tenant_prefix(tenant_id: str, key: str) -> str:
     if not key:
         return ""
     prefix = f"{tenant_id}/"
-    return key[len(prefix) :] if key.startswith(prefix) else key
+    if key.startswith(prefix):
+        return key[len(prefix) :]
+
+    # Backward compatibility: some historic records contain a different
+    # tenant prefix (e.g. "public/uploads/..."). For storage checks we
+    # normalize to the canonical tenant-less "uploads/..." key format.
+    uploads_marker = "uploads/"
+    idx = key.find(uploads_marker)
+    if idx > 0:
+        return key[idx:]
+
+    return key
 
 
 def _preflight_uploads_or_fail(lead: Lead, files: list[LeadFile]) -> None:
@@ -109,9 +121,80 @@ def _preflight_uploads_or_fail(lead: Lead, files: list[LeadFile]) -> None:
             raise RuntimeError("File record missing s3_key")
 
         # backward compat: als er nog tenant-prefixed keys in DB zitten, strippen
-        key = _strip_tenant_prefix(tenant_id, raw_key)
+        key = _strip_tenant_prefix(tenant_id, raw_key).lstrip("/")
+
+        # TEMP DEBUG: trace exact preflight inputs and local file resolution.
+        local_resolved_path = None
+        local_exists = None
+        if hasattr(storage, "_full_path"):
+            try:
+                p = storage._full_path(tenant_id, key)  # type: ignore[attr-defined]
+                local_resolved_path = str(p)
+                local_exists = bool(p.exists() and p.is_file())
+            except Exception:
+                local_resolved_path = None
+                local_exists = None
+
+        logger.info(
+            "PREFLIGHT_DEBUG lead_id=%s tenant_id=%s backend=%s raw_key=%r normalized_key=%r local_path=%r local_exists=%r",
+            str(getattr(lead, "id", "")),
+            tenant_id,
+            type(storage).__name__,
+            raw_key,
+            key,
+            local_resolved_path,
+            local_exists,
+        )
 
         ok, meta, err = head_ok(storage, tenant_id, key)
+
+        # LocalStorage fallback: if head_ok says not found but file exists under
+        # the exact resolved path, treat it as valid and continue with local meta.
+        if (
+            not ok
+            and err == "head_not_found"
+            and hasattr(storage, "_head_local")
+            and hasattr(storage, "_full_path")
+        ):
+            try:
+                # Keep normalization identical to upload/vision flow:
+                # only strip "{tenant_id}/" when present.
+                # Retry using original raw_key too, in case records are mixed.
+                candidates = [key]
+                raw_norm = raw_key.lstrip("/")
+                tenant_prefix = f"{tenant_id}/"
+                if raw_norm.startswith(tenant_prefix):
+                    raw_norm = raw_norm[len(tenant_prefix) :]
+                if raw_norm and raw_norm not in candidates:
+                    candidates.append(raw_norm)
+
+                for candidate_key in candidates:
+                    p = storage._full_path(tenant_id, candidate_key)  # type: ignore[attr-defined]
+                    exists_now = bool(p.exists() and p.is_file())
+                    logger.info(
+                        "PREFLIGHT_DEBUG_LOCAL_CANDIDATE tenant_id=%s candidate_key=%r local_path=%r exists=%r",
+                        tenant_id,
+                        candidate_key,
+                        str(p),
+                        exists_now,
+                    )
+                    if exists_now:
+                        local_meta = storage._head_local(tenant_id, candidate_key)  # type: ignore[attr-defined]
+                        if local_meta:
+                            ok = True
+                            meta = local_meta
+                            err = None
+                            key = candidate_key
+                            logger.info(
+                                "PREFLIGHT_DEBUG_LOCAL_FALLBACK_OK tenant_id=%s key=%r local_path=%r",
+                                tenant_id,
+                                key,
+                                str(p),
+                            )
+                            break
+            except Exception:
+                pass
+
         if not ok:
             # err is bv: wrong_prefix/head_not_found/size_exceeded/bad_content_type
             raise RuntimeError(f"Upload invalid: {raw_key} ({err})")
@@ -154,25 +237,11 @@ def _set_failed(db: Session, lead: Lead, msg: str, http_status: int = 400):
 # =========================
 @router.get("/{lead_id}/status", response_class=HTMLResponse)
 def quote_status_page(request: Request, lead_id: str, db: Session = Depends(get_db)):
-    lead = _load_lead(db, lead_id)
-    autostart = int(request.query_params.get("autostart", "1"))
-
-    logger.info(
-        "STATUS_PAGE autostart=%s lead=%s status=%s",
-        autostart,
-        lead.id,
-        lead.status,
-    )
-
-    return templates.TemplateResponse(
-        "quote_status.html",
-        {
-            "request": request,
-            "lead_id": lead.id,
-            "lead": lead,
-            "autostart": autostart,
-        },
-    )
+    # UX: de "tweede statuspagina" (quote_status.html) vervangen door één
+    # tussenpagina: /processing/{lead_id}. Hierdoor wordt quote_status.html
+    # nooit meer gerenderd in de customer flow.
+    _ = _load_lead(db, lead_id)
+    return RedirectResponse(url=f"/processing/{lead_id}", status_code=303)
 
 
 @router.get("/{lead_id}/status.json")

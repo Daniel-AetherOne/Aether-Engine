@@ -30,7 +30,7 @@
         <span class="pill">{{ lead.status }}</span>
 
         <a class="btn" href="/internal/leads?status=NEEDS_REVIEW">Back</a>
-        <a class="btn" href="/quotes/{{ lead.id }}/status?autostart=0" target="_blank" rel="noopener">Customer status</a>
+        <a class="btn" href="/processing/{{ lead.id }}" target="_blank" rel="noopener">Customer status</a>
         <a class="btn" href="/quotes/{{ lead.id }}/json" target="_blank" rel="noopener">JSON</a>
       </div>
 

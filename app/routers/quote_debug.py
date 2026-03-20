@@ -9,7 +9,7 @@ router = APIRouter(prefix="/quote", tags=["quote"])
 
 
 @router.post("/run/{lead_id}")
-def run_quote(lead_id: int, db: Session = Depends(get_db)):
+def run_quote(lead_id: str, db: Session = Depends(get_db)):
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")

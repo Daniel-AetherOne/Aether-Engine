@@ -19,7 +19,7 @@ templates = Jinja2Templates(directory="app/templates")
 logger = logging.getLogger(__name__)
 
 
-def _load_lead(db: Session, lead_id: int) -> Lead:
+def _load_lead(db: Session, lead_id: str) -> Lead:
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -69,7 +69,7 @@ def internal_leads(
 
 
 @router.get("/leads/{lead_id}", response_class=HTMLResponse)
-def internal_lead_detail(request: Request, lead_id: int, db: Session = Depends(get_db)):
+def internal_lead_detail(request: Request, lead_id: str, db: Session = Depends(get_db)):
     lead = _load_lead(db, lead_id)
     return templates.TemplateResponse(
         "internal_lead_detail.html",
@@ -81,7 +81,7 @@ def internal_lead_detail(request: Request, lead_id: int, db: Session = Depends(g
 # Admin actions (FASE 6)
 # -------------------------
 @router.post("/leads/{lead_id}/approve")
-def internal_approve(lead_id: int, db: Session = Depends(get_db)):
+def internal_approve(lead_id: str, db: Session = Depends(get_db)):
     lead = _load_lead(db, lead_id)
 
     # MVP: only allow approve from NEEDS_REVIEW
@@ -103,7 +103,7 @@ def internal_approve(lead_id: int, db: Session = Depends(get_db)):
 
 @router.post("/leads/{lead_id}/fail")
 def internal_fail(
-    lead_id: int,
+    lead_id: str,
     reason: str = "Manual review required",
     db: Session = Depends(get_db),
 ):
@@ -121,7 +121,7 @@ def internal_fail(
 
 
 @router.post("/leads/{lead_id}/recompute")
-def internal_recompute(lead_id: int, db: Session = Depends(get_db)):
+def internal_recompute(lead_id: str, db: Session = Depends(get_db)):
     """
     Reset lead to NEW and clear artifacts so publish can recompute cleanly.
     Redirect to customer status page with autostart=1.
@@ -142,7 +142,5 @@ def internal_recompute(lead_id: int, db: Session = Depends(get_db)):
     inc("internal_recompute_total")
     logger.info("LEAD %s internal_recompute -> NEW", lead.id)
 
-    # Kick publish from status page
-    return RedirectResponse(
-        url=f"/quotes/{lead_id}/status?autostart=1", status_code=303
-    )
+    # Kick processing via the customer loader page (processing only)
+    return RedirectResponse(url=f"/processing/{lead_id}", status_code=303)

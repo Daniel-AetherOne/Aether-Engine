@@ -2,7 +2,7 @@
 from pydantic import BaseModel, Field
 
 class VerifyUploadIn(BaseModel):
-    lead_id: int
+    lead_id: str
     object_key: str
     expect_mime: str | None = None
     min_size: int | None = 1
@@ -12,7 +12,7 @@ class VerifyUploadIn(BaseModel):
 
 class UploadRecordOut(BaseModel):
     id: int
-    lead_id: int
+    lead_id: str
     object_key: str
     size: int
     mime: str

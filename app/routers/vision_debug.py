@@ -9,7 +9,7 @@ router = APIRouter(prefix="/vision", tags=["vision"])
 
 
 @router.post("/run/{lead_id}")
-def run_vision(lead_id: int, db: Session = Depends(get_db)):
+def run_vision(lead_id: str, db: Session = Depends(get_db)):
     try:
         # Single-vertical for now, but registry-based
         v = get_vertical("paintly")

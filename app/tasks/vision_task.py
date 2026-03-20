@@ -79,6 +79,10 @@ def _collect_image_paths(files: List[LeadFile], lead: Lead) -> List[str]:
             continue
 
         key_str = str(key).strip().lstrip("/")
+        tenant_prefix = f"{tenant_id}/"
+        if key_str.startswith(tenant_prefix):
+            # Backward compatibility: some rows may still store tenant-prefixed keys.
+            key_str = key_str[len(tenant_prefix) :]
         if not key_str:
             continue
 

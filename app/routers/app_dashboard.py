@@ -100,7 +100,7 @@ def leads_page(
 
 @router.get("/leads/{lead_id}", response_class=HTMLResponse)
 def lead_detail_page(
-    lead_id: int,
+    lead_id: str,
     request: Request,
     db: Session = Depends(get_db),
 ):
@@ -109,47 +109,16 @@ def lead_detail_page(
     except Exception:
         return _login_redirect()
 
-    lead = (
-        db.query(Lead)
-        .filter(Lead.id == lead_id, Lead.tenant_id == user.tenant_id)
-        .first()
-    )
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    # Fallback router compatibility:
+    # delegate to the Paintly quote detail page so /app/leads/{lead_id}
+    # always renders the full offerte-detail UI with quote actions.
+    from app.verticals.paintly.router_app import app_lead_detail as paintly_lead_detail
 
-    open_btn = ""
-    if lead.estimate_html_key:
-        open_btn = f'<a class="btn" href="/quotes/{lead.id}/html" target="_blank">Open estimate</a>'
-
-    return HTMLResponse(
-        f"""
-    <!doctype html>
-    <html><head><meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Lead #{lead.id}</title>
-    <style>
-      body{{font-family:system-ui;margin:24px;max-width:900px}}
-      .badge{{padding:4px 8px;border-radius:999px;background:#f3f4f6;display:inline-block}}
-      a.btn{{padding:10px 12px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;display:inline-block;margin-right:8px}}
-      a.btn2{{padding:10px 12px;border-radius:10px;background:#e5e7eb;color:#111827;text-decoration:none;display:inline-block}}
-      .card{{border:1px solid #eee;border-radius:14px;padding:14px;margin-top:12px}}
-      .muted{{color:#6b7280;font-size:13px}}
-    </style></head><body>
-      <a class="btn2" href="/app/leads">← Back</a>
-      <h2>Lead #{lead.id}</h2>
-      <div class="muted">{lead.name} • {lead.email}</div>
-
-      <div class="card">
-        Status: <span class="badge">{lead.status}</span>
-        {f'<div class="muted" style="margin-top:8px;">Error: {lead.error_message}</div>' if lead.error_message else ''}
-      </div>
-
-      <div class="card">
-        {open_btn}
-        <a class="btn2" href="/app/new">New estimate</a>
-      </div>
-    </body></html>
-    """
+    return paintly_lead_detail(
+        request=request,
+        lead_id=lead_id,
+        db=db,
+        current_user=user,
     )
 
 

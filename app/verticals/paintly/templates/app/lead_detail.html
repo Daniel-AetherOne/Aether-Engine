@@ -80,7 +80,7 @@
             Link kopiëren
           </button>
         {% endif %}
-        {% if lead.estimate_html_key %}
+        {% if quote_ui and quote_ui.has_quote_output %}
           <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
              href="/app/leads/{{ lead.id }}/edit-estimate">
             Offerte bewerken
@@ -191,6 +191,8 @@
               <div class="mt-1 text-sm font-semibold text-slate-900">
                 {% if effective_total_display %}
                   {{ effective_total_display }}
+                {% elif lead.final_price is not none %}
+                  € {{ "%.2f"|format(lead.final_price) }}
                 {% elif lead.total_amount_display %}
                   {{ lead.total_amount_display }}
                 {% else %}

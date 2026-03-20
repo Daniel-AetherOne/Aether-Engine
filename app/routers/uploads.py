@@ -449,9 +449,11 @@ async def local_upload(
     tenant_prefix = f"{tenant_id}/"
     key_without_tenant = key[len(tenant_prefix) :]
 
+    lead_id_value = (lead_id or "").strip() or None
+
     # ✅ als lead_id meegegeven is: check dat lead bestaat + tenant matcht
-    if lead_id is not None:
-        lead, t = _lead_and_tenant(db, lead_id)
+    if lead_id_value is not None:
+        lead, t = _lead_and_tenant(db, lead_id_value)
         if str(t) != str(tenant_id):
             raise HTTPException(status_code=403, detail="tenant_mismatch")
 
@@ -469,10 +471,10 @@ async def local_upload(
     existing = (
         db.query(UploadRecord).filter(UploadRecord.object_key == object_key).first()
     )
-    if not existing:
+    if not existing and lead_id_value is not None:
         rec = UploadRecord(
             tenant_id=tenant_id,
-            lead_id=lead_id or "",
+            lead_id=lead_id_value,
             object_key=object_key,
             size=len(data),
             mime=ctype,

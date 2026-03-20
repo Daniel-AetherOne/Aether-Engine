@@ -97,13 +97,33 @@ class LocalStorage(Storage):
     """Lokale bestandsopslag implementatie."""
 
     def __init__(self, base_path: str = "data"):
-        self.base_path = Path(base_path)
+        project_root = Path(__file__).resolve().parents[2]
+        raw_base = Path(base_path)
+        if raw_base.is_absolute():
+            resolved_base = raw_base
+        else:
+            # Docker dev: resolve relative LOCAL_STORAGE_PATH under /app project root.
+            resolved_base = (project_root / raw_base).resolve()
+        self.base_path = resolved_base
         self.base_path.mkdir(parents=True, exist_ok=True)
+        logger.info(
+            "LOCAL_STORAGE_INIT raw_base=%r resolved_base=%s cwd=%s",
+            base_path,
+            str(self.base_path),
+            str(Path.cwd()),
+        )
 
     def _full_path(self, tenant_id: str, key: str) -> Path:
         tenant_id = (tenant_id or "").strip().strip("/")
         key = (key or "").strip().lstrip("/")
-        return self.base_path / tenant_id / key
+        p = (self.base_path / tenant_id / key).resolve()
+        logger.info(
+            "LOCAL_STORAGE_FULL_PATH tenant_id=%r key=%r full_path=%s",
+            tenant_id,
+            key,
+            str(p),
+        )
+        return p
 
     def head(self, tenant_id: str, key: str) -> Dict:
         meta = self._head_local(tenant_id, key)
@@ -126,7 +146,13 @@ class LocalStorage(Storage):
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "wb") as f:
             f.write(data)
-        logger.info("Local opgeslagen: %s", file_path)
+        logger.info(
+            "LOCAL_STORAGE_SAVE tenant_id=%r key=%r path=%s exists=%r",
+            tenant_id,
+            key,
+            str(file_path),
+            bool(file_path.exists() and file_path.is_file()),
+        )
         return key
 
     def public_url(self, tenant_id: str, key: str) -> str:
@@ -134,7 +160,16 @@ class LocalStorage(Storage):
         return f"/files/{tenant_id}/{key}"
 
     def exists(self, tenant_id: str, key: str) -> bool:
-        return self._full_path(tenant_id, key).exists()
+        p = self._full_path(tenant_id, key)
+        exists = bool(p.exists() and p.is_file())
+        logger.info(
+            "LOCAL_STORAGE_EXISTS tenant_id=%r key=%r path=%s exists=%r",
+            tenant_id,
+            key,
+            str(p),
+            exists,
+        )
+        return exists
 
     def delete(self, tenant_id: str, key: str) -> bool:
         try:
@@ -149,14 +184,47 @@ class LocalStorage(Storage):
             return False
 
     def download_to_temp_path(self, tenant_id: str, key: str) -> str:
-        p = self._full_path(tenant_id, key)
-        if not p.exists() or not p.is_file():
+        src = self._full_path(tenant_id, key)
+        src_exists = bool(src.exists() and src.is_file())
+        logger.info(
+            "LOCAL_STORAGE_DOWNLOAD_CHECK tenant_id=%r key=%r source_path=%s source_exists=%r",
+            tenant_id,
+            key,
+            str(src),
+            src_exists,
+        )
+        if not src_exists:
             raise RuntimeError(f"local_not_found:{tenant_id}:{key}")
-        return str(p.resolve())
+
+        suffix = src.suffix or ".bin"
+        fd, tmp_path = tempfile.mkstemp(prefix="aether_local_", suffix=suffix)
+        try:
+            import os
+
+            os.close(fd)
+        except Exception:
+            pass
+
+        shutil.copy2(src, tmp_path)
+        logger.info(
+            "LOCAL_STORAGE_DOWNLOAD_TEMP_COPY tenant_id=%r key=%r source_path=%s temp_path=%s",
+            tenant_id,
+            key,
+            str(src),
+            str(Path(tmp_path).resolve()),
+        )
+        return str(Path(tmp_path).resolve())
 
     # ====== Extra helpers voor verify/move (local) ======
     def _head_local(self, tenant_id: str, key: str) -> Optional[Dict]:
         p = self._full_path(tenant_id, key)
+        logger.info(
+            "LOCAL_STORAGE_HEAD_CHECK tenant_id=%r key=%r path=%s exists=%r",
+            tenant_id,
+            key,
+            str(p),
+            bool(p.exists() and p.is_file()),
+        )
         if not p.exists() or not p.is_file():
             return None
         try:

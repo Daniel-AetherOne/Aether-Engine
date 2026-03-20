@@ -7,12 +7,31 @@ services:
     ports:
       - "8001:8080"
     env_file:
-      - .env
+      - .env.docker
     environment:
       APP_BASE_URL: "http://127.0.0.1:8001"
       APP_PUBLIC_BASE_URL: "http://127.0.0.1:8001"
       GUNICORN_CMD_ARGS: "--workers 1 --reload"
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - .:/app
-      - ./dev.db:/app/dev.db
       - ./data:/app/data
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: app_dev
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d app_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

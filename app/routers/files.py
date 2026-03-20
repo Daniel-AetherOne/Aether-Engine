@@ -4,12 +4,14 @@ from typing import Dict, Any
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import logging
 
 from app.core.settings import settings
 from app.services.s3 import generate_intake_upload_key, create_presigned_post
 from app.services.storage import get_storage, LocalStorage
 
 router = APIRouter(prefix="/files", tags=["files"])
+logger = logging.getLogger(__name__)
 
 
 class PresignUploadResponse(BaseModel):
@@ -91,6 +93,13 @@ def serve_local_file(tenant_id: str, file_path: str):
 
     key = (file_path or "").lstrip("/")
     full_path = storage._full_path(tenant_id, key)  # type: ignore[attr-defined]
+    logger.info(
+        "FILES_ROUTE_LOCAL_LOOKUP tenant_id=%r key=%r path=%s exists=%r",
+        tenant_id,
+        key,
+        str(full_path),
+        bool(full_path.exists() and full_path.is_file()),
+    )
 
     if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")

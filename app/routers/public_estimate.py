@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 async def send_painter_accept_email(
     *,
     painter_email: str,
-    lead_id: int,
+    lead_id: str,
     lead_name: str,
     lead_email: str,
     quote_url: str,

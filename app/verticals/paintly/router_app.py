@@ -887,7 +887,7 @@ def app_leads(
 @router.get("/leads/{lead_id}", response_class=HTMLResponse)
 def app_lead_detail(
     request: Request,
-    lead_id: int,
+    lead_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
 ):
@@ -995,10 +995,13 @@ def app_lead_detail(
     # -------------------------
     # Quote UI flags (MVP)
     # -------------------------
-    has_estimate = bool(getattr(lead, "estimate_html_key", None))
+    has_estimate_html = bool((getattr(lead, "estimate_html_key", None) or "").strip())
+    has_estimate_json = bool((getattr(lead, "estimate_json", None) or "").strip())
+    has_final_price = getattr(lead, "final_price", None) is not None
+    has_quote_output = has_estimate_html or has_estimate_json or has_final_price
     raw_status = (getattr(lead, "status", "") or "").upper()
 
-    if not has_estimate:
+    if not has_quote_output:
         quote_status = "none"
     elif raw_status == "ACCEPTED":
         quote_status = "accepted"
@@ -1011,19 +1014,20 @@ def app_lead_detail(
 
     public_quote_url = public_url_for(request, lead)
 
-    can_generate = not has_estimate
-    can_view = has_estimate
+    can_generate = not has_quote_output
+    can_view = has_estimate_html
     # Allow sending (and re-sending) while the estimate is ready and not accepted, with a valid email
     can_send = (
-        has_estimate
+        has_estimate_html
         and raw_status in {"SUCCEEDED", "SENT", "VIEWED"}
         and bool((getattr(lead, "email", "") or "").strip())
     )
     # Allow regeneration while not accepted
-    can_regenerate = has_estimate and raw_status != "ACCEPTED"
+    can_regenerate = has_quote_output and raw_status != "ACCEPTED"
 
     quote_ui = {
-        "has_estimate": has_estimate,
+        "has_estimate": has_estimate_html,
+        "has_quote_output": has_quote_output,
         "quote_status": quote_status,
         "can_generate": can_generate,
         "can_view": can_view,
@@ -1065,7 +1069,7 @@ def app_lead_detail(
 
 @router.get("/leads/{lead_id}/estimate")
 def app_lead_estimate(
-    lead_id: int,
+    lead_id: str,
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
@@ -1110,7 +1114,7 @@ def app_lead_estimate(
 
 @router.get("/leads/{lead_id}/export-pdf")
 def export_lead_estimate_pdf(
-    lead_id: int,
+    lead_id: str,
     db: Session = Depends(get_db),
     tenant: Tenant = Depends(require_entitlement(Action.EXPORT_PDF.value)),
 ):
@@ -1252,7 +1256,7 @@ from fastapi import BackgroundTasks
 
 @router.post("/leads/{lead_id}/send")
 def send_estimate(
-    lead_id: int,
+    lead_id: str,
     request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -2043,9 +2047,7 @@ def app_review_generate_estimate(
     db.add(lead)
     db.commit()
 
-    return RedirectResponse(
-        url=f"/quotes/{lead_id}/status?autostart=1", status_code=303
-    )
+    return RedirectResponse(url=f"/processing/{lead_id}", status_code=303)
 
 
 @router.post("/app/reviews/{lead_id}/generate-estimate")
@@ -2083,9 +2085,7 @@ def app_review_generate_estimate(
     db.add(lead)
     db.commit()
 
-    return RedirectResponse(
-        url=f"/quotes/{lead_id}/status?autostart=1", status_code=303
-    )
+    return RedirectResponse(url=f"/processing/{lead_id}", status_code=303)
 
 
 @router.post("/reviews/{lead_id}/overrides")
@@ -2162,7 +2162,7 @@ def app_review_save_overrides(
 
 @router.get("/leads/{lead_id}/edit-estimate", response_class=HTMLResponse)
 def edit_estimate_get(
-    lead_id: int,
+    lead_id: str,
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
@@ -2187,7 +2187,7 @@ def edit_estimate_get(
 
 @router.post("/leads/{lead_id}/edit-estimate")
 def edit_estimate_post(
-    lead_id: int,
+    lead_id: str,
     public_notes: str | None = Form(default=None),
     discount_percent: float | None = Form(default=None),
     manual_total: float | None = Form(default=None),

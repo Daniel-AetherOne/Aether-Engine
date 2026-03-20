@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     Enum as SAEnum,
+    ForeignKey,
     Index,
     Integer,
     JSON,
@@ -32,7 +33,12 @@ class UploadRecord(Base):
     tenant_id = Column(String(100), nullable=False, index=True)
 
     # Link to lead
-    lead_id = Column(Integer, nullable=False, index=True)
+    lead_id = Column(
+        String(100),
+        ForeignKey("leads.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
     # Storage key (S3 key / blob key)
     object_key = Column(String(1024), nullable=False, unique=True, index=True)

@@ -29,7 +29,7 @@
         <h1 style="margin:0;">Lead #{{ lead.id }}</h1>
         <span class="pill">{{ lead.status }}</span>
         <a class="btn" href="/internal/leads?status=NEEDS_REVIEW">Back</a>
-        <a class="btn" href="/quotes/{{ lead.id }}/status?autostart=0">Customer status page</a>
+        <a class="btn" href="/processing/{{ lead.id }}">Customer status page</a>
         <a class="btn" href="/quotes/{{ lead.id }}/json" target="_blank" rel="noopener">JSON</a>
         {% if lead.status in ["SUCCEEDED","NEEDS_REVIEW"] %}
           <a class="btn" href="/quotes/{{ lead.id }}/html" target="_blank" rel="noopener">HTML</a>
