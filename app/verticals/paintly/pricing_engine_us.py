@@ -92,6 +92,15 @@ def _safe_float(v: Any) -> Optional[float]:
         return None
 
 
+def _tenant_money(pricing: Dict[str, Any], *keys: str) -> Optional[float]:
+    for key in keys:
+        if key in pricing:
+            value = _safe_float(pricing.get(key))
+            if value is not None:
+                return value
+    return None
+
+
 def _extract_intake_payload(lead: Any) -> Dict[str, Any]:
     raw = getattr(lead, "intake_payload", None)
     if not raw:
@@ -326,6 +335,7 @@ def _quote_inputs_to_surface(q: Dict[str, Any]) -> Dict[str, Any]:
 def price_from_vision(
     vision_surface: Dict[str, Any],
     rules: Optional[Dict[str, Any]] = None,
+    tenant_pricing: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     rules = rules or load_rules_default()
 
@@ -369,7 +379,34 @@ def price_from_vision(
             "surface_type": surface_type,
         }
 
-    rate_cfg = base_rates[surface_type]
+    rate_cfg = dict(base_rates[surface_type] or {})
+
+    tenant_pricing = tenant_pricing if isinstance(tenant_pricing, dict) else {}
+    tenant_price_per_m2 = _tenant_money(
+        tenant_pricing,
+        "price_per_m2",
+        "walls_rate_eur_per_sqm",
+    )
+    tenant_minimum_price = _tenant_money(
+        tenant_pricing,
+        "minimum_price",
+        "minimum_prijs",
+        "minimum_price_eur",
+    )
+    tenant_travel_cost = _tenant_money(
+        tenant_pricing,
+        "callout_fee",
+        "voorrijkosten",
+        "travel_cost_eur",
+    )
+
+    if (
+        surface_type == "walls"
+        and (rate_cfg.get("unit") or "").lower() == "sqm"
+        and tenant_price_per_m2 is not None
+        and tenant_price_per_m2 > 0
+    ):
+        rate_cfg["rate_eur"] = float(tenant_price_per_m2)
 
     # If pricing_ready is required, allow a range estimate (instead of €0)
     if require_pricing_ready and not pricing_ready:
@@ -524,6 +561,11 @@ def price_from_vision(
     margin_eur = cost_eur * margin_rate
     total_eur = cost_eur + margin_eur
 
+    if tenant_minimum_price is not None and tenant_minimum_price > 0:
+        total_eur = max(total_eur, float(tenant_minimum_price))
+    if tenant_travel_cost is not None and tenant_travel_cost > 0:
+        total_eur += float(tenant_travel_cost)
+
     item = line_items[-1]
     item.update(
         {
@@ -542,6 +584,9 @@ def price_from_vision(
             "margin_rate": margin_rate,
             "margin_eur": round(margin_eur, 2),
             "total_eur": round(total_eur, 2),
+            "tenant_price_per_m2": tenant_price_per_m2,
+            "tenant_minimum_prijs": tenant_minimum_price,
+            "tenant_voorrijkosten": tenant_travel_cost,
         }
     )
 
@@ -588,6 +633,7 @@ def run_pricing_engine(
     lead: Any,
     vision: Union[Dict[str, Any], list],
     rules: Optional[Dict[str, Any]] = None,
+    tenant_pricing: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Entry point used by engine step.
@@ -613,7 +659,11 @@ def run_pricing_engine(
     # Inject area + surface_type from lead/intake overrides (EU migration safety net)
     vision_surface = _inject_overrides_from_lead(lead, vision_surface)
 
-    return price_from_vision(vision_surface, rules=rules)
+    return price_from_vision(
+        vision_surface,
+        rules=rules,
+        tenant_pricing=tenant_pricing,
+    )
 
 
 __all__ = [

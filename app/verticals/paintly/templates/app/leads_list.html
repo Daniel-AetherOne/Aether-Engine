@@ -74,7 +74,7 @@
         </div>
         <div>
           <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.total }}</div>
-          <div class="text-sm text-slate-400">Totaal offertes</div>
+          <div class="text-xs uppercase tracking-wide text-slate-400">Totaal offertes</div>
         </div>
       </div>
     </div>
@@ -88,7 +88,7 @@
         </div>
         <div>
           <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.new }}</div>
-          <div class="text-sm text-slate-400">Nieuw / Concept</div>
+          <div class="text-xs uppercase tracking-wide text-slate-400">Nieuw / Concept</div>
         </div>
       </div>
     </div>
@@ -102,7 +102,7 @@
         </div>
         <div>
           <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.pending }}</div>
-          <div class="text-sm text-slate-400">Offerte verstuurd</div>
+          <div class="text-xs uppercase tracking-wide text-slate-400">Offerte verstuurd</div>
         </div>
       </div>
     </div>
@@ -116,7 +116,7 @@
         </div>
         <div>
           <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.accepted }}</div>
-          <div class="text-sm text-slate-400">Geaccepteerd</div>
+          <div class="text-xs uppercase tracking-wide text-slate-400">Geaccepteerd</div>
         </div>
       </div>
     </div>
@@ -141,11 +141,11 @@
     <div class="overflow-x-auto">
       <table class="min-w-full">
         <thead>
-          <tr class="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-            <th class="px-5 py-4 text-left font-medium">Klant</th>
-            <th class="px-5 py-4 text-left font-medium">Status</th>
-            <th class="px-5 py-4 text-left font-medium">Offerte</th>
-            <th class="px-5 py-4 text-right font-medium">Acties</th>
+          <tr class="border-b border-slate-100 text-[11px] uppercase tracking-[0.14em] text-slate-400">
+            <th class="px-5 py-3.5 text-left font-medium">Klant</th>
+            <th class="px-5 py-3.5 text-left font-medium">Status</th>
+            <th class="px-5 py-3.5 text-left font-medium">Offerte</th>
+            <th class="px-5 py-3.5 text-right font-medium">Acties</th>
           </tr>
         </thead>
 
@@ -163,9 +163,9 @@
               'DRAFT': 'Concept'
             } %}
             {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
-              {% set badge_color = 'bg-emerald-50 text-emerald-600' %}
+              {% set badge_color = 'bg-emerald-50 text-emerald-700' %}
             {% elif st in ['SENT','VIEWED'] %}
-              {% set badge_color = 'bg-amber-50 text-amber-600' %}
+              {% set badge_color = 'bg-amber-50 text-amber-700' %}
             {% elif st in ['CANCELLED'] %}
               {% set badge_color = 'bg-rose-50 text-rose-600' %}
             {% else %}
@@ -174,9 +174,9 @@
 
             {% set total = lead.get("total") if lead is mapping else None %}
 
-            <tr class="border-b border-slate-100 last:border-0 transition hover:bg-slate-50/70">
+            <tr class="border-b border-slate-100 last:border-0 transition hover:bg-slate-50">
               <!-- Customer -->
-              <td class="px-5 py-4 align-top">
+              <td class="px-5 py-5 align-middle">
                 <div class="flex flex-col gap-1">
                   <a href="/app/leads/{{ lead.id }}" class="text-sm font-medium text-slate-900 transition hover:text-sky-600">
                     {{ lead.customer_name or "—" }}
@@ -194,14 +194,14 @@
               </td>
 
               <!-- Status -->
-              <td class="px-5 py-4 align-top">
-                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ badge_color }}">
+              <td class="px-5 py-5 align-middle">
+                <span class="inline-flex items-center rounded-full border border-transparent px-3 py-1 text-xs font-medium {{ badge_color }}">
                   {{ status_labels.get(st, "Nieuw") }}
                 </span>
               </td>
 
               <!-- Estimate -->
-              <td class="px-5 py-4 align-top">
+              <td class="px-5 py-5 align-middle">
                 <div class="flex flex-col gap-2">
                   {% if lead.estimate_html_key %}
                     <span class="inline-flex w-fit items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-600">
@@ -228,13 +228,13 @@
               </td>
 
               <!-- Actions -->
-              <td class="px-5 py-4 align-top text-right">
-                <div class="flex flex-wrap justify-end gap-2">
+              <td class="px-5 py-5 align-middle text-right">
+                <div class="flex flex-wrap items-center justify-end gap-3">
                   {% set a = lead.next_action %}
                   {% if a.method == "POST" %}
                     <form method="post" action="{{ a.href }}" class="m-0">
                       <button
-                        class="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+                        class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
                         type="submit"
                       >
                         {{ a.label }}
@@ -242,7 +242,7 @@
                     </form>
                   {% else %}
                     <a
-                      class="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+                      class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
                       href="{{ a.href }}"
                     >
                       {{ a.label }}

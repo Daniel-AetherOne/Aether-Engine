@@ -4,15 +4,15 @@ from typing import Dict
 import stripe
 
 from app.core.settings import settings
+from app.core.plan_catalog import PLAN_CATALOG
 
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 
-# Environment-based mapping from internal plan_code -> Stripe price_id
+# Backwards-compatible mapping export, derived from the central plan catalog.
 PLAN_PRICE_MAPPING: Dict[str, str | None] = {
-    "starter_99": os.getenv("STRIPE_PRICE_STARTER_99"),
-    "pro_199": os.getenv("STRIPE_PRICE_PRO_199"),
-    "business_399": os.getenv("STRIPE_PRICE_BUSINESS_399"),
+    code: (os.getenv(item.stripe_price_env_key) or "").strip() or None
+    for code, item in PLAN_CATALOG.items()
 }
 
 # Base URL used for Stripe redirect URLs.

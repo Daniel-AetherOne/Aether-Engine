@@ -64,7 +64,7 @@
     <div class="min-h-[calc(100vh-24px)] overflow-hidden rounded-[30px] border border-slate-200/70 bg-[#f8fbff] shadow-soft lg:flex">
 
       <!-- Sidebar -->
-      <aside class="hidden lg:flex lg:w-72 lg:flex-col border-r border-slate-200/70 bg-white/80 backdrop-blur-sm">
+      <aside class="hidden lg:flex lg:w-72 lg:flex-col border-r border-slate-200 bg-slate-50">
         <!-- Logo -->
         <div class="px-5 py-6">
           <div class="flex items-center gap-3">
@@ -95,11 +95,11 @@
             <a href="{{ href }}"
                class="group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all
                  {% if active_condition %}
-                   bg-slate-100 text-slate-900
+                   bg-blue-50 text-blue-600 font-medium
                  {% else %}
-                   text-slate-500 hover:bg-slate-50 hover:text-slate-900
+                   text-slate-500 hover:bg-slate-100 hover:text-slate-900
                  {% endif %}">
-              <svg class="h-5 w-5 {% if active_condition %}text-sky-500{% else %}text-slate-400 group-hover:text-slate-700{% endif %} transition-colors"
+              <svg class="h-5 w-5 {% if active_condition %}text-blue-600{% else %}text-slate-400 group-hover:text-slate-600{% endif %} transition-colors"
                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}"/>
               </svg>
@@ -126,6 +126,12 @@
           {{ nav_link('/app/calendar', 'Agenda',
             'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
             path.startswith('/app/calendar')) }}
+
+          <div class="my-2 border-t border-slate-200"></div>
+
+          {{ nav_link('/app/settings', 'Instellingen',
+            'M10.325 4.317a1 1 0 011.35-.936l.527.211a1 1 0 001.357-.556l.21-.527a1 1 0 011.873 0l.21.527a1 1 0 001.357.556l.527-.211a1 1 0 011.35.936l.05.566a1 1 0 001.114.873l.566-.05a1 1 0 01.936 1.35l-.211.527a1 1 0 00.556 1.357l.527.21a1 1 0 010 1.873l-.527.21a1 1 0 00-.556 1.357l.211.527a1 1 0 01-.936 1.35l-.566-.05a1 1 0 00-1.114.873l-.05.566a1 1 0 01-1.35.936l-.527-.211a1 1 0 00-1.357.556l-.21.527a1 1 0 01-1.873 0l-.21-.527a1 1 0 00-1.357-.556l-.527.211a1 1 0 01-1.35-.936l-.05-.566a1 1 0 00-1.114-.873l-.566.05a1 1 0 01-.936-1.35l.211-.527a1 1 0 00-.556-1.357l-.527-.21a1 1 0 010-1.873l.527-.21a1 1 0 00.556-1.357l-.211-.527a1 1 0 01.936-1.35l.566.05a1 1 0 001.114-.873l.05-.566z M12 15a3 3 0 100-6 3 3 0 000 6z',
+            path.startswith('/app/settings')) }}
         </nav>
 
         <!-- Bottom section -->

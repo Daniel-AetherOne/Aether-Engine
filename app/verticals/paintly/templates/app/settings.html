@@ -1,0 +1,126 @@
+{% extends "app/layout.html" %}
+{% block content %}
+
+<div class="mx-auto max-w-2xl space-y-6">
+  <div class="rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm">
+    <div class="text-sm text-slate-400">Instellingen</div>
+    <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">Instellingen</h1>
+  </div>
+
+  {% if saved in ["1", "account", "pricing"] %}
+    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+      {% if saved == "account" %}
+        Account opgeslagen.
+      {% elif saved == "pricing" %}
+        Prijzen opgeslagen.
+      {% else %}
+        Instellingen opgeslagen.
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <form method="post" action="/app/settings" class="rounded-[24px] border border-slate-200/70 bg-white p-6 shadow-sm">
+    <input type="hidden" name="section" value="account" />
+    <div class="space-y-8">
+      <h2 class="text-base font-semibold text-slate-900">Account</h2>
+
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-slate-700">Naam</label>
+        <input
+          class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+          name="account_name"
+          type="text"
+          value="{{ account_name }}"
+        />
+      </div>
+
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+        <input
+          class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+          name="account_email"
+          type="email"
+          value="{{ account_email }}"
+        />
+      </div>
+    </div>
+
+    <div class="mt-6 flex justify-end gap-2">
+      <a
+        href="/auth/login"
+        class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+      >
+        Wachtwoord wijzigen
+      </a>
+      <button
+        type="submit"
+        class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+      >
+        Opslaan account
+      </button>
+    </div>
+  </form>
+
+  <form method="post" action="/app/settings" class="rounded-[24px] border border-slate-200/70 bg-white p-6 shadow-sm">
+    <input type="hidden" name="section" value="pricing" />
+    <div class="space-y-8">
+      <h2 class="text-base font-semibold text-slate-900">Prijzen</h2>
+      <p class="-mt-4 text-sm text-slate-500">
+        Deze instellingen worden gebruikt voor het automatisch berekenen van offertes.
+      </p>
+
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-slate-700">Prijs per m²</label>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">€</span>
+          <input
+            class="h-10 w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+            name="price_per_m2"
+            type="text"
+            value="{{ price_per_m2 }}"
+            placeholder="Bijv. 35"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-slate-700">Minimum prijs</label>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">€</span>
+          <input
+            class="h-10 w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+            name="minimum_price"
+            type="text"
+            value="{{ minimum_price }}"
+            placeholder="Bijv. 250"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label class="mb-1.5 block text-sm font-medium text-slate-700">Voorrijkosten</label>
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">€</span>
+          <input
+            class="h-10 w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+            name="travel_cost"
+            type="text"
+            value="{{ travel_cost }}"
+            placeholder="Bijv. 50"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 flex justify-end">
+      <button
+        type="submit"
+        class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+      >
+        Opslaan prijzen
+      </button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

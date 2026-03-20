@@ -4,6 +4,13 @@ from enum import StrEnum
 from typing import Iterable, Mapping, Protocol
 import logging
 
+from app.core.plan_catalog import (
+    DEFAULT_PLAN_CODE,
+    PLAN_CODE_ALIASES,
+    PLAN_CATALOG,
+    resolve_plan_code,
+)
+
 
 class Feature(StrEnum):
     """
@@ -23,38 +30,12 @@ logger = logging.getLogger(__name__)
 
 
 PLAN_FEATURES: Mapping[str, frozenset[FeatureName]] = {
-    "starter_99": frozenset(
-        {
-            Feature.BASIC_SENDING.value,
-            Feature.PDF_EXPORT.value,
-        }
-    ),
-    "pro_199": frozenset(
-        {
-            Feature.BASIC_SENDING.value,
-            Feature.PDF_EXPORT.value,
-            Feature.BRANDING.value,
-        }
-    ),
-    "business_399": frozenset(
-        {
-            Feature.BASIC_SENDING.value,
-            Feature.PDF_EXPORT.value,
-            Feature.BRANDING.value,
-            Feature.WHITELABEL.value,
-        }
-    ),
+    code: item.entitlement_features for code, item in PLAN_CATALOG.items()
 }
 
 
 _ACCESSIBLE_STATUSES: frozenset[str] = frozenset({"active", "trialing"})
-_PLAN_CODE_ALIASES: Mapping[str, str] = {
-    "starter": "starter_99",
-    "starter_monthly": "starter_99",
-    "starter-yearly": "starter_99",
-    "pro": "pro_199",
-    "business": "business_399",
-}
+_PLAN_CODE_ALIASES: Mapping[str, str] = PLAN_CODE_ALIASES
 
 
 def is_subscription_accessible(subscription_status: str | None) -> bool:
@@ -86,9 +67,8 @@ def get_plan_features(plan_code: str | None) -> set[FeatureName]:
     - Whitespace is ignored
     """
 
-    code = (plan_code or "").strip()
     # Default to Starter when plan code is missing in dev/runtime records.
-    normalized = _PLAN_CODE_ALIASES.get(code.lower(), code) if code else "starter_99"
+    normalized = resolve_plan_code(plan_code, allow_aliases=True) or DEFAULT_PLAN_CODE
     features = PLAN_FEATURES.get(normalized)
     return set(features) if features else set()
 

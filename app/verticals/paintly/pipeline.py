@@ -165,9 +165,15 @@ def compute_quote_for_lead(db: Session, lead: Lead, render_html: bool = True) ->
             raise
 
     # --------------------------------------------------
-    # 2) Pricing stage
+    # 2) Pricing stage (tenant pricing aware)
     # --------------------------------------------------
-    pricing = run_pricing_engine(lead, vision)
+    tenant_row: Tenant | None = (
+        db.query(Tenant).filter(Tenant.id == lead.tenant_id).first()
+    )
+    tenant_pricing = (
+        dict(getattr(tenant_row, "pricing_json", {}) or {}) if tenant_row is not None else {}
+    )
+    pricing = run_pricing_engine(lead, vision, tenant_pricing=tenant_pricing)
     pricing = _ensure_obj(pricing)
 
     # --------------------------------------------------
@@ -210,13 +216,6 @@ def compute_quote_for_lead(db: Session, lead: Lead, render_html: bool = True) ->
     # 5) Branding (logo) gating via entitlement
     # --------------------------------------------------
     if isinstance(estimate, dict):
-        try:
-            tenant_row: Tenant | None = (
-                db.query(Tenant).filter(Tenant.id == lead.tenant_id).first()
-            )
-        except Exception:
-            tenant_row = None
-
         if tenant_row is not None:
             class _BrandingCtx:
                 # Minimal TenantUsageLike context for USE_BRANDING entitlement

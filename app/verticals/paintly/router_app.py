@@ -34,9 +34,9 @@ from app.models.upload_record import UploadRecord, UploadStatus
 from app.core.settings import settings
 from app.core.stripe_config import (
     APP_BASE_URL,
-    PLAN_PRICE_MAPPING,
     ensure_stripe_api_key,
 )
+from app.core.plan_catalog import DEFAULT_PLAN_CODE, PLAN_CATALOG, get_stripe_price_id
 from app.dependencies import tenant_service
 from app.config.plans import PLANS
 from app.services.usage_service import get_or_create_usage, increment_usage
@@ -600,7 +600,7 @@ def app_dashboard(
     )
 
     current_plan_code = getattr(tenant, "plan_code", None) if tenant is not None else None
-    current_plan_code = current_plan_code or "starter_99"
+    current_plan_code = current_plan_code or DEFAULT_PLAN_CODE
 
     subscription_status = (
         getattr(tenant, "subscription_status", None) if tenant is not None else None
@@ -624,7 +624,7 @@ def app_dashboard(
     usage = get_or_create_usage(db, str(current_user.tenant_id))
     quotes_sent_this_month = int(getattr(usage, "quotes_sent", 0) or 0)
 
-    plan = PLANS.get(current_plan_code) or PLANS.get("starter_99") or {}
+    plan = PLANS.get(current_plan_code) or PLANS.get(DEFAULT_PLAN_CODE) or {}
     quote_limit = plan.get("quote_limit")
     quotes_remaining = (
         None
@@ -656,6 +656,101 @@ def app_dashboard(
     return templates.TemplateResponse("app/dashboard.html", context)
 
 
+@router.get("/settings", response_class=HTMLResponse)
+def app_settings(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    tenant = (
+        db.query(Tenant)
+        .filter(Tenant.id == str(current_user.tenant_id))
+        .first()
+    )
+    pricing = dict(getattr(tenant, "pricing_json", {}) or {})
+    price_per_m2 = pricing.get("price_per_m2", pricing.get("walls_rate_eur_per_sqm"))
+    minimum_price = pricing.get("minimum_prijs", pricing.get("minimum_price_eur"))
+    travel_cost = pricing.get("voorrijkosten", pricing.get("travel_cost_eur"))
+    context = _dashboard_context(
+        request,
+        current_user,
+        db,
+        {
+            "tenant": tenant,
+            "account_name": (getattr(tenant, "company_name", None) or ""),
+            "account_email": (getattr(current_user, "email", None) or ""),
+            "price_per_m2": "" if price_per_m2 is None else str(price_per_m2),
+            "minimum_price": "" if minimum_price is None else str(minimum_price),
+            "travel_cost": "" if travel_cost is None else str(travel_cost),
+            "saved": (request.query_params.get("saved") or "").strip(),
+        },
+    )
+    return templates.TemplateResponse("app/settings.html", context)
+
+
+@router.post("/settings")
+def app_settings_save(
+    request: Request,
+    section: str = Form(...),
+    account_name: str | None = Form(None),
+    account_email: str | None = Form(None),
+    price_per_m2: str | None = Form(None),
+    minimum_price: str | None = Form(None),
+    travel_cost: str | None = Form(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    def _parse_money(raw: str | None) -> float | None:
+        if raw is None:
+            return None
+        value = raw.strip().replace(",", ".")
+        if not value:
+            return None
+        try:
+            parsed = float(value)
+        except ValueError:
+            return None
+        if parsed < 0:
+            return None
+        return round(parsed, 2)
+
+    tenant = (
+        db.query(Tenant)
+        .filter(Tenant.id == str(current_user.tenant_id))
+        .first()
+    )
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    if section == "account":
+        if account_name is not None:
+            tenant.company_name = account_name.strip()
+        if account_email is not None and account_email.strip():
+            current_user.email = account_email.strip()
+    elif section == "pricing":
+        pricing = dict(getattr(tenant, "pricing_json", {}) or {})
+        parsed_price_per_m2 = _parse_money(price_per_m2)
+        parsed_minimum_price = _parse_money(minimum_price)
+        parsed_travel_cost = _parse_money(travel_cost)
+
+        pricing["price_per_m2"] = parsed_price_per_m2
+        pricing["minimum_prijs"] = parsed_minimum_price
+        pricing["voorrijkosten"] = parsed_travel_cost
+
+        # keep existing pricing key used elsewhere in the app
+        pricing["walls_rate_eur_per_sqm"] = parsed_price_per_m2
+        pricing["minimum_price_eur"] = parsed_minimum_price
+        pricing["travel_cost_eur"] = parsed_travel_cost
+        tenant.pricing_json = pricing
+
+    db.add(tenant)
+    db.add(current_user)
+    db.commit()
+
+    saved_section = section if section in {"account", "pricing"} else "1"
+    return RedirectResponse(url=f"/app/settings?saved={saved_section}", status_code=303)
+
+
 @router.get("/billing", response_class=HTMLResponse)
 def app_billing(
     request: Request,
@@ -676,7 +771,7 @@ def app_billing(
     current_plan_code = (
         getattr(tenant, "plan_code", None) if tenant is not None else None
     )
-    current_plan_code = current_plan_code or "starter_99"
+    current_plan_code = current_plan_code or DEFAULT_PLAN_CODE
 
     subscription_status = (
         getattr(tenant, "subscription_status", None) if tenant is not None else None
@@ -702,26 +797,13 @@ def app_billing(
 
     plans = [
         {
-            "code": "starter_99",
-            "name": "Starter",
-            "price_label": "€99 / maand",
-            "quote_limit_label": "99 offertes / maand",
-            "features": ["Basic sending only"],
-        },
-        {
-            "code": "pro_199",
-            "name": "Pro",
-            "price_label": "€199 / maand",
-            "quote_limit_label": "200 offertes / maand",
-            "features": ["PDF export", "Branding/logo"],
-        },
-        {
-            "code": "business_399",
-            "name": "Business",
-            "price_label": "€399 / maand",
-            "quote_limit_label": "Onbeperkt offertes / maand",
-            "features": ["PDF export", "Branding/logo", "Whitelabel"],
-        },
+            "code": item.code,
+            "name": item.name,
+            "price_label": item.price_label,
+            "quote_limit_label": item.quote_limit_label,
+            "features": list(item.ui_features),
+        }
+        for item in PLAN_CATALOG.values()
     ]
 
     context = _dashboard_context(
@@ -790,10 +872,6 @@ def app_billing_upgrade(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
 ):
-    price_id = PLAN_PRICE_MAPPING.get(plan_code)
-    if not price_id:
-        raise HTTPException(status_code=400, detail="Invalid or unavailable plan code")
-
     tenant = (
         db.query(Tenant)
         .filter(Tenant.id == current_user.tenant_id)
@@ -801,6 +879,43 @@ def app_billing_upgrade(
     )
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
+
+    current_plan_code = getattr(tenant, "plan_code", None)
+    available_mapping_keys = sorted(PLAN_CATALOG.keys())
+    resolved_plan_code, price_id = get_stripe_price_id(plan_code)
+    price_id_masked = None if not price_id else f"...{price_id[-6:]}"
+    logger.info(
+        "billing_upgrade_validation tenant_id=%s current_plan_code=%s requested_plan_code=%s available_mapping_keys=%s price_id_found=%s price_id_masked=%s",
+        str(tenant.id),
+        current_plan_code,
+        plan_code,
+        available_mapping_keys,
+        bool(price_id),
+        price_id_masked,
+    )
+    if not resolved_plan_code:
+        logger.warning(
+            "billing_upgrade_validation_failed tenant_id=%s current_plan_code=%s requested_plan_code=%s available_mapping_keys=%s price_id_found=%s reason=%s",
+            str(tenant.id),
+            current_plan_code,
+            plan_code,
+            available_mapping_keys,
+            bool(price_id),
+            "unknown_plan_code",
+        )
+        raise HTTPException(status_code=400, detail="Invalid or unavailable plan code")
+    if not price_id:
+        logger.error(
+            "billing_upgrade_validation_failed tenant_id=%s current_plan_code=%s requested_plan_code=%s resolved_plan_code=%s available_mapping_keys=%s price_id_found=%s reason=%s",
+            str(tenant.id),
+            current_plan_code,
+            plan_code,
+            resolved_plan_code,
+            available_mapping_keys,
+            False,
+            "missing_stripe_price_id_mapping",
+        )
+        raise HTTPException(status_code=400, detail="Invalid or unavailable plan code")
 
     try:
         ensure_stripe_api_key()
@@ -814,13 +929,13 @@ def app_billing_upgrade(
             client_reference_id=str(tenant.id),
             metadata={
                 "tenant_id": str(tenant.id),
-                "target_plan_code": plan_code,
+                "target_plan_code": resolved_plan_code,
             },
             subscription_data={
                 "trial_period_days": 14,
                 "metadata": {
                     "tenant_id": str(tenant.id),
-                    "plan_code": plan_code,
+                    "plan_code": resolved_plan_code,
                 },
             },
         )
@@ -1298,10 +1413,10 @@ def send_estimate(
 
     # Plan-based usage limit check (before sending)
     plan_code = getattr(tenant, "plan_code", None) if tenant is not None else None
-    plan_key = plan_code or "starter_99"
+    plan_key = plan_code or DEFAULT_PLAN_CODE
 
     usage = get_or_create_usage(db, str(lead.tenant_id))
-    plan = PLANS.get(plan_key) or PLANS["starter_99"]
+    plan = PLANS.get(plan_key) or PLANS[DEFAULT_PLAN_CODE]
     quote_limit = plan.get("quote_limit")
 
     logger.info(

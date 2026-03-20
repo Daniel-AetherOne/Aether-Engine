@@ -52,6 +52,176 @@
     </div>
   </div>
 
+  <!-- Oneflow-style offerte analytics -->
+  <div class="space-y-6">
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div class="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-2.5 0-4 1.1-4 2.5S9.5 13 12 13s4 1.1 4 2.5S14.5 18 12 18m0-10V6m0 12v-2" />
+          </svg>
+          <span>Openstaande offertewaarde</span>
+        </div>
+        <div id="kpi-pipeline-value" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+        <div class="mt-2 text-sm text-slate-500">Totale waarde van alle open offertes</div>
+      </div>
+      <div class="rounded-[20px] border border-green-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-green-700">
+          <svg class="h-5 w-5 text-green-600 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3 17 6-6 4 4 7-7" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 8h6v6" />
+          </svg>
+          <span>Gewonnen omzet</span>
+        </div>
+        <div id="kpi-won-revenue" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+      </div>
+      <div class="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v5h5M9 13h6M9 17h6" />
+          </svg>
+          <span>Openstaande offertes</span>
+        </div>
+        <div id="kpi-pending-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+      </div>
+      <div class="rounded-[20px] border border-slate-200/70 bg-white p-4 shadow-sm">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+          </svg>
+          <span>Tekenratio</span>
+        </div>
+        <div id="kpi-sign-rate" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+      </div>
+      <div class="rounded-[20px] border border-green-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-green-700">
+          <svg class="h-5 w-5 text-green-600 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l2.5 1.2L17 4l1 2.3 2 1-.4 2.6L21 12l-1.4 2.1.4 2.6-2 1L17 20l-2.5-.2L12 21l-2.5-1.2L7 20l-1-2.3-2-1 .4-2.6L3 12l1.4-2.1-.4-2.6 2-1L7 4l2.5.2L12 3z" />
+          </svg>
+          <span>Getekend</span>
+        </div>
+        <div id="kpi-signed-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+      </div>
+      <div class="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 9l-6 6m0-6 6 6" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+          </svg>
+          <span>Afgewezen</span>
+        </div>
+        <div id="kpi-rejected-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+      </div>
+      <div class="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 7v5l3 3" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+          </svg>
+          <span>Te laat</span>
+        </div>
+        <div id="kpi-overdue-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+      </div>
+      <div class="rounded-[20px] border border-slate-200/70 bg-white p-4 shadow-sm">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 7v5l3 3" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+          </svg>
+          <span>Gem. tijd tot tekenen</span>
+        </div>
+        <div id="kpi-avg-time-to-sign" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+      </div>
+      <div class="rounded-[20px] border border-orange-300 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-orange-700">
+          <svg class="h-5 w-5 text-orange-600 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v5h5M9 13h6" />
+          </svg>
+          <span>Offertes zonder reactie</span>
+        </div>
+        <div id="kpi-no-response-value" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+        <div class="mt-2 text-sm text-slate-500">Offertes waar nog geen actie op is</div>
+      </div>
+      <div class="rounded-[20px] border-2 border-orange-300 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-orange-700">
+          <svg class="h-5 w-5 text-orange-600 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18A2 2 0 0 0 3.53 21h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+          <span>Actie nodig vandaag</span>
+        </div>
+        <div id="kpi-action-needed-today" class="mt-3 text-3xl font-semibold text-orange-900">-</div>
+        <div class="mt-2 text-sm text-orange-700/80">Offertes ouder dan 3 dagen zonder reactie</div>
+      </div>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-12">
+      <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm xl:col-span-8">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-700">Omzet per maand</h2>
+        <p class="mt-1 text-xs text-slate-400">Getekende omzet per maand</p>
+        <div id="current-month-revenue" class="mt-3 text-sm font-medium text-slate-700">€ 0 deze maand</div>
+        <div class="mt-5 h-72">
+          <canvas id="revenue-by-month-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm xl:col-span-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-700">Statusverdeling</h2>
+        <p class="mt-1 text-xs text-slate-400">Verdeling van offerte statussen</p>
+        <div class="mt-5 h-72">
+          <canvas id="status-breakdown-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-700">Tijd tot ondertekening</h2>
+      <p class="mt-1 text-xs text-slate-400">Aantal offertes per doorlooptijd</p>
+      <div id="time-to-sign-summary" class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div id="time-to-sign-summary-primary" class="text-sm font-medium text-slate-800">Nog geen ondertekeningen</div>
+        <div id="time-to-sign-summary-secondary" class="mt-1 text-xs text-slate-500">0 offertes getekend</div>
+      </div>
+      <div id="time-to-sign-chart-wrap" class="mt-3 h-36">
+        <canvas id="time-to-sign-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="rounded-[24px] border border-slate-200/70 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <h2 class="text-base font-semibold text-slate-900">Recente offertes</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead>
+            <tr class="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+              <th class="px-5 py-3 text-left font-medium">Offerte</th>
+              <th class="px-5 py-3 text-left font-medium">Klant</th>
+              <th class="px-5 py-3 text-left font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in leads[:8] %}
+              <tr class="border-b border-slate-100 last:border-0">
+                <td class="px-5 py-3 text-sm">
+                  <a href="/app/leads/{{ l.id }}" class="font-medium text-slate-800 transition hover:text-sky-600">#{{ l.id }}</a>
+                </td>
+                <td class="px-5 py-3 text-sm text-slate-600">{{ l.name or "Onbekend" }}</td>
+                <td class="px-5 py-3 text-sm text-slate-500">{{ l.status or "Nieuw" }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="3" class="px-5 py-8 text-center text-sm text-slate-400">Nog geen offertes</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- Main grid -->
   <div class="grid gap-6 xl:grid-cols-12">
 
@@ -491,5 +661,213 @@
 
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const eur = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+  const pct = new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 2 });
+  const monthFmt = new Intl.DateTimeFormat("nl-NL", { month: "short", year: "numeric" });
+
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+
+  function buildCharts(summary) {
+    const revenue = summary.revenue_by_month || [];
+    const status = summary.status_breakdown || {};
+    const buckets = summary.time_to_sign_buckets || {};
+    const bucketEntries = [
+      ["0-1 dagen", buckets["0-1_days"] || 0],
+      ["2-3 dagen", buckets["2-3_days"] || 0],
+      ["4-7 dagen", buckets["4-7_days"] || 0],
+      ["8-14 dagen", buckets["8-14_days"] || 0],
+      ["15+ dagen", buckets["15+_days"] || 0],
+    ];
+    const filteredBucketEntries = bucketEntries.filter(([, count]) => count > 0);
+    const bucketLabels = filteredBucketEntries.length
+      ? filteredBucketEntries.map(([label]) => label)
+      : ["Geen data"];
+    const bucketValues = filteredBucketEntries.length
+      ? filteredBucketEntries.map(([, count]) => count)
+      : [0];
+    const totalSignedForBuckets = bucketEntries.reduce((sum, [, count]) => sum + count, 0);
+    const topBucket = filteredBucketEntries.length
+      ? filteredBucketEntries.reduce((best, curr) => (curr[1] > best[1] ? curr : best))
+      : null;
+    const insightText = topBucket && totalSignedForBuckets > 0
+      ? `${pct.format((topBucket[1] / totalSignedForBuckets) * 100)}% binnen ${topBucket[0].replace(" dagen", "")}`
+      : "Nog geen ondertekeningen";
+    const pointsCount = filteredBucketEntries.length;
+    const timeToSignChartWrap = document.getElementById("time-to-sign-chart-wrap");
+    if (topBucket && totalSignedForBuckets > 0) {
+      setText("time-to-sign-summary-primary", insightText);
+      setText("time-to-sign-summary-secondary", `${totalSignedForBuckets} offerte${totalSignedForBuckets === 1 ? "" : "s"} getekend`);
+    } else {
+      setText("time-to-sign-summary-primary", "Nog geen ondertekeningen");
+      setText("time-to-sign-summary-secondary", "0 offertes getekend");
+    }
+    if (timeToSignChartWrap) timeToSignChartWrap.classList.remove("hidden");
+    const revenueLabels = revenue.map((x) => {
+      const [y, m] = String(x.month || "").split("-");
+      const dt = new Date(Number(y), Number(m) - 1, 1);
+      return Number.isNaN(dt.getTime()) ? String(x.month || "") : monthFmt.format(dt);
+    });
+
+    new Chart(document.getElementById("revenue-by-month-chart"), {
+      type: "bar",
+      data: {
+        labels: revenueLabels,
+        datasets: [{
+          label: "Getekende omzet per maand",
+          data: revenue.map((x) => x.value),
+          backgroundColor: "rgba(56, 189, 248, 0.75)",
+          borderColor: "rgba(56, 189, 248, 0.95)",
+          borderWidth: 1,
+          borderRadius: 6,
+          categoryPercentage: 0.52,
+          barPercentage: 0.7,
+          maxBarThickness: 28,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: { display: true, text: "Maand" },
+            ticks: { color: "#64748b", font: { size: 11 } },
+            grid: { display: false, drawBorder: false },
+            border: { display: false },
+          },
+          y: {
+            title: { display: true, text: "Omzet (€)" },
+            ticks: {
+              color: "#64748b",
+              font: { size: 11 },
+              callback: (value) => eur.format(value),
+            },
+            grid: { color: "rgba(148, 163, 184, 0.12)", drawBorder: false },
+            border: { display: false },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#0f172a",
+            titleColor: "#f8fafc",
+            bodyColor: "#f8fafc",
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              title: (items) => (items[0] ? items[0].label : ""),
+              label: (ctx) => `Omzet: ${eur.format(ctx.parsed.y || 0)}`,
+            },
+          },
+        },
+      },
+    });
+
+    new Chart(document.getElementById("status-breakdown-chart"), {
+      type: "doughnut",
+      data: {
+        labels: ["Openstaand", "Getekend", "Afgewezen", "Overig"],
+        datasets: [{
+          data: [status.pending || 0, status.signed || 0, status.rejected || 0, status.other || 0],
+          backgroundColor: ["#f59e0b", "#10b981", "#ef4444", "#94a3b8"],
+          borderColor: "#ffffff",
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { boxWidth: 10, boxHeight: 10, padding: 16, color: "#64748b", font: { size: 11 } },
+          },
+          tooltip: {
+            backgroundColor: "#0f172a",
+            titleColor: "#f8fafc",
+            bodyColor: "#f8fafc",
+            padding: 10,
+            cornerRadius: 8,
+          },
+        },
+      },
+    });
+
+    new Chart(document.getElementById("time-to-sign-chart"), {
+      type: "bar",
+      data: {
+        labels: bucketLabels,
+        datasets: [{
+          label: "Aantal offertes",
+          data: bucketValues,
+          backgroundColor: "#6366f1",
+          borderRadius: 8,
+          categoryPercentage: pointsCount <= 2 ? 0.9 : 0.7,
+          barPercentage: pointsCount <= 2 ? 0.85 : 0.6,
+          maxBarThickness: pointsCount <= 2 ? 36 : 28,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: { top: 10 },
+        },
+        scales: {
+          x: {
+            ticks: { color: "#64748b", font: { size: 11 } },
+            grid: { display: false, drawBorder: false },
+            border: { display: false },
+          },
+          y: {
+            ticks: { color: "#64748b", font: { size: 11 }, precision: 0 },
+            grid: { color: "#f1f5f9", drawBorder: false },
+            border: { display: false },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#0f172a",
+            titleColor: "#f8fafc",
+            bodyColor: "#f8fafc",
+            padding: 10,
+            cornerRadius: 8,
+          },
+        },
+      },
+    });
+  }
+
+  async function loadDashboardSummary() {
+    const res = await fetch("/app/api/dashboard/summary", { headers: { Accept: "application/json" } });
+    if (!res.ok) return;
+    const summary = await res.json();
+    const k = summary.kpis || {};
+    const revenue = summary.revenue_by_month || [];
+    const currentMonthRevenue = revenue.length ? (revenue[revenue.length - 1].value || 0) : 0;
+
+    setText("kpi-pipeline-value", eur.format(k.pipeline_value || 0));
+    setText("kpi-won-revenue", eur.format(k.won_revenue || 0));
+    setText("kpi-pending-count", String(k.pending_count || 0));
+    setText("kpi-signed-count", String(k.signed_count || 0));
+    setText("kpi-rejected-count", String(k.rejected_count || 0));
+    setText("kpi-overdue-count", String(k.overdue_count || 0));
+    setText("kpi-no-response-value", eur.format(k.no_response_value || 0));
+    setText("kpi-action-needed-today", String(k.action_needed_today_count || 0));
+    setText("kpi-sign-rate", `${pct.format(k.sign_rate || 0)}%`);
+    setText("kpi-avg-time-to-sign", `${pct.format(k.avg_time_to_sign_days || 0)} dagen`);
+    setText("current-month-revenue", `${eur.format(currentMonthRevenue)} deze maand`);
+
+    buildCharts(summary);
+  }
+
+  loadDashboardSummary();
+</script>
 
 {% endblock %}
