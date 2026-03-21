@@ -1,0 +1,12 @@
+{% if ok %}
+  <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+    {{ message }}
+    {% if html_link %}
+      <a href="{{ html_link }}" target="_blank" class="ml-1 font-semibold underline">Open event</a>
+    {% endif %}
+  </div>
+{% else %}
+  <div class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+    {{ message }}
+  </div>
+{% endif %}

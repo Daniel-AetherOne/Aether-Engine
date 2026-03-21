@@ -7,12 +7,14 @@
     <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">Instellingen</h1>
   </div>
 
-  {% if saved in ["1", "account", "pricing"] %}
+  {% if saved in ["1", "account", "pricing", "integrations"] %}
     <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
       {% if saved == "account" %}
         Account opgeslagen.
       {% elif saved == "pricing" %}
         Prijzen opgeslagen.
+      {% elif saved == "integrations" %}
+        Integratie opgeslagen.
       {% else %}
         Instellingen opgeslagen.
       {% endif %}
@@ -121,6 +123,53 @@
       </button>
     </div>
   </form>
+
+  <div class="rounded-[24px] border border-slate-200/70 bg-white p-6 shadow-sm space-y-4">
+    <h2 class="text-base font-semibold text-slate-900">Integraties</h2>
+    <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <div class="text-sm font-medium text-slate-900">Google Calendar</div>
+          <div class="text-xs text-slate-500">
+            {% if google_calendar_connected %}
+              Verbonden met kalender <span class="font-medium text-slate-700">{{ google_calendar_id or "primary" }}</span>.
+            {% else %}
+              Niet verbonden.
+            {% endif %}
+          </div>
+        </div>
+        {% if google_calendar_connected %}
+          <button
+            type="button"
+            onclick="disconnectGoogleCalendar()"
+            class="inline-flex h-9 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition hover:bg-rose-50"
+          >
+            Ontkoppelen
+          </button>
+        {% else %}
+          <a
+            href="/integrations/google-calendar/connect"
+            class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-3 text-xs font-medium text-white transition hover:bg-sky-600"
+          >
+            Verbind Google Calendar
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  async function disconnectGoogleCalendar() {
+    const ok = window.confirm("Google Calendar ontkoppelen?");
+    if (!ok) return;
+    const res = await fetch("/integrations/google-calendar/disconnect", { method: "DELETE" });
+    if (res.ok) {
+      window.location.href = "/app/settings?saved=integrations";
+      return;
+    }
+    window.alert("Ontkoppelen mislukt. Probeer opnieuw.");
+  }
+</script>
 
 {% endblock %}

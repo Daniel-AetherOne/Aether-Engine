@@ -6,6 +6,8 @@ from app.models.user import User  # noqa
 from app.models.job import Job  # noqa
 from app.models.tenant_usage import TenantUsage  # noqa
 from app.models.lead_training_record import LeadTrainingRecord  # noqa
+from app.models.calendar_connection import CalendarConnection  # noqa
+from app.models.quote_calendar_link import QuoteCalendarLink  # noqa
 
 # (als je dit al had)
 from app.models.upload_record import UploadRecord  # noqa  (alleen als die bestaat)

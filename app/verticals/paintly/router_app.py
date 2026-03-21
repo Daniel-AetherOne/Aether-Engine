@@ -26,6 +26,7 @@ from app.models.lead import Lead
 from app.models.job import Job
 from app.models.user import User
 from app.models.tenant import Tenant
+from app.models.calendar_connection import CalendarConnection
 from app.models.tenant_settings import TenantSettings
 from app.services.storage import get_storage, get_text
 from app.models.lead import LeadFile
@@ -668,6 +669,14 @@ def app_settings(
         .first()
     )
     pricing = dict(getattr(tenant, "pricing_json", {}) or {})
+    google_connection = (
+        db.query(CalendarConnection)
+        .filter(
+            CalendarConnection.tenant_id == str(current_user.tenant_id),
+            CalendarConnection.provider == "google",
+        )
+        .first()
+    )
     price_per_m2 = pricing.get("price_per_m2", pricing.get("walls_rate_eur_per_sqm"))
     minimum_price = pricing.get("minimum_prijs", pricing.get("minimum_price_eur"))
     travel_cost = pricing.get("voorrijkosten", pricing.get("travel_cost_eur"))
@@ -683,6 +692,10 @@ def app_settings(
             "minimum_price": "" if minimum_price is None else str(minimum_price),
             "travel_cost": "" if travel_cost is None else str(travel_cost),
             "saved": (request.query_params.get("saved") or "").strip(),
+            "google_calendar_connected": bool(google_connection),
+            "google_calendar_id": (
+                google_connection.calendar_id if google_connection else "primary"
+            ),
         },
     )
     return templates.TemplateResponse("app/settings.html", context)
@@ -1157,6 +1170,14 @@ def app_lead_detail(
         .filter(Tenant.id == str(current_user.tenant_id))
         .first()
     )
+    google_connection = (
+        db.query(CalendarConnection)
+        .filter(
+            CalendarConnection.tenant_id == str(current_user.tenant_id),
+            CalendarConnection.provider == "google",
+        )
+        .first()
+    )
 
     context = _dashboard_context(
         request,
@@ -1177,6 +1198,7 @@ def app_lead_detail(
             "estimate_overrides": overrides,
             "effective_total_display": effective_total_display,
             "entitlements": tenant_entitlements(tenant),
+            "google_calendar_connected": bool(google_connection),
         },
     )
     return templates.TemplateResponse("app/lead_detail.html", context)
@@ -1528,6 +1550,28 @@ def _get_job_or_404(db: Session, job_id: int, tenant_id: str) -> Job:
     return job
 
 
+def _sync_lead_schedule_window(
+    *,
+    db: Session,
+    tenant_id: str,
+    lead_id: str,
+    start_utc: datetime | None,
+    duration_hours: int = 4,
+) -> None:
+    lead = (
+        db.query(Lead).filter(Lead.id == lead_id, Lead.tenant_id == tenant_id).first()
+    )
+    if not lead:
+        return
+
+    lead.scheduled_start = start_utc
+    if start_utc is None:
+        lead.scheduled_end = None
+    else:
+        lead.scheduled_end = start_utc + timedelta(hours=duration_hours)
+    db.add(lead)
+
+
 @router.post("/jobs/{job_id}/status")
 def app_job_set_status(
     request: Request,
@@ -1657,6 +1701,12 @@ def job_schedule(
     # Store tz if field exists
     if hasattr(job, "scheduled_tz"):
         job.scheduled_tz = tz_name
+    _sync_lead_schedule_window(
+        db=db,
+        tenant_id=str(current_user.tenant_id),
+        lead_id=job.lead_id,
+        start_utc=dt_utc,
+    )
 
     # Auto status
     if (job.status or "").upper() in ("NEW", "SCHEDULED"):
@@ -1708,6 +1758,12 @@ def job_quick_schedule(
     job.scheduled_at = dt_utc
     if hasattr(job, "scheduled_tz"):
         job.scheduled_tz = tz_name
+    _sync_lead_schedule_window(
+        db=db,
+        tenant_id=str(current_user.tenant_id),
+        lead_id=job.lead_id,
+        start_utc=dt_utc,
+    )
 
     if (job.status or "").upper() in ("NEW", "SCHEDULED"):
         job.status = "SCHEDULED"
@@ -1734,6 +1790,12 @@ def job_unschedule(
     job.scheduled_at = None
     if hasattr(job, "scheduled_tz"):
         job.scheduled_tz = _get_tenant_timezone(current_user, job)
+    _sync_lead_schedule_window(
+        db=db,
+        tenant_id=str(current_user.tenant_id),
+        lead_id=job.lead_id,
+        start_utc=None,
+    )
 
     if (job.status or "").upper() == "SCHEDULED":
         job.status = "NEW"
@@ -1754,6 +1816,12 @@ def job_schedule_now(
     now = _utcnow()
     if not getattr(job, "scheduled_at", None):
         job.scheduled_at = now
+        _sync_lead_schedule_window(
+            db=db,
+            tenant_id=str(current_user.tenant_id),
+            lead_id=job.lead_id,
+            start_utc=now,
+        )
 
     if hasattr(job, "scheduled_tz") and not getattr(job, "scheduled_tz", None):
         job.scheduled_tz = _get_tenant_timezone(current_user, job)

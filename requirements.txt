@@ -17,6 +17,7 @@ pydantic-settings
 
 requests
 httpx
+cryptography
 boto3
 stripe
 

@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     POSTMARK_FROM: str = ""
     POSTMARK_REPLY_TO: str = ""
     APP_PUBLIC_BASE_URL: str = "http://127.0.0.1:8000"
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_OAUTH_REDIRECT_URI: str = ""
+    GOOGLE_CALENDAR_SCOPES: str = "https://www.googleapis.com/auth/calendar.events"
 
     # Public estimate flow
     SEND_ACCEPT_CONFIRMATION_EMAIL: bool = True

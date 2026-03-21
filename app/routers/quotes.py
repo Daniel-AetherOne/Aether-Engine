@@ -3,19 +3,36 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.auth.deps import get_current_user
 from app.db import get_db
 from app.models import Lead, LeadFile, Tenant
+from app.models.calendar_connection import CalendarConnection
+from app.models.quote_calendar_link import QuoteCalendarLink
+from app.models.user import User
 from app.services.storage import get_storage, head_ok, MAX_BYTES, ALLOWED_CONTENT_TYPES
 from app.services.metrics import inc  # ✅ FASE 6 metrics
+from app.verticals.paintly.calendar_ics import (
+    build_quote_calendar_payload,
+    build_quote_ics,
+    build_quote_ics_filename,
+)
+from app.verticals.paintly.google_calendar_oauth import (
+    create_google_calendar_event,
+    decrypt_token,
+    encrypt_token,
+    refresh_access_token,
+    token_expiry_from_response,
+)
+from app.verticals.paintly.google_calendar_quote import build_google_event_payload
 from app.verticals.registry import get as get_vertical
 from app.core.settings import settings
 from app.verticals.paintly.estimate_email import (
@@ -24,6 +41,7 @@ from app.verticals.paintly.estimate_email import (
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 templates = Jinja2Templates(directory="app/templates")
+paintly_templates = Jinja2Templates(directory="app/verticals/paintly/templates")
 logger = logging.getLogger(__name__)
 
 
@@ -475,3 +493,163 @@ def quote_html(lead_id: str, db: Session = Depends(get_db)):
 
     inc("quote_html_redirects_total")
     return RedirectResponse(url, status_code=302)
+
+
+@router.get("/{quote_id}/calendar.ics")
+def quote_calendar_ics(
+    quote_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    lead = (
+        db.query(Lead)
+        .filter(Lead.id == quote_id, Lead.tenant_id == str(current_user.tenant_id))
+        .first()
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Quote not found")
+
+    try:
+        payload = build_quote_calendar_payload(lead)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    ics_body = build_quote_ics(payload)
+    filename = build_quote_ics_filename(quote_id)
+
+    return Response(
+        content=ics_body,
+        media_type="text/calendar; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+def _create_google_calendar_event_for_quote(
+    *,
+    quote_id: str,
+    db: Session,
+    current_user: User,
+):
+    tenant_id = str(current_user.tenant_id)
+    lead = (
+        db.query(Lead)
+        .filter(Lead.id == quote_id, Lead.tenant_id == tenant_id)
+        .first()
+    )
+    if not lead:
+        raise HTTPException(status_code=404, detail="Quote not found")
+
+    connection = (
+        db.query(CalendarConnection)
+        .filter(
+            CalendarConnection.tenant_id == tenant_id,
+            CalendarConnection.provider == "google",
+        )
+        .first()
+    )
+    if not connection:
+        raise HTTPException(status_code=409, detail="Google Calendar is not connected.")
+
+    try:
+        payload = build_quote_calendar_payload(lead)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    access_token = decrypt_token(connection.access_token_encrypted)
+    expires_at = connection.token_expires_at
+    if expires_at is not None:
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if expires_at <= datetime.now(UTC):
+            if not connection.refresh_token_encrypted:
+                raise HTTPException(status_code=409, detail="Google token expired. Reconnect integration.")
+            refreshed = refresh_access_token(
+                decrypt_token(connection.refresh_token_encrypted)
+            )
+            refreshed_access = str(refreshed.get("access_token") or "").strip()
+            if not refreshed_access:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Failed to refresh Google token. Reconnect integration.",
+                )
+            access_token = refreshed_access
+            connection.access_token_encrypted = encrypt_token(refreshed_access)
+            connection.token_expires_at = token_expiry_from_response(refreshed)
+            db.add(connection)
+            db.commit()
+
+    event_payload = build_google_event_payload(payload)
+    event = create_google_calendar_event(
+        access_token=access_token,
+        calendar_id=connection.calendar_id or "primary",
+        event_payload=event_payload,
+    )
+    event_id = str(event.get("id") or "").strip()
+    if not event_id:
+        raise HTTPException(status_code=400, detail="Google Calendar event missing id.")
+    link = (
+        db.query(QuoteCalendarLink)
+        .filter(
+            QuoteCalendarLink.tenant_id == tenant_id,
+            QuoteCalendarLink.quote_id == quote_id,
+            QuoteCalendarLink.provider == "google",
+        )
+        .first()
+    )
+    if not link:
+        link = QuoteCalendarLink(
+            tenant_id=tenant_id,
+            quote_id=quote_id,
+            provider="google",
+            external_event_id=event_id,
+        )
+    else:
+        link.external_event_id = event_id
+    db.add(link)
+    db.commit()
+    return {"ok": True, "event_id": event_id, "html_link": event.get("htmlLink")}
+
+
+@router.post("/{quote_id}/calendar/google")
+def create_quote_google_calendar(
+    quote_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return _create_google_calendar_event_for_quote(
+        quote_id=quote_id, db=db, current_user=current_user
+    )
+
+
+@router.post("/{quote_id}/calendar/google/partial", response_class=HTMLResponse)
+def create_quote_google_calendar_partial(
+    request: Request,
+    quote_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        result = _create_google_calendar_event_for_quote(
+            quote_id=quote_id,
+            db=db,
+            current_user=current_user,
+        )
+        context = {
+            "request": request,
+            "ok": True,
+            "message": "Google Calendar event aangemaakt.",
+            "event_id": result.get("event_id"),
+            "html_link": result.get("html_link"),
+        }
+    except HTTPException as exc:
+        context = {
+            "request": request,
+            "ok": False,
+            "message": str(exc.detail) if exc.detail else "Kon event niet aanmaken.",
+            "event_id": None,
+            "html_link": None,
+        }
+    return paintly_templates.TemplateResponse("app/partials/calendar_feedback.html", context)
