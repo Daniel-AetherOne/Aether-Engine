@@ -47,22 +47,6 @@
   {% if country %}{% set _ = address_parts.append(country) %}{% endif %}
   {% set full_address = address_parts | join(', ') %}
 
-  <!-- Toast -->
-  <div id="toast"
-       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-lg z-50">
-    <div class="flex items-start gap-3">
-      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
-      </div>
-      <div>
-        <div class="text-sm font-semibold text-slate-900">Link gekopieerd</div>
-        <div class="text-xs text-slate-500">Gekopieerd naar klembord</div>
-      </div>
-    </div>
-  </div>
-
   <!-- Header -->
   <div class="rounded-[26px] border border-slate-200/70 bg-white px-5 py-4 shadow-sm">
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -94,7 +78,7 @@
           </a>
         {% endif %}
         {% set ent = (entitlements.export_pdf if entitlements is defined and entitlements else None) %}
-        {% if quote_ui and quote_ui.can_view %}
+        {% if quote_ui and quote_ui.can_download_pdf %}
           {% if ent and ent.allowed %}
             <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
                href="/app/leads/{{ lead.id }}/export-pdf" target="_blank">
@@ -107,17 +91,21 @@
             </a>
           {% endif %}
         {% endif %}
-        {% if lead.public_token %}
+        {% if quote_ui and quote_ui.can_copy_link and lead.public_token %}
           <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
              href="/e/{{ lead.public_token }}" target="_blank">
             Publiek bekijken
           </a>
-          <button class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                  type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">
-            Link kopiëren
+          <button class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                  type="button"
+                  data-copy-url="{{ request.base_url }}e/{{ lead.public_token }}"
+                  x-data="{ copied: false }"
+                  @click="window.paintlyCopy($el.dataset.copyUrl).then(() => { copied = true; setTimeout(() => copied = false, 2000) })">
+            <span x-show="!copied" class="inline">Link kopiëren</span>
+            <span x-show="copied" class="inline text-emerald-600" x-cloak>Gekopieerd</span>
           </button>
         {% endif %}
-        {% if quote_ui and quote_ui.has_quote_output %}
+        {% if quote_ui and quote_ui.can_edit %}
           <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
              href="/app/leads/{{ lead.id }}/edit-estimate">
             Offerte bewerken
@@ -520,38 +508,20 @@
     <!-- Right column -->
     <div class="space-y-6 lg:col-span-1">
       {% set q = quote_ui or {} %}
-      {% set qs = q.quote_status or 'none' %}
-      {% set quote_labels = {
-        'none': 'Geen offerte',
-        'generated': 'AI gecontroleerd',
-        'review': 'Controle nodig',
-        'sent': 'Verstuurd naar klant',
-        'accepted': 'Geaccepteerd'
-      } %}
-      {% if qs == 'accepted' %}
-        {% set qbadge = 'bg-emerald-50 text-emerald-600' %}
-      {% elif qs in ['review', 'sent'] %}
-        {% set qbadge = 'bg-amber-50 text-amber-600' %}
-      {% elif qs == 'generated' %}
-        {% set qbadge = 'bg-sky-50 text-sky-600' %}
-      {% else %}
-        {% set qbadge = 'bg-slate-100 text-slate-600' %}
-      {% endif %}
 
-      <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-4">
-        <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Status</div>
-        <div class="flex items-center justify-between">
-          <span class="text-sm text-slate-600">Offerte status</span>
-          <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ qbadge }}">
-            {{ quote_labels.get(qs, 'Geen offerte') }}
-          </span>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="text-sm text-slate-600">Lead status</span>
-          <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ lead_status_badge }}">
-            {{ status_labels.get(st, 'Nieuw') }}
-          </span>
-        </div>
+      <div id="hx-quote-poller"
+           class="hidden"
+           aria-hidden="true"
+           hx-get="/app/tenants/{{ lead.tenant_id }}/quotes/{{ lead.id }}/partials/summary"
+           hx-trigger="load delay:1s, every 20s"
+           hx-swap="none"></div>
+
+      <div id="quote-status">
+        {% include "quotes/partials/status_badge.html" %}
+      </div>
+
+      <div id="timeline-block">
+        {% include "quotes/partials/timeline_block.html" %}
       </div>
 
       <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-4">
@@ -575,6 +545,13 @@
       {% if st == "ACCEPTED" %}
         <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-4">
           <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Agenda</div>
+          {% if lead_scheduled_start_display and lead_scheduled_end_display %}
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              Ingepland: <span class="font-semibold text-slate-900">{{ lead_scheduled_start_display }}</span>
+              - <span class="font-semibold text-slate-900">{{ lead_scheduled_end_display }}</span>
+              <span class="text-slate-500">({{ tz_name }})</span>
+            </div>
+          {% endif %}
           <div id="agenda-feedback"></div>
           <div class="flex flex-wrap items-center gap-2">
             {% if google_calendar_connected %}
@@ -605,37 +582,24 @@
         </div>
       {% endif %}
 
-      <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-4">
-        <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Offerte acties</div>
-        <div class="flex flex-wrap items-center gap-2">
-          {% if q.can_generate %}
-            <form method="post" action="/quotes/publish/{{ lead.id }}" class="m-0">
-              <button class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600" type="submit">Genereer offerte</button>
-            </form>
-          {% endif %}
-          {% if q.can_view %}
-            <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" href="/app/leads/{{ lead.id }}/estimate" target="_blank">Bekijk offerte</a>
-          {% endif %}
-          {% if q.can_send %}
-            <form method="post" action="/app/leads/{{ lead.id }}/send" class="m-0" id="sendEstimateFormTop">
-              <button id="sendEstimateBtnTop" class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600" type="submit">
-                {% if q.quote_status == 'sent' %}Offerte opnieuw versturen{% else %}Offerte versturen{% endif %}
-              </button>
-            </form>
-          {% endif %}
-          {% if q.can_regenerate %}
-            <form method="post" action="/app/reviews/{{ lead.id }}/generate-estimate" class="m-0">
-              <button class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" type="submit">Offerte opnieuw genereren</button>
-            </form>
-          {% endif %}
-        </div>
+      <div id="quote-actions" class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-4">
+        {% include "quotes/partials/quote_actions.html" %}
       </div>
 
-      {% if lead.public_token %}
+      {% include "quotes/partials/internal_notes.html" %}
+
+      {% if q.can_copy_link and lead.public_token %}
         <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-3">
           <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Publieke URL</div>
           <code class="block rounded-xl bg-slate-100 px-3 py-2 text-xs font-mono text-slate-600">/e/{{ lead.public_token }}</code>
-          <button class="inline-flex h-8 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" type="button" onclick="copyText('{{ '/e/' ~ lead.public_token }}')">Kopiëren</button>
+          <button class="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                  type="button"
+                  data-copy-url="{{ request.base_url }}e/{{ lead.public_token }}"
+                  x-data="{ copied: false }"
+                  @click="window.paintlyCopy($el.dataset.copyUrl).then(() => { copied = true; setTimeout(() => copied = false, 2000) })">
+            <span x-show="!copied">Kopiëren</span>
+            <span x-show="copied" class="text-emerald-600" x-cloak>Gekopieerd</span>
+          </button>
           <p class="text-xs text-slate-500">Deel deze link met de klant om de offerte te bekijken en accepteren.</p>
         </div>
       {% endif %}
@@ -724,39 +688,6 @@
 </div>
 
 <script>
-  function copyText(text) {
-    const toast = document.getElementById("toast");
-    const showToast = () => {
-      if (!toast) return;
-      toast.classList.remove("hidden");
-      toast.classList.add("block");
-      clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(() => {
-        toast.classList.add("hidden");
-        toast.classList.remove("block");
-      }, 2000);
-    };
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(showToast).catch(() => {
-        prompt("Kopieer dit:", text);
-      });
-    } else {
-      prompt("Kopieer dit:", text);
-    }
-  }
-
-  (function(){
-    const form = document.getElementById('sendEstimateFormTop');
-    const btn = document.getElementById('sendEstimateBtnTop');
-    if(!form || !btn) return;
-
-    form.addEventListener('submit', () => {
-      btn.disabled = true;
-      btn.innerHTML = '<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Bezig met versturen...';
-    });
-  })();
-
   function pad(n){ return String(n).padStart(2,'0'); }
 
   function setDayOffset(offsetDays){
@@ -799,12 +730,5 @@
   }
 
 </script>
-<script src="https://unpkg.com/htmx.org@1.9.12"></script>
-
-{% if job and job.status not in ["DONE","CANCELLED"] %}
-<script>
-  setInterval(() => window.location.reload(), 4000);
-</script>
-{% endif %}
 
 {% endblock %}

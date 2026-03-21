@@ -13,6 +13,8 @@
 
   <!-- Tailwind (CDN for now) -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.3/dist/cdn.min.js"></script>
 
   <!-- Optional: keep legacy css if you still use it somewhere -->
   <link rel="stylesheet" href="/static/app.css">
@@ -37,8 +39,12 @@
   </script>
 
   <style>
+    [x-cloak] { display: none !important; }
     html { scroll-behavior: smooth; }
     html, body { height: 100%; }
+
+    .htmx-indicator { opacity: 0; transition: opacity 120ms ease; }
+    .htmx-indicator.htmx-request { opacity: 1; }
 
     ::-webkit-scrollbar {
       width: 8px;
@@ -232,5 +238,63 @@
       </div>
     </div>
   </div>
+
+  <!-- Globale toast (HTMX HX-Trigger show-toast + copy feedback) -->
+  <div id="toast"
+       x-data="{ open: false, level: 'success', title: '', message: '' }"
+       x-show="open"
+       x-transition.opacity.duration.200ms
+       x-cloak
+       @paintly-toast.window="level = $event.detail.level || 'success'; title = $event.detail.title || ''; message = $event.detail.message || ''; open = true; clearTimeout(window.__paintlyToastTimer); window.__paintlyToastTimer = setTimeout(() => open = false, 3200)"
+       class="pointer-events-none fixed bottom-5 right-5 z-[100] max-w-sm rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-lg">
+    <div class="flex items-start gap-3">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+           :class="level === 'error' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold text-slate-900" x-text="title"></div>
+        <div class="text-xs text-slate-500" x-show="message" x-text="message"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.paintlyToast = function (payload) {
+      var level = (payload && payload.level) || 'success';
+      var title = (payload && payload.title) || '';
+      var message = (payload && payload.message) || '';
+      window.dispatchEvent(new CustomEvent('paintly-toast', {
+        bubbles: true,
+        detail: { level: level, title: title, message: message },
+      }));
+    };
+
+    window.paintlyCopy = function (text) {
+      if (!text) return Promise.resolve();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).then(function () {
+          window.paintlyToast({ level: 'success', title: 'Gekopieerd', message: 'Link staat op het klembord.' });
+        });
+      }
+      prompt('Kopieer dit:', text);
+      return Promise.resolve();
+    };
+
+    document.addEventListener('htmx:afterRequest', function (evt) {
+      try {
+        var xhr = evt.detail.xhr;
+        if (!xhr) return;
+        var raw = xhr.getResponseHeader('HX-Trigger');
+        if (!raw) return;
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed['show-toast']) {
+          window.paintlyToast(parsed['show-toast']);
+        }
+      } catch (e) { /* ignore */ }
+    });
+  </script>
 </body>
 </html>

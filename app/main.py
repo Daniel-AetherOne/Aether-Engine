@@ -13,6 +13,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.routers.auth import router as auth_router
 from app.verticals.paintly.router_app import router as paintly_app_router
+from app.verticals.paintly.router_htmx import router as paintly_htmx_router
 from app.verticals.paintly.router_integrations import router as paintly_integrations_router
 from app.routers.public_estimate import router as public_estimate_router
 from app.models.job import Job
@@ -172,6 +173,7 @@ app.include_router(public_intake.router)
 app.include_router(debug_email_router)
 # app.include_router(app_dashboard_router)
 app.include_router(paintly_app_router)
+app.include_router(paintly_htmx_router)
 app.include_router(paintly_integrations_router)
 app.include_router(public_estimate_router)
 app.include_router(quote_router)

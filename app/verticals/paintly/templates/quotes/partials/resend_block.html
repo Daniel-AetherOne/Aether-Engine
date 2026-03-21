@@ -1,0 +1,39 @@
+{% set q = quote_ui or {} %}
+<div class="flex flex-wrap items-center gap-2">
+  {% if q.can_generate %}
+    <form method="post" action="/quotes/publish/{{ lead.id }}" class="m-0">
+      <button class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600 disabled:opacity-60" type="submit">
+        Genereer offerte
+      </button>
+    </form>
+  {% endif %}
+  {% if q.can_view %}
+    <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" href="/app/leads/{{ lead.id }}/estimate" target="_blank">Bekijk offerte</a>
+  {% endif %}
+  {% if q.can_send %}
+    <form class="m-0 inline-flex"
+          hx-post="/app/leads/{{ lead.id }}/send"
+          hx-target="body"
+          hx-swap="none"
+          hx-disabled-elt="button[type=submit]"
+          hx-indicator="#send-indicator-{{ lead.id }}">
+      <button class="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600 disabled:opacity-60"
+              type="submit">
+        <span id="send-indicator-{{ lead.id }}" class="htmx-indicator inline-flex h-4 w-4 items-center justify-center">
+          <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </span>
+        {% if q.quote_status == 'sent' %}Offerte opnieuw versturen{% else %}Offerte versturen{% endif %}
+      </button>
+    </form>
+  {% endif %}
+  {% if q.can_regenerate %}
+    <form method="post" action="/app/reviews/{{ lead.id }}/generate-estimate" class="m-0">
+      <button class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:opacity-60" type="submit">
+        Offerte opnieuw genereren
+      </button>
+    </form>
+  {% endif %}
+</div>
