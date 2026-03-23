@@ -85,7 +85,7 @@ def test_send_quote_denied_for_unknown_or_none_plan(plan_code: str | None) -> No
 @pytest.mark.parametrize(
     "plan_code, expected_allowed",
     [
-        ("starter_99", False),
+        ("starter_99", True),
         ("pro_199", True),
         ("business_399", True),
     ],

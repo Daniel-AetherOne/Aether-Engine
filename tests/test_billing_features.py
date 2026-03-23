@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import pytest
 
@@ -17,6 +18,7 @@ from app.billing.features import (
 class TenantStub:
     plan_code: str | None
     subscription_status: str | None
+    trial_ends_at: datetime | None = None
 
 
 @pytest.mark.parametrize(
@@ -26,6 +28,7 @@ class TenantStub:
             "starter_99",
             {
                 Feature.BASIC_SENDING.value,
+                Feature.PDF_EXPORT.value,
             },
         ),
         (
@@ -53,12 +56,12 @@ def test_get_plan_features_known_plans(plan_code: str, expected: set[str]) -> No
 
 @pytest.mark.parametrize("plan_code", [None, "", "unknown_plan", "starter_999"])
 def test_get_plan_features_unknown_or_none(plan_code: str | None) -> None:
-    assert get_plan_features(plan_code) == set()
+    assert get_plan_features(plan_code) == get_plan_features("starter_99")
 
 
 def test_plan_matrix_starter_99() -> None:
     assert plan_supports_feature("starter_99", Feature.BASIC_SENDING.value) is True
-    assert plan_supports_feature("starter_99", Feature.PDF_EXPORT.value) is False
+    assert plan_supports_feature("starter_99", Feature.PDF_EXPORT.value) is True
     assert plan_supports_feature("starter_99", Feature.BRANDING.value) is False
     assert plan_supports_feature("starter_99", Feature.WHITELABEL.value) is False
 
@@ -78,20 +81,25 @@ def test_plan_matrix_business_399() -> None:
 
 
 @pytest.mark.parametrize(
-    "subscription_status, expected",
+    "subscription_status, trial_ends_at, expected",
     [
-        ("active", True),
-        ("trialing", True),
-        ("canceled", False),
-        ("past_due", False),
-        ("inactive", False),
-        (None, False),
-        ("", False),
-        ("weird_status", False),
+        ("active", None, True),
+        ("trialing", datetime(2099, 1, 1, tzinfo=timezone.utc), True),
+        ("trialing", None, False),
+        ("canceled", None, False),
+        ("past_due", None, False),
+        ("inactive", None, False),
+        (None, None, False),
+        ("", None, False),
+        ("weird_status", None, False),
     ],
 )
-def test_is_subscription_accessible(subscription_status: str | None, expected: bool) -> None:
-    assert is_subscription_accessible(subscription_status) is expected
+def test_is_subscription_accessible(
+    subscription_status: str | None,
+    trial_ends_at: datetime | None,
+    expected: bool,
+) -> None:
+    assert is_subscription_accessible(subscription_status, trial_ends_at) is expected
 
 
 def test_tenant_has_feature_requires_accessible_subscription() -> None:
@@ -99,8 +107,12 @@ def test_tenant_has_feature_requires_accessible_subscription() -> None:
     t_active = TenantStub(plan_code="pro_199", subscription_status="active")
     assert tenant_has_feature(t_active, Feature.PDF_EXPORT.value) is True
 
-    # trialing + feature present => True
-    t_trial = TenantStub(plan_code="pro_199", subscription_status="trialing")
+    # trialing + valid trial end + feature present => True
+    t_trial = TenantStub(
+        plan_code="pro_199",
+        subscription_status="trialing",
+        trial_ends_at=datetime(2099, 1, 1, tzinfo=timezone.utc),
+    )
     assert tenant_has_feature(t_trial, Feature.PDF_EXPORT.value) is True
 
     # canceled => False, even if plan includes it
@@ -120,10 +132,9 @@ def test_tenant_has_feature_requires_accessible_subscription() -> None:
     assert tenant_has_feature(t_none, Feature.WHITELABEL.value) is False
 
 
-def test_unknown_plan_code_has_no_features() -> None:
+def test_unknown_plan_code_resolves_to_starter_features() -> None:
     t = TenantStub(plan_code="unknown_plan", subscription_status="active")
-    assert tenant_has_feature(t, Feature.BASIC_SENDING.value) is False
-    assert tenant_has_feature(t, Feature.PDF_EXPORT.value) is False
+    assert tenant_has_feature(t, Feature.BASIC_SENDING.value) is True
+    assert tenant_has_feature(t, Feature.PDF_EXPORT.value) is True
     assert tenant_has_feature(t, Feature.BRANDING.value) is False
     assert tenant_has_feature(t, Feature.WHITELABEL.value) is False
-

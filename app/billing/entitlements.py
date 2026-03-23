@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from datetime import datetime
 import logging
 from typing import Protocol
 
@@ -39,6 +40,7 @@ class TenantUsageLike(Protocol):
 
     plan_code: str | None
     subscription_status: str | None
+    trial_ends_at: datetime | None
     # Optional usage fields; implemented either on tenant or a related usage object.
     quotes_sent: int | None  # type: ignore[assignment]
     quote_limit: int | None  # type: ignore[assignment]
@@ -144,6 +146,7 @@ def check_entitlement(tenant: TenantUsageLike | None, action: str) -> Entitlemen
     subscription_status = (
         getattr(tenant, "subscription_status", None) if tenant is not None else None
     )
+    trial_ends_at = getattr(tenant, "trial_ends_at", None) if tenant is not None else None
 
     # Resolve action + feature
     try:
@@ -165,7 +168,7 @@ def check_entitlement(tenant: TenantUsageLike | None, action: str) -> Entitlemen
     # SEND_QUOTE: feature + subscription + usage
     if act is Action.SEND_QUOTE:
         # 1) Subscription must be accessible
-        if not is_subscription_accessible(subscription_status):
+        if not is_subscription_accessible(subscription_status, trial_ends_at):
             return EntitlementResult(
                 allowed=False,
                 action=act.value,
@@ -220,23 +223,65 @@ def check_entitlement(tenant: TenantUsageLike | None, action: str) -> Entitlemen
             subscription_status=subscription_status,
         )
 
-    # Other actions: only feature gating + subscription status (where applicable)
-    if act in {Action.EXPORT_PDF, Action.USE_BRANDING, Action.USE_WHITELABEL}:
+    # EXPORT_PDF: subscription only; not tier-gated (matches export-pdf route policy).
+    if act is Action.EXPORT_PDF:
+        if not is_subscription_accessible(subscription_status, trial_ends_at):
+            logger.info(
+                "PDF_ENTITLEMENT_CHECK tenant_id=%s plan_code=%s subscription_status=%s action=%s allowed=%s reason=%s feature=%s features=%s",
+                getattr(tenant, "id", None) if tenant is not None else None,
+                plan_code,
+                subscription_status,
+                act.value,
+                False,
+                "subscription_inactive",
+                feature,
+                plan_features,
+            )
+            return EntitlementResult(
+                allowed=False,
+                action=act.value,
+                reason="subscription_inactive",
+                feature=feature,
+                upgrade_url=build_upgrade_url(feature=feature, action=act.value),
+                plan_code=plan_code,
+                subscription_status=subscription_status,
+            )
+        if tenant is None:
+            return EntitlementResult(
+                allowed=False,
+                action=act.value,
+                reason="feature_not_in_plan",
+                feature=feature,
+                upgrade_url=build_upgrade_url(feature=feature, action=act.value),
+                plan_code=plan_code,
+                subscription_status=subscription_status,
+            )
+        logger.info(
+            "PDF_ENTITLEMENT_CHECK tenant_id=%s plan_code=%s subscription_status=%s action=%s allowed=%s reason=%s feature=%s features=%s",
+            getattr(tenant, "id", None),
+            plan_code,
+            subscription_status,
+            act.value,
+            True,
+            None,
+            feature,
+            plan_features,
+        )
+        return EntitlementResult(
+            allowed=True,
+            action=act.value,
+            reason=None,
+            feature=feature,
+            upgrade_url=None,
+            plan_code=plan_code,
+            subscription_status=subscription_status,
+        )
+
+    # Other actions: feature gating + subscription status (where applicable)
+    if act in {Action.USE_BRANDING, Action.USE_WHITELABEL}:
         # We intentionally reuse subscription accessibility here so that
         # premium features cannot be used on inactive accounts.
-        if not is_subscription_accessible(subscription_status):
-            if act is Action.EXPORT_PDF:
-                logger.info(
-                    "PDF_ENTITLEMENT_CHECK tenant_id=%s plan_code=%s subscription_status=%s action=%s allowed=%s reason=%s feature=%s features=%s",
-                    getattr(tenant, "id", None) if tenant is not None else None,
-                    plan_code,
-                    subscription_status,
-                    act.value,
-                    False,
-                    "subscription_inactive",
-                    feature,
-                    plan_features,
-                )
+        if not is_subscription_accessible(subscription_status, trial_ends_at):
             return EntitlementResult(
                 allowed=False,
                 action=act.value,
@@ -248,18 +293,6 @@ def check_entitlement(tenant: TenantUsageLike | None, action: str) -> Entitlemen
             )
 
         if tenant is None or not tenant_has_feature(tenant, feature or ""):
-            if act is Action.EXPORT_PDF:
-                logger.info(
-                    "PDF_ENTITLEMENT_CHECK tenant_id=%s plan_code=%s subscription_status=%s action=%s allowed=%s reason=%s feature=%s features=%s",
-                    getattr(tenant, "id", None) if tenant is not None else None,
-                    plan_code,
-                    subscription_status,
-                    act.value,
-                    False,
-                    "feature_not_in_plan",
-                    feature,
-                    plan_features,
-                )
             return EntitlementResult(
                 allowed=False,
                 action=act.value,
@@ -270,18 +303,6 @@ def check_entitlement(tenant: TenantUsageLike | None, action: str) -> Entitlemen
                 subscription_status=subscription_status,
             )
 
-        if act is Action.EXPORT_PDF:
-            logger.info(
-                "PDF_ENTITLEMENT_CHECK tenant_id=%s plan_code=%s subscription_status=%s action=%s allowed=%s reason=%s feature=%s features=%s",
-                getattr(tenant, "id", None) if tenant is not None else None,
-                plan_code,
-                subscription_status,
-                act.value,
-                True,
-                None,
-                feature,
-                plan_features,
-            )
         return EntitlementResult(
             allowed=True,
             action=act.value,

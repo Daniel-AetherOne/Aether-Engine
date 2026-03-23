@@ -37,7 +37,13 @@ from app.core.stripe_config import (
     APP_BASE_URL,
     ensure_stripe_api_key,
 )
-from app.core.plan_catalog import DEFAULT_PLAN_CODE, PLAN_CATALOG, get_stripe_price_id
+from app.core.plan_catalog import (
+    CANONICAL_PLAN_CODES,
+    DEFAULT_PLAN_CODE,
+    PLAN_CATALOG,
+    get_plan_item,
+    get_stripe_price_id,
+)
 from app.dependencies import tenant_service
 from app.config.plans import PLANS
 from app.services.usage_service import get_or_create_usage, increment_usage
@@ -196,6 +202,111 @@ def _utc_to_local_human(dt_utc: datetime | None, tz_name: str) -> str:
         return ""
     tz = ZoneInfo(tz_name)
     return dt_utc.astimezone(tz).strftime("%b %d, %Y %H:%M")
+
+
+def _parse_followup_datetime(value: str | None, tz_name: str) -> datetime | None:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except Exception:
+        return None
+    if parsed.tzinfo is None:
+        try:
+            parsed = parsed.replace(tzinfo=ZoneInfo(tz_name))
+        except Exception:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _followup_status_label(next_action_at_utc: datetime, tz_name: str) -> str:
+    tz = ZoneInfo(tz_name)
+    now_local = datetime.now(tz)
+    target_local = next_action_at_utc.astimezone(tz)
+    if target_local < now_local:
+        return "Te laat"
+    if target_local.date() == now_local.date():
+        return "Vandaag"
+    return "Komt eraan"
+
+
+def build_followup_summary(overrides: dict, tz_name: str) -> dict:
+    next_action = str(overrides.get("next_action") or "").strip()
+    next_action_at_raw = str(overrides.get("next_action_at") or "").strip()
+    next_action_at_utc = _parse_followup_datetime(next_action_at_raw, tz_name)
+    next_action_at_human = _utc_to_local_human(next_action_at_utc, tz_name)
+    next_action_at_input = _utc_to_local_input(next_action_at_utc, tz_name)
+
+    is_overdue = False
+    if next_action_at_utc is not None:
+        is_overdue = next_action_at_utc < _utcnow()
+
+    return {
+        "has_followup": bool(next_action),
+        "next_action": next_action,
+        "next_action_at_raw": next_action_at_raw,
+        "next_action_at_human": next_action_at_human,
+        "next_action_at_input": next_action_at_input,
+        "is_overdue": is_overdue,
+        "status_label": (
+            _followup_status_label(next_action_at_utc, tz_name)
+            if next_action_at_utc is not None
+            else ""
+        ),
+    }
+
+
+def collect_dashboard_followups(
+    db: Session, tenant_id: str, tz_name: str, *, limit: int = 5
+) -> list[dict]:
+    leads = (
+        db.query(Lead)
+        .filter(Lead.tenant_id == tenant_id, Lead.estimate_overrides_json.isnot(None))
+        .order_by(desc(Lead.updated_at))
+        .limit(250)
+        .all()
+    )
+
+    now_utc = _utcnow()
+    rows: list[dict] = []
+    for lead in leads:
+        overrides = get_estimate_overrides(lead)
+        next_action = str(overrides.get("next_action") or "").strip()
+        if not next_action:
+            continue
+        next_action_at_utc = _parse_followup_datetime(
+            str(overrides.get("next_action_at") or ""), tz_name
+        )
+        if next_action_at_utc is None:
+            continue
+
+        rows.append(
+            {
+                "lead_id": str(lead.id),
+                "customer_name": (getattr(lead, "name", "") or "Onbekende klant").strip()
+                or "Onbekende klant",
+                "next_action": next_action,
+                "next_action_at_utc": next_action_at_utc,
+                "next_action_at_human": _utc_to_local_human(next_action_at_utc, tz_name),
+                "is_overdue": next_action_at_utc < now_utc,
+                "status_label": _followup_status_label(next_action_at_utc, tz_name),
+                "href": f"/app/leads/{lead.id}",
+            }
+        )
+
+    overdue = sorted(
+        [item for item in rows if item["is_overdue"]],
+        key=lambda item: item["next_action_at_utc"],
+    )
+    upcoming = sorted(
+        [item for item in rows if not item["is_overdue"]],
+        key=lambda item: item["next_action_at_utc"],
+    )
+    merged = (overdue + upcoming)[:limit]
+    for item in merged:
+        item.pop("next_action_at_utc", None)
+    return merged
 
 
 def _safe_decimal(val: object) -> Decimal | None:
@@ -492,7 +603,7 @@ def dev_set_timezone(
 # -------------------------
 def derive_status(lead: Lead) -> str:
     s = (getattr(lead, "status", "") or "").upper()
-    if s in {"SENT", "VIEWED", "ACCEPTED"}:
+    if s in {"SENT", "VIEWED", "ACCEPTED", "REJECTED"}:
         return s
 
     if getattr(lead, "needs_review_hard", False):
@@ -652,6 +763,7 @@ def app_dashboard(
             "feature_flags": tenant_feature_flags(tenant),
             "features": tenant_feature_ui(tenant),
             "entitlements": tenant_entitlements(tenant),
+            "tenant_id": str(current_user.tenant_id),
         },
     )
     return templates.TemplateResponse("app/dashboard.html", context)
@@ -808,15 +920,50 @@ def app_billing(
 
     is_paid_or_trialing = subscription_status in ("trialing", "active")
 
+    _plan_cta_labels = {
+        "starter_99": "Kies Starter",
+        "pro_199": "Kies Pro",
+        "business_399": "Kies Business",
+    }
+    _subscription_status_labels = {
+        "trialing": "Proefperiode actief",
+        "active": "Abonnement actief",
+        "inactive": "Nog geen actief abonnement",
+        "past_due": "Betaling vereist",
+        "canceled": "Opgezegd",
+        "unpaid": "Niet betaald",
+    }
+
+    current_plan_item = get_plan_item(current_plan_code) or PLAN_CATALOG[DEFAULT_PLAN_CODE]
+    current_plan_name = current_plan_item.name
+
+    trial_ends_at_display: str | None = None
+    if trial_ends_at is not None:
+        te = trial_ends_at
+        if getattr(te, "tzinfo", None) is None:
+            te = te.replace(tzinfo=timezone.utc)
+        trial_ends_at_display = te.astimezone(ZoneInfo("Europe/Amsterdam")).strftime(
+            "%d-%m-%Y"
+        )
+
+    subscription_status_label = _subscription_status_labels.get(
+        subscription_status,
+        subscription_status.replace("_", " ").title(),
+    )
+
     plans = [
         {
             "code": item.code,
             "name": item.name,
-            "price_label": item.price_label,
+            "price_display": item.price_display,
+            "price_period": item.price_period,
             "quote_limit_label": item.quote_limit_label,
             "features": list(item.ui_features),
+            "tagline": item.tagline_nl,
+            "is_recommended": item.code == "pro_199",
+            "cta_label": _plan_cta_labels[item.code],
         }
-        for item in PLAN_CATALOG.values()
+        for item in (PLAN_CATALOG[c] for c in CANONICAL_PLAN_CODES)
     ]
 
     context = _dashboard_context(
@@ -824,10 +971,14 @@ def app_billing(
         current_user,
         db,
         {
+            "title": "Abonnement",
             "plans": plans,
             "current_plan_code": current_plan_code,
+            "current_plan_name": current_plan_name,
             "subscription_status": subscription_status,
+            "subscription_status_label": subscription_status_label,
             "trial_ends_at": trial_ends_at,
+            "trial_ends_at_display": trial_ends_at_display,
             "trial_days_left": trial_days_left,
             "is_paid_or_trialing": is_paid_or_trialing,
             "billing_status_error": billing_status_error,
@@ -1062,6 +1213,12 @@ def app_lead_detail(
         _utc_to_local_human(getattr(job, "done_at", None), tz_name) if job else ""
     )
     sent_display = _utc_to_local_human(getattr(lead, "sent_at", None), tz_name)
+    lead_scheduled_start_display = _utc_to_local_human(
+        getattr(lead, "scheduled_start", None), tz_name
+    )
+    lead_scheduled_end_display = _utc_to_local_human(
+        getattr(lead, "scheduled_end", None), tz_name
+    )
 
     # -------------------------
     # Photo previews (MVP)
@@ -1147,11 +1304,22 @@ def app_lead_detail(
     # Allow sending (and re-sending) while the estimate is ready and not accepted, with a valid email
     can_send = (
         has_estimate_html
-        and raw_status in {"SUCCEEDED", "SENT", "VIEWED"}
+        and raw_status in {"SUCCEEDED", "SENT", "VIEWED", "REJECTED"}
         and bool((getattr(lead, "email", "") or "").strip())
     )
+    # Keep edit available in all quote phases except accepted/planning phase
+    can_edit = has_quote_output and raw_status != "ACCEPTED"
     # Allow regeneration while not accepted
     can_regenerate = has_quote_output and raw_status != "ACCEPTED"
+    # Public-link is primarily useful once customer flow started
+    can_copy_link = bool(public_quote_url) and raw_status in {
+        "SENT",
+        "VIEWED",
+        "REJECTED",
+        "ACCEPTED",
+    }
+    # PDF: same inputs as export-pdf route (HTML and/or JSON), any lifecycle stage
+    can_download_pdf = has_estimate_html or has_estimate_json
 
     quote_ui = {
         "has_estimate": has_estimate_html,
@@ -1159,8 +1327,11 @@ def app_lead_detail(
         "quote_status": quote_status,
         "can_generate": can_generate,
         "can_view": can_view,
+        "can_edit": can_edit,
         "can_regenerate": can_regenerate,
         "can_send": can_send,
+        "can_copy_link": can_copy_link,
+        "can_download_pdf": can_download_pdf,
         "public_quote_url": public_quote_url,
     }
 
@@ -1179,6 +1350,11 @@ def app_lead_detail(
         .first()
     )
 
+    from app.verticals.paintly.router_htmx import timeline_rows_for_lead
+
+    internal_notes_val = str(overrides.get("internal_notes") or "")
+    followup_summary = build_followup_summary(overrides, tz_name)
+
     context = _dashboard_context(
         request,
         current_user,
@@ -1195,10 +1371,15 @@ def app_lead_detail(
             "started_display": started_display,
             "done_display": done_display,
             "sent_display": sent_display,
+            "lead_scheduled_start_display": lead_scheduled_start_display,
+            "lead_scheduled_end_display": lead_scheduled_end_display,
             "estimate_overrides": overrides,
             "effective_total_display": effective_total_display,
             "entitlements": tenant_entitlements(tenant),
             "google_calendar_connected": bool(google_connection),
+            "timeline_rows": timeline_rows_for_lead(lead, tz_name),
+            "internal_notes": internal_notes_val,
+            "followup_summary": followup_summary,
         },
     )
     return templates.TemplateResponse("app/lead_detail.html", context)
@@ -1411,6 +1592,17 @@ def update_branding_settings(
 from fastapi import BackgroundTasks
 
 
+def _paintly_hx_toast(level: str, title: str, message: str = "") -> HTMLResponse:
+    return HTMLResponse(
+        "",
+        headers={
+            "HX-Trigger": json.dumps(
+                {"show-toast": {"level": level, "title": title, "message": message}}
+            )
+        },
+    )
+
+
 @router.post("/leads/{lead_id}/send")
 def send_estimate(
     lead_id: str,
@@ -1420,6 +1612,8 @@ def send_estimate(
     current_user: User = Depends(require_user_html),
 ):
     logger.warning("SEND_ESTIMATE_HIT lead_id=%s", lead_id)
+
+    is_htmx = (request.headers.get("hx-request") or "").lower() == "true"
 
     lead = (
         db.query(Lead)
@@ -1457,6 +1651,7 @@ def send_estimate(
         def __init__(self, tenant_obj: Tenant, quotes_sent: int | None, limit: int | None):
             self.plan_code = getattr(tenant_obj, "plan_code", None)
             self.subscription_status = getattr(tenant_obj, "subscription_status", None)
+            self.trial_ends_at = getattr(tenant_obj, "trial_ends_at", None)
             self.quotes_sent = quotes_sent
             self.quote_limit = limit
 
@@ -1469,21 +1664,45 @@ def send_estimate(
     if not ent.allowed:
         # Preserve existing UX while using centralized reasoning
         if ent.reason == "subscription_inactive":
+            if is_htmx:
+                return _paintly_hx_toast(
+                    "error",
+                    "Abonnement",
+                    "Abonnement niet actief. Open facturatie om te upgraden.",
+                )
             return RedirectResponse(
                 url="/app/billing?send_error=billing_status",
                 status_code=303,
             )
         if ent.reason == "usage_limit_reached":
+            if is_htmx:
+                return _paintly_hx_toast(
+                    "error",
+                    "Limiet bereikt",
+                    "Je maandelijkse offertelimiet is bereikt.",
+                )
             return RedirectResponse(
                 url=f"/app/leads/{lead_id}?send_error=quote_limit",
                 status_code=303,
             )
 
         upgrade_url = ent.upgrade_url or f"/app/billing?upgrade=1&feature={Feature.BASIC_SENDING.value}"
+        if is_htmx:
+            return _paintly_hx_toast(
+                "error",
+                "Niet toegestaan",
+                "Versturen is met dit abonnement niet mogelijk.",
+            )
         return RedirectResponse(url=upgrade_url, status_code=303)
 
     if not lead.estimate_html_key:
         # Geen offerte beschikbaar om te versturen -> nette melding op lead detail
+        if is_htmx:
+            return _paintly_hx_toast(
+                "error",
+                "Geen offerte",
+                "Genereer eerst een offerte voordat je deze verstuurt.",
+            )
         return RedirectResponse(
             url=f"/app/leads/{lead_id}?send_error=no_estimate",
             status_code=303,
@@ -1501,6 +1720,12 @@ def send_estimate(
     to_email = (getattr(lead, "email", "") or "").strip()
     if not to_email:
         # Geen klant e-mail -> nette melding op lead detail
+        if is_htmx:
+            return _paintly_hx_toast(
+                "error",
+                "Geen e-mail",
+                "Vul eerst een klant-e-mailadres in.",
+            )
         return RedirectResponse(
             url=f"/app/leads/{lead_id}?send_error=no_email",
             status_code=303,
@@ -1531,6 +1756,21 @@ def send_estimate(
 
     db.add(lead)
     db.commit()
+    db.refresh(lead)
+
+    if is_htmx:
+        from app.verticals.paintly.router_htmx import render_quote_oob_response
+
+        resp = render_quote_oob_response(
+            request,
+            db,
+            current_user,
+            lead_id,
+            toast_title="Offerte verzonden",
+            toast_message="De klant ontvangt de e-mail binnenkort.",
+        )
+        resp.background = background_tasks
+        return resp
 
     response = RedirectResponse(
         url=f"/app/leads/{lead_id}?sent=1",

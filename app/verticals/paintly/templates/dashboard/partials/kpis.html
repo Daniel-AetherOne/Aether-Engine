@@ -1,0 +1,19 @@
+<div id="dashboard-kpis" class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+  <div class="rounded-[18px] border border-sky-100 bg-sky-50/35 p-4">
+    <div class="text-xs uppercase tracking-wide text-slate-400">Totaal offertes</div>
+    <div class="mt-2 text-3xl font-semibold text-slate-900">{{ kpi_total }}</div>
+  </div>
+  <div class="rounded-[18px] border border-slate-200 bg-slate-50/35 p-4">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Openstaand (verstuurd)</div>
+    <div class="mt-2 text-3xl font-semibold text-slate-900">{{ kpi_open }}</div>
+  </div>
+  <div class="rounded-[18px] border border-emerald-100 bg-emerald-50/35 p-4">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Geaccepteerd</div>
+    <div class="mt-2 text-3xl font-semibold text-slate-900">{{ kpi_accepted }}</div>
+  </div>
+  <div class="rounded-[18px] border border-sky-100 bg-sky-50/35 p-4">
+    <div class="text-xs uppercase tracking-wide text-slate-400">Verstuurd deze maand</div>
+    <div class="mt-2 text-3xl font-semibold text-slate-900">{{ kpi_sent_month }}</div>
+    <div class="mt-1 text-xs text-slate-500">Usage-teller (e-mail verzendingen)</div>
+  </div>
+</div>

@@ -1,0 +1,164 @@
+<tbody id="quotes-table">
+  {% for lead in leads %}
+    {% set st = (lead.status or '').upper() %}
+    {% set followup = lead.followup_summary or {} %}
+    {% set status_labels = {
+      'ACCEPTED': 'Geaccepteerd',
+      'DONE': 'Afgerond',
+      'COMPLETED': 'Compleet',
+      'SENT': 'Verstuurd',
+      'VIEWED': 'Bekeken',
+      'CANCELLED': 'Geannuleerd',
+      'NEW': 'Nieuw',
+      'DRAFT': 'Concept',
+      'SUCCEEDED': 'Gereed',
+      'REJECTED': 'Afgewezen',
+      'RUNNING': 'Bezig'
+    } %}
+    {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
+      {% set badge_color = 'bg-emerald-50 text-emerald-700 border-emerald-200' %}
+    {% elif st in ['SENT','VIEWED'] %}
+      {% set badge_color = 'bg-amber-50 text-amber-700 border-amber-200' %}
+    {% elif st in ['CANCELLED','REJECTED'] %}
+      {% set badge_color = 'bg-rose-50 text-rose-600 border-rose-200' %}
+    {% else %}
+      {% set badge_color = 'bg-slate-100 text-slate-600 border-slate-200' %}
+    {% endif %}
+
+    {% set urgency = (followup.status_label or '') %}
+    {% if urgency == 'Te laat' %}
+      {% set urgency_class = 'bg-rose-50 text-rose-700 border-rose-200' %}
+    {% elif urgency == 'Vandaag' %}
+      {% set urgency_class = 'bg-amber-50 text-amber-700 border-amber-200' %}
+    {% elif urgency == 'Komt eraan' %}
+      {% set urgency_class = 'bg-sky-50 text-sky-700 border-sky-200' %}
+    {% else %}
+      {% set urgency_class = 'bg-slate-100 text-slate-500 border-slate-200' %}
+    {% endif %}
+
+    {% set total = lead.get("total") if lead is mapping else None %}
+
+    {% set searchable = ((lead.customer_name or '') ~ ' ' ~ (status_labels.get(st, st or '')) ~ ' ' ~ (followup.next_action or ''))|lower %}
+    <tr
+      class="border-b border-slate-100/90 align-top last:border-0 transition hover:bg-sky-50/40"
+      x-show='match({ search: {{ searchable|tojson }}, status: {{ st|lower|tojson }}, urgentie: {{ urgency|lower|tojson }} })'
+    >
+      <td class="px-5 py-4 align-middle">
+        <div class="flex min-w-[260px] flex-col gap-1.5">
+          <a href="/app/leads/{{ lead.id }}" class="text-[15px] font-semibold text-slate-900 transition hover:text-sky-700">
+            {{ lead.customer_name or "—" }}
+          </a>
+          {% if lead.address %}
+            <div class="flex items-center gap-1.5 text-xs text-slate-500">
+              <span class="max-w-[260px] truncate">{{ lead.address }}</span>
+            </div>
+          {% endif %}
+          <div class="text-xs text-slate-500">
+            {% if total is not none %}
+              Offertebedrag: <span class="font-semibold text-slate-700">€ {{ "%.2f"|format(total) }}</span>
+            {% else %}
+              Offertebedrag nog niet bekend
+            {% endif %}
+          </div>
+        </div>
+      </td>
+      <td class="px-5 py-4 align-middle">
+        <div class="flex min-w-[190px] flex-col gap-2">
+          <span class="inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs font-semibold {{ badge_color }}">
+            {{ status_labels.get(st, st or "Onbekend") }}
+          </span>
+          {% if lead.estimate_html_key %}
+            <span class="inline-flex w-fit items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+              Offerte gereed
+            </span>
+          {% else %}
+            <span class="inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              Offerte in opbouw
+            </span>
+          {% endif %}
+        </div>
+      </td>
+      <td class="px-5 py-4 align-middle">
+        <div class="min-w-[250px] space-y-2">
+          {% if followup.has_followup %}
+            <div class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold {{ urgency_class }}">
+              {{ urgency or "Gepland" }}
+            </div>
+            <div class="text-sm font-medium text-slate-700">{{ followup.next_action or "Opvolgactie" }}</div>
+            {% if followup.next_action_at_human %}
+              <div class="text-xs text-slate-500">{{ followup.next_action_at_human }}</div>
+            {% else %}
+              <div class="text-xs text-slate-500">Moment nog niet gepland</div>
+            {% endif %}
+          {% else %}
+            <div class="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+              Geen opvolging gepland
+            </div>
+          {% endif %}
+        </div>
+      </td>
+      <td class="px-5 py-4 align-middle text-right">
+        <div class="flex min-w-[330px] flex-wrap items-center justify-end gap-2.5">
+          {% set a = lead.next_action %}
+          {% if a.method == "POST" %}
+            <form method="post" action="{{ a.href }}" class="m-0">
+              <button
+                class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-600 px-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-60"
+                type="submit"
+              >
+                Bekijk offerte
+              </button>
+            </form>
+          {% else %}
+            <a
+              class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-600 px-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+              href="{{ a.href }}"
+            >
+              Bekijk offerte
+            </a>
+          {% endif %}
+          {% if lead.public_url %}
+            <a
+              class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+              href="{{ lead.public_url }}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open publieke offerte
+            </a>
+          {% endif %}
+          {% if lead.public_url %}
+            <button
+              class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+              type="button"
+              onclick="window.paintlyCopy('{{ lead.public_url }}')"
+            >
+              <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              Link kopiëren
+            </button>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+  {% else %}
+    <tr>
+      <td class="px-5 py-16 text-center" colspan="4">
+        <div class="flex flex-col items-center justify-center">
+          <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+          </div>
+          <p class="text-sm font-medium text-slate-900">Geen offertes gevonden</p>
+          <p class="mt-1 text-xs text-slate-500">Pas je filters aan of maak direct een nieuwe offerte aan.</p>
+          <a href="/intake/paintly"
+             class="mt-4 inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600">
+            Nieuwe offerte
+          </a>
+        </div>
+      </td>
+    </tr>
+  {% endfor %}
+</tbody>

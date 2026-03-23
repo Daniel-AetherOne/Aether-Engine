@@ -222,6 +222,7 @@ def compute_quote_for_lead(db: Session, lead: Lead, render_html: bool = True) ->
                 def __init__(self, tenant_obj: Tenant):
                     self.plan_code = getattr(tenant_obj, "plan_code", None)
                     self.subscription_status = getattr(tenant_obj, "subscription_status", None)
+                    self.trial_ends_at = getattr(tenant_obj, "trial_ends_at", None)
                     self.quotes_sent = None
                     self.quote_limit = None
 

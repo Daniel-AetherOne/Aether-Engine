@@ -1,10 +1,13 @@
 # app/routers/public_estimate.py
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 import logging
+import json
+from decimal import Decimal, InvalidOperation
 
 from app.core.settings import settings
 from app.db import get_db
@@ -18,12 +21,16 @@ from app.services.workflow import (
     mark_lead_accepted,
     mark_lead_viewed,
 )
-from app.verticals.paintly.email_render import render_estimate_accepted_email
+from app.verticals.paintly.email_render import (
+    render_estimate_accepted_email,
+    render_painter_estimate_accepted_email,
+)
 from app.workflow.status import apply_workflow
 
 router = APIRouter(prefix="/e", tags=["public_estimate"])
 # Alias router for simple customer-friendly quote URL (/q/{public_token})
 router_q = APIRouter(prefix="/q", tags=["public_quote"])
+paintly_templates = Jinja2Templates(directory="app/verticals/paintly/templates")
 
 logger = logging.getLogger(__name__)
 
@@ -31,47 +38,43 @@ logger = logging.getLogger(__name__)
 async def send_painter_accept_email(
     *,
     painter_email: str,
-    lead_id: str,
+    company_name: str,
     lead_name: str,
     lead_email: str,
+    lead_phone: str,
+    project_description: str,
+    square_meters: str,
+    job_type: str,
+    price_display: str,
     quote_url: str,
     admin_url: str,
 ) -> None:
-    subject = f"Offerte geaccepteerd - {lead_name}"
+    subject = f"Offerte geaccepteerd - {lead_name or 'Onbekende klant'}"
 
-    html_body = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
-        <h2>Offerte geaccepteerd</h2>
-        <p>Een klant heeft de offerte geaccepteerd.</p>
-
-        <ul>
-          <li><strong>Klant:</strong> {lead_name}</li>
-          <li><strong>Email:</strong> {lead_email}</li>
-          <li><strong>Lead ID:</strong> {lead_id}</li>
-        </ul>
-
-        <p>
-          <a href="{admin_url}" style="display:inline-block;padding:12px 18px;background:#111;color:#fff;text-decoration:none;border-radius:8px;">
-            Open dashboard
-          </a>
-        </p>
-
-        <p>
-          Offerte bekijken:<br>
-          <a href="{quote_url}">{quote_url}</a>
-        </p>
-      </body>
-    </html>
-    """
+    html_body = render_painter_estimate_accepted_email(
+        company_name=company_name,
+        lead_name=lead_name,
+        lead_email=lead_email,
+        lead_phone=lead_phone,
+        project_description=project_description,
+        square_meters=square_meters,
+        job_type=job_type,
+        price_display=price_display,
+        quote_url=quote_url,
+        admin_url=admin_url,
+    )
 
     text_body = (
-        "Offerte geaccepteerd.\n\n"
-        f"Klant: {lead_name}\n"
-        f"Email: {lead_email}\n"
-        f"Lead ID: {lead_id}\n\n"
+        "Een klant heeft de offerte geaccepteerd.\n\n"
+        f"Klant: {lead_name or '—'}\n"
+        f"E-mail: {lead_email or '—'}\n"
+        f"Telefoon: {lead_phone or '—'}\n"
+        f"Type werk: {job_type or '—'}\n"
+        f"Oppervlakte: {square_meters or '—'}\n"
+        f"Prijs: {price_display or '—'}\n"
+        f"Projectnotities: {project_description or '—'}\n\n"
         f"Dashboard: {admin_url}\n"
-        f"Offerte: {quote_url}\n"
+        f"Publieke offerte: {quote_url}\n"
     )
 
     await send_email(
@@ -80,8 +83,60 @@ async def send_painter_accept_email(
         html_body=html_body,
         text_body=text_body,
         tag="painter-accepted",
-        metadata={"lead_id": str(lead_id)},
+        metadata={},
     )
+
+
+def _fmt_price_eur(value: object) -> str:
+    try:
+        amount = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return "—"
+    amount = amount.quantize(Decimal("0.01"))
+    s = f"{amount:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    return f"EUR {s}"
+
+
+def _extract_quote_summary(lead: Lead) -> tuple[str, str, str, str]:
+    notes = (getattr(lead, "notes", "") or "").strip()
+    square_meters = ""
+    job_type = ""
+    price_display = "—"
+    intake_raw = getattr(lead, "intake_payload", None)
+    if isinstance(intake_raw, str) and intake_raw.strip():
+        try:
+            intake = json.loads(intake_raw)
+        except Exception:
+            intake = {}
+        if isinstance(intake, dict):
+            square_meters = str(
+                intake.get("square_meters")
+                or intake.get("area_sqm")
+                or intake.get("sqm")
+                or ""
+            ).strip()
+            job_type = str(intake.get("job_type") or "").strip()
+            if not notes:
+                notes = str(intake.get("project_description") or "").strip()
+
+    final_price = getattr(lead, "final_price", None)
+    if final_price is not None:
+        price_display = _fmt_price_eur(final_price)
+    else:
+        estimate_raw = getattr(lead, "estimate_json", None)
+        if isinstance(estimate_raw, str) and estimate_raw.strip():
+            try:
+                estimate = json.loads(estimate_raw)
+            except Exception:
+                estimate = {}
+            if isinstance(estimate, dict):
+                totals = estimate.get("totals") or {}
+                value = totals.get("grand_total") or totals.get("pre_tax")
+                if value is not None:
+                    price_display = _fmt_price_eur(value)
+
+    square_meters_display = f"{square_meters} m2" if square_meters else "—"
+    return notes or "—", square_meters_display, job_type or "—", price_display
 
 
 @router.get("/{token}", response_class=HTMLResponse)
@@ -290,30 +345,14 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
     # - concept: offerte mag bekeken worden, maar nog niet geaccepteerd
     # - verstuurd: offerte is naar klant verstuurd → accept-knop toegestaan
     is_sent = lead_status in {"SENT", "VIEWED"} or bool(getattr(lead, "sent_at", None))
-    show_accept = is_sent and lead_status not in {"ACCEPTED", "COMPLETED", "CANCELLED", "DONE"}
-
-    accepted_param = (request.query_params.get("accepted") or "").strip() == "1"
-    show_accepted_banner = (lead_status == "ACCEPTED") or accepted_param
-
-    accepted_banner = ""
-    if show_accepted_banner:
-        accepted_banner = """
-<div class="no-print sticky top-0 z-[9999] border-b border-emerald-200 bg-emerald-50">
-  <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-    <div class="flex items-center gap-2">
-      <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white font-black">✓</span>
-      <div>
-        <div class="text-sm font-semibold text-emerald-950">Accepted — thank you!</div>
-        <div class="text-xs text-emerald-900/80">We’ll contact you shortly to confirm details.</div>
-      </div>
-    </div>
-    <a href="#" onclick="window.print(); return false;"
-       class="hidden sm:inline-flex items-center rounded-xl bg-white px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm ring-1 ring-inset ring-emerald-200 hover:bg-emerald-50">
-      Print
-    </a>
-  </div>
-</div>
-"""
+    show_accept = is_sent and lead_status not in {
+        "ACCEPTED",
+        "REJECTED",
+        "DECLINED",
+        "COMPLETED",
+        "CANCELLED",
+        "DONE",
+    }
 
     # Bodycontent: inline HTML (S3) of iframe (LocalStorage)
     if iframe_url:
@@ -323,101 +362,14 @@ def public_estimate(token: str, request: Request, db: Session = Depends(get_db))
     else:
         body_html = html
 
-    if show_accept:
-        accept_bar = """
-<script src="https://cdn.tailwindcss.com"></script>
-
-<div class="no-print sticky top-0 z-[9999] border-b border-slate-200 bg-white/90 backdrop-blur">
-  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-    <div class="flex items-center gap-3">
-      <div class="h-9 w-9 rounded-2xl bg-slate-900 text-white grid place-items-center font-black tracking-tight">P</div>
-      <div>
-        <div class="text-sm font-semibold text-slate-900">Your estimate is ready</div>
-        <div class="text-xs text-slate-600">Review the details below and accept when you’re ready.</div>
-      </div>
-    </div>
-
-    <div class="flex items-center gap-2">
-      <form id="acceptForm" method="post" action="/e/{token}/accept" class="m-0">
-        <button
-          id="acceptBtn"
-          type="submit"
-          class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Accept estimate
-        </button>
-      </form>
-
-      <a href="#" onclick="window.scrollTo({{ top: document.body.scrollHeight, behavior: 'smooth' }}); return false;"
-         class="hidden sm:inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50">
-        See summary
-      </a>
-    </div>
-  </div>
-
-  <div id="acceptFlash" class="mx-auto hidden max-w-6xl px-4 pb-3"></div>
-</div>
-
-<script>
-(function(){{
-  const form = document.getElementById('acceptForm');
-  const btn = document.getElementById('acceptBtn');
-  const flashWrap = document.getElementById('acceptFlash');
-  if(!form || !btn || !flashWrap) return;
-
-   function show(type, msg){{
-    flashWrap.classList.remove('hidden');
-    flashWrap.innerHTML = `
-      <div class="rounded-2xl border px-4 py-3 text-sm ${{
-        type==='success'
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
-          : 'border-rose-200 bg-rose-50 text-rose-950'
-      }}">
-        <div class="font-semibold">${{type==='success' ? 'Accepted' : 'Could not accept'}}</div>
-        <div class="mt-1 text-sm opacity-90">${{msg}}</div>
-      </div>
-    `;
-  }}
-
-  form.addEventListener('submit', async (e) => {{
-    e.preventDefault();
-    btn.disabled = true;
-    const old = btn.textContent;
-    btn.textContent = 'Accepting…';
-
-    try {{
-      const res = await fetch(form.action, {{
-        method: 'POST',
-        headers: {{ 'Accept': 'application/json' }}
-      }});
-
-      if (!res.ok) {{
-        let data = {{}};
-        try {{ data = await res.json(); }} catch(_) {{}}
-        throw new Error((data && (data.detail || data.error)) || 'Failed to accept');
-      }}
-
-      let data = {{}};
-      try {{ data = await res.json(); }} catch(_) {{}}
-      show('success', 'Redirecting…');
-      setTimeout(() => {{
-        window.location.href = (data && data.redirect) ? data.redirect : '/e/{token}?accepted=1';
-      }}, 350);
-    }} catch (err) {{
-      show('error', err && err.message ? err.message : 'Something went wrong');
-      btn.disabled = false;
-      btn.textContent = old;
-    }}
-  }});
-}})();
-</script>
-""".format(
-            token=lead.public_token
-        )
-
-        return HTMLResponse(content=accept_bar + body_html)
-
-    return HTMLResponse(content=accepted_banner + body_html)
+    page_html = paintly_templates.env.get_template("public/quote_page.html").render(
+        token=lead.public_token,
+        show_accept=show_accept,
+        lead_status=lead_status,
+        iframe_url=iframe_url,
+        body_html=body_html or "",
+    )
+    return HTMLResponse(content=page_html)
 
 
 @router_q.get("/{token}", response_class=HTMLResponse)
@@ -443,6 +395,7 @@ def public_accept(
 
     if (lead.status or "").upper() != "ACCEPTED":
         mark_lead_accepted(db, lead)
+        lead.reject_reason = None
         apply_workflow(db, lead)
         db.commit()
 
@@ -478,13 +431,21 @@ def public_accept(
             else:
                 quote_url = f"{base}/e/{lead.public_token}"
                 admin_url = f"{base}/app/leads/{lead.id}"
+            project_description, square_meters, job_type, price_display = (
+                _extract_quote_summary(lead)
+            )
 
             background.add_task(
                 send_painter_accept_email,
                 painter_email=painter_email,
-                lead_id=lead.id,
+                company_name="Paintly",
                 lead_name=getattr(lead, "name", "") or "—",
                 lead_email=getattr(lead, "email", "") or "",
+                lead_phone=getattr(lead, "phone", "") or "",
+                project_description=project_description,
+                square_meters=square_meters,
+                job_type=job_type,
+                price_display=price_display,
                 quote_url=quote_url,
                 admin_url=admin_url,
             )
@@ -508,14 +469,15 @@ def public_accept(
                         company_name=company_name,
                     )
                     text_body = (
-                        f"Hi {customer_name},\n\n"
-                        "We received your acceptance.\n\n"
-                        f"View your estimate: {public_url}\n"
+                        f"Beste {customer_name or 'klant'},\n\n"
+                        "Bedankt, uw akkoord op de offerte is ontvangen.\n"
+                        "We nemen binnenkort contact met u op om de planning te bevestigen.\n\n"
+                        f"Bekijk uw offerte: {public_url}\n"
                     )
                     try:
                         await send_email(
                             to=to_email,
-                            subject="We received your acceptance",
+                            subject="Uw akkoord is ontvangen",
                             html_body=html_body,
                             text_body=text_body,
                             tag="customer-accepted",
@@ -529,10 +491,75 @@ def public_accept(
 
                 background.add_task(_send)
 
-    redirect_url = f"/e/{token}?accepted=1"
+    redirect_url = f"/e/{token}/accepted"
+
+    if (request.headers.get("hx-request") or "").lower() == "true":
+        return HTMLResponse("", headers={"HX-Redirect": redirect_url})
 
     accept = (request.headers.get("accept") or "").lower()
     if "application/json" in accept:
         return JSONResponse({"ok": True, "redirect": redirect_url})
 
     return RedirectResponse(url=redirect_url, status_code=303)
+
+
+@router.post("/{token}/reject")
+def public_reject(
+    token: str,
+    request: Request,
+    reject_reason: str | None = Form(default=None),
+    db: Session = Depends(get_db),
+):
+    lead = db.query(Lead).filter(Lead.public_token == token).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Not found")
+    if (lead.status or "").upper() == "ACCEPTED":
+        redirect_url = f"/e/{token}/accepted"
+        if (request.headers.get("hx-request") or "").lower() == "true":
+            return HTMLResponse("", headers={"HX-Redirect": redirect_url})
+        accept = (request.headers.get("accept") or "").lower()
+        if "application/json" in accept:
+            return JSONResponse({"ok": True, "redirect": redirect_url})
+        return RedirectResponse(url=redirect_url, status_code=303)
+
+    lead.status = "REJECTED"
+    reason = (reject_reason or "").strip()
+    lead.reject_reason = reason[:1000] if reason else None
+    db.add(lead)
+    db.commit()
+
+    redirect_url = f"/e/{token}/rejected"
+    if (request.headers.get("hx-request") or "").lower() == "true":
+        return HTMLResponse("", headers={"HX-Redirect": redirect_url})
+    accept = (request.headers.get("accept") or "").lower()
+    if "application/json" in accept:
+        return JSONResponse({"ok": True, "redirect": redirect_url})
+    return RedirectResponse(url=redirect_url, status_code=303)
+
+
+@router.get("/{token}/accepted", response_class=HTMLResponse)
+def public_accepted_confirmation(token: str, request: Request, db: Session = Depends(get_db)):
+    lead = db.query(Lead).filter(Lead.public_token == token).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Not found")
+    return paintly_templates.TemplateResponse(
+        "public/quote_accepted_confirmation.html",
+        {
+            "request": request,
+            "token": token,
+        },
+    )
+
+
+@router.get("/{token}/rejected", response_class=HTMLResponse)
+def public_rejected_confirmation(token: str, request: Request, db: Session = Depends(get_db)):
+    lead = db.query(Lead).filter(Lead.public_token == token).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Not found")
+    return paintly_templates.TemplateResponse(
+        "public/quote_rejected_confirmation.html",
+        {
+            "request": request,
+            "token": token,
+        },
+    )

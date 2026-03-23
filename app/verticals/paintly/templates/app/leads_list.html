@@ -1,20 +1,37 @@
 {% extends "app/layout.html" %}
 {% block content %}
 
+{% set counts = {'nieuw': 0, 'verstuurd': 0, 'geaccepteerd': 0, 'te_laat': 0, 'totaal': leads|length} %}
+{% for lead in leads %}
+  {% set st = (lead.status or '').upper() %}
+  {% if st in ['NEW', 'DRAFT'] %}
+    {% set _ = counts.update({'nieuw': counts.nieuw + 1}) %}
+  {% elif st in ['SENT', 'VIEWED'] %}
+    {% set _ = counts.update({'verstuurd': counts.verstuurd + 1}) %}
+  {% elif st in ['ACCEPTED'] %}
+    {% set _ = counts.update({'geaccepteerd': counts.geaccepteerd + 1}) %}
+  {% endif %}
+  {% set followup = lead.followup_summary or {} %}
+  {% if (followup.status_label or '') == 'Te laat' %}
+    {% set _ = counts.update({'te_laat': counts.te_laat + 1}) %}
+  {% endif %}
+{% endfor %}
+
 <div class="space-y-6">
-
-  <!-- Header -->
-  <div class="rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm">
-    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+  <section class="rounded-[28px] border border-slate-200/80 bg-white p-6 shadow-sm">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
       <div>
-        <div class="text-sm text-slate-400">Offertes</div>
-        <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">Offerte overzicht</h1>
-        <div class="mt-2 text-sm text-slate-500">Beheer klantaanvragen en verstuur offertes</div>
+        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-sky-600">Werkoverzicht offertes</p>
+        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Vandaag te regelen</h1>
+        <p class="mt-2 max-w-2xl text-sm text-slate-600">
+          Zie in een oogopslag welke offertes aandacht vragen, welke opvolging gepland staat en welke direct actie nodig hebben.
+        </p>
       </div>
-
       {% if tenant is defined and tenant and tenant.slug %}
-        <a class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-           href="/intake/{{ tenant.slug }}">
+        <a
+          class="inline-flex h-11 items-center justify-center rounded-xl bg-sky-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+          href="/intake/{{ tenant.slug }}"
+        >
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4v16m8-8H4"/>
           </svg>
@@ -23,7 +40,7 @@
       {% else %}
         <button
           type="button"
-          class="inline-flex h-10 items-center justify-center rounded-xl bg-slate-200 px-4 text-sm font-medium text-slate-400 cursor-not-allowed"
+          class="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-xl bg-slate-200 px-4 text-sm font-semibold text-slate-500"
           disabled
         >
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -33,107 +50,96 @@
         </button>
       {% endif %}
     </div>
-  </div>
+  </section>
 
-  <!-- Toast -->
-  <div id="toast"
-       class="pointer-events-none fixed bottom-5 right-5 hidden max-w-sm rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-lg z-50">
-    <div class="flex items-start gap-3">
-      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <article class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <p class="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">In beeld</p>
+      <p class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{{ counts.totaal }}</p>
+      <p class="mt-1 text-xs text-slate-500">Offertes in dit overzicht</p>
+    </article>
+    <article class="rounded-2xl border border-rose-200/90 bg-rose-50/70 p-5 shadow-sm">
+      <p class="text-xs font-medium uppercase tracking-[0.12em] text-rose-600">Direct opvolgen</p>
+      <p class="mt-2 text-3xl font-semibold tracking-tight text-rose-700">{{ counts.te_laat }}</p>
+      <p class="mt-1 text-xs text-rose-600">Te laat voor follow-up</p>
+    </article>
+    <article class="rounded-2xl border border-amber-200/90 bg-amber-50/70 p-5 shadow-sm">
+      <p class="text-xs font-medium uppercase tracking-[0.12em] text-amber-700">Nog open</p>
+      <p class="mt-2 text-3xl font-semibold tracking-tight text-amber-800">{{ counts.verstuurd }}</p>
+      <p class="mt-1 text-xs text-amber-700">Verstuurd of bekeken</p>
+    </article>
+    <article class="rounded-2xl border border-emerald-200/90 bg-emerald-50/70 p-5 shadow-sm">
+      <p class="text-xs font-medium uppercase tracking-[0.12em] text-emerald-700">Binnen</p>
+      <p class="mt-2 text-3xl font-semibold tracking-tight text-emerald-800">{{ counts.geaccepteerd }}</p>
+      <p class="mt-1 text-xs text-emerald-700">Geaccepteerde offertes</p>
+    </article>
+  </section>
+
+  <section
+    class="rounded-[26px] border border-slate-200/80 bg-white shadow-sm"
+    x-data="{
+      q: '',
+      status: 'alles',
+      urgentie: 'alles',
+      match(row) {
+        const searchOk = !this.q || ((row.search || '').toLowerCase().includes(this.q.toLowerCase()));
+        const statusOk = this.status === 'alles' || (row.status || '') === this.status;
+        const urgentieOk = this.urgentie === 'alles' || (row.urgentie || '') === this.urgentie;
+        return searchOk && statusOk && urgentieOk;
+      }
+    }"
+  >
+    <div class="border-b border-slate-100 px-5 py-5">
+      <div class="flex flex-col gap-2">
+        <h2 class="text-base font-semibold text-slate-900">Offerte-inbox</h2>
+        <p class="text-sm text-slate-500">Filter op status en urgentie om sneller te schakelen.</p>
       </div>
-      <div>
-        <div class="text-sm font-semibold text-slate-900">Link gekopieerd</div>
-        <div class="text-xs text-slate-500">Publieke offerte-link gekopieerd naar klembord</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    {% set counts = {'new': 0, 'pending': 0, 'accepted': 0, 'total': leads|length} %}
-    {% for lead in leads %}
-      {% set st = (lead.status or '').upper() %}
-      {% if st in ['NEW', 'DRAFT'] %}
-        {% set _ = counts.update({'new': counts.new + 1}) %}
-      {% elif st in ['SENT', 'VIEWED'] %}
-        {% set _ = counts.update({'pending': counts.pending + 1}) %}
-      {% elif st in ['ACCEPTED'] %}
-        {% set _ = counts.update({'accepted': counts.accepted + 1}) %}
-      {% endif %}
-    {% endfor %}
-
-    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-      <div class="flex items-center gap-4">
-        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-          </svg>
-        </div>
-        <div>
-          <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.total }}</div>
-          <div class="text-xs uppercase tracking-wide text-slate-400">Totaal offertes</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-      <div class="flex items-center gap-4">
-        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.new }}</div>
-          <div class="text-xs uppercase tracking-wide text-slate-400">Nieuw / Concept</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-      <div class="flex items-center gap-4">
-        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-500">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.pending }}</div>
-          <div class="text-xs uppercase tracking-wide text-slate-400">Offerte verstuurd</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-      <div class="flex items-center gap-4">
-        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-500">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ counts.accepted }}</div>
-          <div class="text-xs uppercase tracking-wide text-slate-400">Geaccepteerd</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Table card -->
-  <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
-    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-        <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="text-sm font-semibold text-slate-900">Alle offertes</div>
-          <div class="text-xs text-slate-400">Klik op een offerte voor details</div>
+      <div class="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
+        <label class="block">
+          <span class="sr-only">Zoeken</span>
+          <input
+            type="search"
+            x-model.debounce.150ms="q"
+            placeholder="Zoek op klant, status of opvolgactie"
+            class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          />
+        </label>
+        <label class="block">
+          <span class="sr-only">Status</span>
+          <select
+            x-model="status"
+            class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          >
+            <option value="alles">Alle statussen</option>
+            <option value="new">Nieuw</option>
+            <option value="draft">Concept</option>
+            <option value="sent">Verstuurd</option>
+            <option value="viewed">Bekeken</option>
+            <option value="accepted">Geaccepteerd</option>
+            <option value="rejected">Afgewezen</option>
+            <option value="cancelled">Geannuleerd</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="sr-only">Urgentie</span>
+          <select
+            x-model="urgentie"
+            class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+          >
+            <option value="alles">Alle urgentie</option>
+            <option value="te laat">Te laat</option>
+            <option value="vandaag">Vandaag</option>
+            <option value="komt eraan">Komt eraan</option>
+          </select>
+        </label>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            @click="q = ''; status = 'alles'; urgentie = 'alles'"
+            class="inline-flex h-10 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700"
+          >
+            Filters wissen
+          </button>
         </div>
       </div>
     </div>
@@ -142,176 +148,16 @@
       <table class="min-w-full">
         <thead>
           <tr class="border-b border-slate-100 text-[11px] uppercase tracking-[0.14em] text-slate-400">
-            <th class="px-5 py-3.5 text-left font-medium">Klant</th>
-            <th class="px-5 py-3.5 text-left font-medium">Status</th>
-            <th class="px-5 py-3.5 text-left font-medium">Offerte</th>
-            <th class="px-5 py-3.5 text-right font-medium">Acties</th>
+            <th class="px-5 py-3.5 text-left font-semibold">Klant</th>
+            <th class="px-5 py-3.5 text-left font-semibold">Offertestatus</th>
+            <th class="px-5 py-3.5 text-left font-semibold">Opvolging</th>
+            <th class="px-5 py-3.5 text-right font-semibold">Acties</th>
           </tr>
         </thead>
-
-        <tbody>
-          {% for lead in leads %}
-            {% set st = (lead.status or '').upper() %}
-            {% set status_labels = {
-              'ACCEPTED': 'Geaccepteerd',
-              'DONE': 'Afgerond',
-              'COMPLETED': 'Compleet',
-              'SENT': 'Verstuurd',
-              'VIEWED': 'Bekeken',
-              'CANCELLED': 'Geannuleerd',
-              'NEW': 'Nieuw',
-              'DRAFT': 'Concept'
-            } %}
-            {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
-              {% set badge_color = 'bg-emerald-50 text-emerald-700' %}
-            {% elif st in ['SENT','VIEWED'] %}
-              {% set badge_color = 'bg-amber-50 text-amber-700' %}
-            {% elif st in ['CANCELLED'] %}
-              {% set badge_color = 'bg-rose-50 text-rose-600' %}
-            {% else %}
-              {% set badge_color = 'bg-slate-100 text-slate-600' %}
-            {% endif %}
-
-            {% set total = lead.get("total") if lead is mapping else None %}
-
-            <tr class="border-b border-slate-100 last:border-0 transition hover:bg-slate-50">
-              <!-- Customer -->
-              <td class="px-5 py-5 align-middle">
-                <div class="flex flex-col gap-1">
-                  <a href="/app/leads/{{ lead.id }}" class="text-sm font-medium text-slate-900 transition hover:text-sky-600">
-                    {{ lead.customer_name or "—" }}
-                  </a>
-                  {% if lead.address %}
-                    <div class="flex items-center gap-1.5 text-xs text-slate-500">
-                      <svg class="h-3.5 w-3.5 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                      </svg>
-                      <span class="max-w-[220px] truncate">{{ lead.address }}</span>
-                    </div>
-                  {% endif %}
-                </div>
-              </td>
-
-              <!-- Status -->
-              <td class="px-5 py-5 align-middle">
-                <span class="inline-flex items-center rounded-full border border-transparent px-3 py-1 text-xs font-medium {{ badge_color }}">
-                  {{ status_labels.get(st, "Nieuw") }}
-                </span>
-              </td>
-
-              <!-- Estimate -->
-              <td class="px-5 py-5 align-middle">
-                <div class="flex flex-col gap-2">
-                  {% if lead.estimate_html_key %}
-                    <span class="inline-flex w-fit items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-600">
-                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                      </svg>
-                      Gereed
-                    </span>
-                  {% else %}
-                    <span class="inline-flex w-fit items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      In behandeling
-                    </span>
-                  {% endif %}
-
-                  {% if total is not none %}
-                    <div class="text-sm font-semibold text-slate-900">
-                      €{{ "%.2f"|format(total) }}
-                    </div>
-                  {% endif %}
-                </div>
-              </td>
-
-              <!-- Actions -->
-              <td class="px-5 py-5 align-middle text-right">
-                <div class="flex flex-wrap items-center justify-end gap-3">
-                  {% set a = lead.next_action %}
-                  {% if a.method == "POST" %}
-                    <form method="post" action="{{ a.href }}" class="m-0">
-                      <button
-                        class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-                        type="submit"
-                      >
-                        {{ a.label }}
-                      </button>
-                    </form>
-                  {% else %}
-                    <a
-                      class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-                      href="{{ a.href }}"
-                    >
-                      {{ a.label }}
-                    </a>
-                  {% endif %}
-
-                  {% if lead.public_url %}
-                    <button
-                      class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                      type="button"
-                      onclick="copyText('{{ lead.public_url }}')"
-                    >
-                      <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                      </svg>
-                      Link kopiëren
-                    </button>
-                  {% endif %}
-                </div>
-              </td>
-            </tr>
-          {% else %}
-            <tr>
-              <td class="px-5 py-16 text-center" colspan="4">
-                <div class="flex flex-col items-center justify-center">
-                  <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
-                  </div>
-                  <p class="text-sm font-medium text-slate-900">Nog geen offertes</p>
-                  <p class="mt-1 text-xs text-slate-500">Maak je eerste offerte aan om te beginnen</p>
-                  <a href="/intake/paintly"
-                     class="mt-4 inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600">
-                    Nieuwe offerte
-                  </a>
-                </div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
+        {% include "leads/partials/table_body.html" %}
       </table>
     </div>
-  </div>
+  </section>
 </div>
-
-<script>
-  function copyText(text) {
-    const toast = document.getElementById("toast");
-
-    const showToast = () => {
-      if (!toast) return;
-      toast.classList.remove("hidden");
-      toast.classList.add("block");
-      clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(() => {
-        toast.classList.add("hidden");
-        toast.classList.remove("block");
-      }, 2000);
-    };
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(showToast).catch(() => {
-        prompt("Kopieer dit:", text);
-      });
-    } else {
-      prompt("Kopieer dit:", text);
-    }
-  }
-</script>
 
 {% endblock %}

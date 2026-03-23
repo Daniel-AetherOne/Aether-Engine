@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, require_user_html
 from app.db import get_db
 from app.models import Lead, LeadFile, Tenant
 from app.models.calendar_connection import CalendarConnection
@@ -499,7 +499,7 @@ def quote_html(lead_id: str, db: Session = Depends(get_db)):
 def quote_calendar_ics(
     quote_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_user_html),
 ):
     lead = (
         db.query(Lead)

@@ -71,6 +71,7 @@ class Lead(Base):
     accepted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    reject_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     scheduled_start: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

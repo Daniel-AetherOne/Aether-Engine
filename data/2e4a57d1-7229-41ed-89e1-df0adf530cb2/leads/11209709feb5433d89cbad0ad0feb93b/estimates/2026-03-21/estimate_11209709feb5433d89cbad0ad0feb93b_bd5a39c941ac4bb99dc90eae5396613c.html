@@ -1,0 +1,574 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Concept offerte – schilderwerk</title>
+
+  
+  
+    <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* Base tweaks */
+    html { scroll-behavior: smooth; }
+
+    @page {
+      size: A4;
+      margin: 14mm 12mm;
+    }
+
+    @media print {
+      html, body {
+        background: white !important;
+      }
+
+      body {
+        margin: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .no-print { display: none !important; }
+      a { text-decoration: none; color: inherit; }
+
+      /* Eén kolom document-flow voor PDF */
+      .pdf-root {
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 0;
+      }
+
+      .pdf-root .grid,
+      .pdf-root .flex {
+        display: block !important;
+      }
+
+      /* Verwijder zware UI-styling in print */
+      .shadow-sm,
+      .shadow-lg {
+        box-shadow: none !important;
+      }
+
+      .print-card {
+        border-radius: 2px !important;
+        border: 1px solid #e2e8f0 !important;
+      }
+
+      /* Secties: compacte, consistente marges */
+      .pdf-section {
+        margin-bottom: 10px !important;
+      }
+
+      /* Tabellen: volle breedte, nette randen, rijen samenhouden waar mogelijk */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        page-break-inside: auto;
+      }
+
+      th, td {
+        padding: 6px 8px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      thead th {
+        background: #f1f5f9;
+        font-weight: 600;
+      }
+
+      tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      /* Sidebar: geen sticky gedrag in PDF */
+      .lg\\:sticky {
+        position: static !important;
+        top: auto !important;
+      }
+
+      /* Minder verticale ruimte uit web-UI klassen */
+      .mb-6 {
+        margin-bottom: 10px !important;
+      }
+      .py-6, .py-5, .py-4 {
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+      }
+
+      /* Hoofdcontent + sidebar onder elkaar in print */
+      .lg\\:grid-cols-\\[1fr_360px\\] {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* Tabellen mogen breed zijn; geen scrollcontainers in PDF */
+      .overflow-x-auto {
+        overflow: visible !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-[#eef4fb] text-slate-900 antialiased">
+
+  
+  
+  
+  
+
+  
+  
+  
+  
+
+  <div class="w-full max-w-none px-8 py-6 md:py-8 pdf-root">
+
+    <!-- Top bar -->
+    <div class="mb-6 rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm print-card pdf-section pdf-keep-together">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-sm">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+            </svg>
+          </div>
+          
+
+          <div>
+            <div class="text-[22px] font-semibold tracking-tight text-slate-900">
+              
+                Paintly
+              
+            </div>
+            <div class="mt-0.5 text-sm text-slate-500">
+              Paintly
+            </div>
+            <div class="mt-1 text-sm text-slate-500">
+              
+              
+              
+            </div>
+          </div>
+        </div>
+
+        <div class="no-print flex items-center gap-2">
+          
+        </div>
+      </div>
+    </div>
+
+    <!-- Status banner -->
+    
+      <div class="mb-6 rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 print-card pdf-section pdf-keep-together">
+        <div class="flex items-start gap-3">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="text-base font-semibold text-emerald-900">AI-gegenereerde conceptofferte</div>
+            <div class="mt-1 text-sm text-emerald-800">
+              Deze conceptofferte is automatisch opgesteld op basis van de ingestuurde foto's en projectgegevens. De definitieve prijs kan na verificatie nog worden aangepast.
+            </div>
+          </div>
+        </div>
+      </div>
+    
+
+    <!-- Document header -->
+    <div class="mb-6 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white shadow-sm print-card pdf-section pdf-keep-together">
+      <div class="border-b border-slate-100 px-6 py-5">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">CONCEPTOFFERTE</div>
+            <h1 class="mt-1 text-[32px] font-semibold tracking-tight text-slate-900">
+              Concept offerte – schilderwerk
+            </h1>
+            <p class="mt-2 text-sm text-slate-500">
+              Deze conceptofferte is automatisch gegenereerd op basis van de ingestuurde foto's.
+            </p>
+            <div class="mt-2 text-sm text-slate-500">
+              AI analyse · Zekerheid: Hoog
+            </div>
+            
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
+              #lead_11209709feb5433d89cbad0ad0feb93b
+            </span>
+            
+              <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
+                2026-03-21
+              </span>
+            
+            
+              <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
+                Geldig t/m 2026-04-20
+              </span>
+            
+          </div>
+        </div>
+      </div>
+
+      <!-- Badges -->
+      <div class="flex flex-wrap gap-2 border-b border-slate-100 px-6 py-4">
+        
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            AI-gegenereerde conceptofferte
+          </span>
+        
+
+        
+      </div>
+
+      <!-- Total preview -->
+      <div class="px-6 py-6">
+        
+          <div class="flex flex-wrap items-baseline gap-3">
+            <span class="text-5xl font-semibold tracking-tight text-slate-900">
+              €1.716,75
+            </span>
+            
+          </div>
+
+          <div class="mt-3 max-w-md space-y-1 text-sm text-slate-600">
+            <div class="flex justify-between">
+              <span>Subtotaal (excl. btw)</span>
+              <span class="font-medium text-slate-900">
+                €1.575
+              </span>
+            </div>
+
+            <div class="flex justify-between">
+              <span>BTW (9.0%)</span>
+              <span class="font-medium text-slate-900">
+                €141,75
+              </span>
+            </div>
+
+            
+              <div class="pt-1">
+                Geldig t/m <span class="font-medium text-slate-900">2026-04-20</span>
+              </div>
+            
+          </div>
+        
+
+        <!-- Trust badges -->
+        <div class="mt-5 flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
+            <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            Vloeren & meubels beschermd
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
+            <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            Dagelijkse opruiming
+          </span>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
+            <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Garantie op vakmanschap
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="grid gap-6 lg:grid-cols-[1fr_360px] pdf-section">
+
+      <!-- Left -->
+      <div class="space-y-6">
+
+        <!-- Itemized breakdown -->
+        <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm print-card pdf-section">
+          <div class="border-b border-slate-100 px-5 py-4">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                </svg>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-slate-900">Gedetailleerde specificatie</div>
+                <div class="text-xs text-slate-400">Regels gebaseerd op uw foto's</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full">
+              <thead>
+                <tr class="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                  <th class="px-5 py-4 text-left font-medium">Ruimte / onderdeel</th>
+                  <th class="px-5 py-4 text-left font-medium">Aantal</th>
+                  <th class="px-5 py-4 text-right font-medium">Prijs</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                
+                  
+                    
+                    
+                    
+                    
+                    
+
+                    <tr class="border-b border-slate-100 last:border-0 transition hover:bg-slate-50/70">
+                      <td class="px-5 py-4">
+                        <div class="text-sm font-medium text-slate-900">Wanden schilderen</div>
+
+                        
+
+                        
+
+                        
+                          <div class="mt-2 flex flex-wrap gap-2">
+                            
+                              <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">Voorbereiding: light</span>
+                            
+                            
+                              <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">Toegang: low</span>
+                            
+                          </div>
+                        
+                      </td>
+
+                      <td class="px-5 py-4 text-sm text-slate-600">
+                        
+                          
+                          45.0 m²
+                        
+                      </td>
+
+                      <td class="px-5 py-4 text-right">
+                        
+                          <span class="text-sm font-semibold text-slate-900">€1.575</span>
+                        
+                      </td>
+                    </tr>
+                  
+                
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Scope & exclusions -->
+        <div class="grid gap-6 md:grid-cols-2 pdf-section">
+          <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm print-card">
+            <div class="mb-3 flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-500">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <h3 class="text-sm font-semibold text-slate-900">Werkzaamheden</h3>
+            </div>
+
+            <ul class="space-y-2 text-sm text-slate-700">
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span>Bescherming van vloeren en omliggende oppervlakken</span>
+                </li>
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span>Standaard voorbereiding (licht schuren waar nodig)</span>
+                </li>
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span>Twee verflagen waar nodig</span>
+                </li>
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span>Opruimen en afvoeren van licht afval</span>
+                </li>
+              
+            </ul>
+
+            <p class="mt-4 text-xs text-slate-500">
+              Inclusief bescherming van vloeren/meubels en dagelijkse opruiming.
+            </p>
+          </div>
+
+          <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm print-card">
+            <div class="mb-3 flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+              </div>
+              <h3 class="text-sm font-semibold text-slate-900">Niet inbegrepen</h3>
+            </div>
+
+            <ul class="space-y-2 text-sm text-slate-700">
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  <span>Groot herstelwerk aan muren of hout</span>
+                </li>
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  <span>Schimmelbehandeling</span>
+                </li>
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  <span>Verplaatsen van zware meubels</span>
+                </li>
+              
+            </ul>
+
+            <div class="mt-4 border-t border-slate-100 pt-4">
+              <div class="mb-1 text-xs font-semibold text-slate-900">Wijzigingen</div>
+              <p class="text-xs text-slate-600">Extra werk wordt geprijsd en goedgekeurd voordat we verder gaan.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right sidebar -->
+      <aside class="space-y-6">
+        <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm print-card lg:sticky lg:top-6 pdf-section">
+
+          <!-- Customer info -->
+          <div class="border-b border-slate-100 px-5 py-4">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-slate-900">Klant</div>
+                <div class="text-xs text-slate-400">Projectdetails</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-5 px-5 py-5">
+            <div class="space-y-3">
+              <div class="flex justify-between gap-4 text-sm">
+                <span class="text-slate-500">Naam</span>
+                <span class="text-right font-medium text-slate-900">demo3</span>
+              </div>
+              <div class="flex justify-between gap-4 text-sm">
+                <span class="text-slate-500">E-mail</span>
+                <span class="break-all text-right text-xs text-slate-900">dvanlieshout00@gmail.com</span>
+              </div>
+              <div class="flex justify-between gap-4 text-sm">
+                <span class="text-slate-500">Telefoon</span>
+                <span class="text-right text-slate-900">123456</span>
+              </div>
+            </div>
+
+            <div class="h-px bg-slate-100"></div>
+
+            <div class="space-y-3">
+              
+              
+            </div>
+
+            
+
+            
+
+            <div class="h-px bg-slate-100"></div>
+
+            <!-- Totals -->
+            <div>
+              <div class="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Kostenoverzicht
+              </div>
+
+              
+                <div class="space-y-2">
+                  <div class="flex justify-between gap-4 text-sm">
+                    <span class="text-slate-600">Arbeid</span>
+                    <span class="font-medium text-slate-900">
+                      €1.575
+                    </span>
+                  </div>
+
+                  <div class="flex justify-between gap-4 text-sm">
+                    <span class="text-slate-600">Materialen</span>
+                    <span class="font-medium text-slate-900">
+                      €0
+                    </span>
+                  </div>
+
+                  <div class="flex justify-between gap-4 pt-2 text-sm">
+                    <span class="text-slate-600">Subtotaal (excl. btw)</span>
+                    <span class="font-medium text-slate-900">€1.575</span>
+                  </div>
+
+                  <div class="flex justify-between gap-4 text-sm">
+                    <span class="text-slate-600">BTW (9.0%)</span>
+                    <span class="font-medium text-slate-900">€141,75</span>
+                  </div>
+                </div>
+
+                <div class="mt-4 rounded-2xl bg-slate-900 px-4 py-4">
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="text-sm font-medium text-white">Totaal (incl. btw)</span>
+                    <span class="text-2xl font-semibold text-white">€1.716,75</span>
+                  </div>
+                  
+                </div>
+              
+            </div>
+
+            <div class="text-center text-xs text-slate-400">
+              
+                <p>Gegenereerd door Paintly AI</p>
+              
+              
+                <p class="mt-1">Referentie: Offerte #11209709feb5433d89cbad0ad0feb93b</p>
+              
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</body>
+</html>

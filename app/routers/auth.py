@@ -2,6 +2,7 @@ from pathlib import Path
 from uuid import uuid4
 import re
 import logging
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -117,6 +118,9 @@ def register_form(
         slug = f"{base_slug}-{counter}"
         counter += 1
 
+    trial_start = datetime.now(timezone.utc)
+    trial_end = trial_start + timedelta(days=14)
+
     tenant = Tenant(
         id=str(uuid4()),
         name=company_name_clean,
@@ -124,8 +128,9 @@ def register_form(
         email=email_norm,
         phone=phone_clean,
         slug=slug,
-        plan_code="starter_99",
+        plan_code="pro_199",
         subscription_status="trialing",
+        trial_ends_at=trial_end,
         pricing_json={
             "walls_rate_eur_per_sqm": float(walls_rate_eur_per_sqm),
         },

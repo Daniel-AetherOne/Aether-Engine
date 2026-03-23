@@ -25,8 +25,10 @@ PLAN_CODE_ALIASES: dict[str, str] = {
 class PlanCatalogItem:
     code: str
     name: str
-    price_label: str
+    price_display: str
+    price_period: str
     quote_limit_label: str
+    tagline_nl: str
     ui_features: tuple[str, ...]
     entitlement_features: frozenset[str]
     stripe_price_env_key: str
@@ -36,9 +38,15 @@ PLAN_CATALOG: dict[str, PlanCatalogItem] = {
     "starter_99": PlanCatalogItem(
         code="starter_99",
         name="Starter",
-        price_label="EUR99 / month",
-        quote_limit_label="99 quotes / month",
-        ui_features=("Basic sending", "PDF export"),
+        price_display="€99",
+        price_period="per maand",
+        quote_limit_label="99 offertes per maand",
+        tagline_nl="Voor zelfstandige schilders die digitaal willen starten met duidelijke offertes.",
+        ui_features=(
+            "Tot 99 offertes per maand versturen",
+            "PDF-export die je zo naar klanten stuurt",
+            "Overzicht van leads en opvolging in Paintly",
+        ),
         entitlement_features=frozenset(
             {
                 "BASIC_SENDING",
@@ -50,9 +58,15 @@ PLAN_CATALOG: dict[str, PlanCatalogItem] = {
     "pro_199": PlanCatalogItem(
         code="pro_199",
         name="Pro",
-        price_label="EUR199 / month",
-        quote_limit_label="200 quotes / month",
-        ui_features=("Basic sending", "PDF export", "Branding/logo"),
+        price_display="€199",
+        price_period="per maand",
+        quote_limit_label="200 offertes per maand",
+        tagline_nl="Voor groeiende teams: meer volume en een professionele uitstraling richting klanten.",
+        ui_features=(
+            "Tot 200 offertes per maand",
+            "PDF-export en eigen logo op je offertes",
+            "Huisstijl die past bij je schildersbedrijf",
+        ),
         entitlement_features=frozenset(
             {
                 "BASIC_SENDING",
@@ -65,9 +79,15 @@ PLAN_CATALOG: dict[str, PlanCatalogItem] = {
     "business_399": PlanCatalogItem(
         code="business_399",
         name="Business",
-        price_label="EUR399 / month",
-        quote_limit_label="Unlimited quotes / month",
-        ui_features=("Basic sending", "PDF export", "Branding/logo", "Whitelabel"),
+        price_display="€399",
+        price_period="per maand",
+        quote_limit_label="Onbeperkt offertes",
+        tagline_nl="Voor bedrijven met hoog volume en meerdere medewerkers aan het roer.",
+        ui_features=(
+            "Onbeperkt offertes per maand",
+            "Alles van Pro, inclusief whitelabel",
+            "Jouw merk centraal: professioneel naar buiten",
+        ),
         entitlement_features=frozenset(
             {
                 "BASIC_SENDING",
@@ -104,4 +124,3 @@ def get_stripe_price_id(plan_code: str | None) -> tuple[str | None, str | None]:
     if not item:
         return None, None
     return item.code, (os.getenv(item.stripe_price_env_key) or "").strip() or None
-

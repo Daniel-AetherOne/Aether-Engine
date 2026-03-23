@@ -26,8 +26,8 @@ async def send_estimate_ready_email_to_customer(
     )
 
     text_body = (
-        f"Hi {customer_name or 'klant'},\n\n"
-        "Uw offerte staat klaar. U kunt deze online bekijken en accepteren wanneer het u uitkomt.\n\n"
+        f"Beste {customer_name or 'klant'},\n\n"
+        "Uw offerte staat klaar. U kunt deze vrijblijvend online bekijken, met duidelijke prijsopbouw, en eenvoudig accepteren of afwijzen.\n\n"
         f"Bekijk uw offerte: {quote_url}\n"
     )
 
@@ -40,7 +40,7 @@ async def send_estimate_ready_email_to_customer(
     try:
         await send_email(
             to=to_email,
-            subject="Je offerte staat klaar",
+            subject="Uw offerte staat klaar",
             html_body=html_body,
             text_body=text_body,
             tag="customer-estimate-ready",

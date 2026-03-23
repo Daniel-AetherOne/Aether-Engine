@@ -1,150 +1,178 @@
 {% extends "app/layout.html" %}
 {% block content %}
 
-<div class="space-y-6">
-  <div class="rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm">
-    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-      <div>
-        <div class="text-sm text-slate-400">Billing</div>
-        <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">
-          Kies je plan
-        </h1>
-      </div>
-    </div>
-  </div>
+<div class="mx-auto max-w-6xl pb-10">
+  <!-- Compacte header -->
+  <header class="border-b border-slate-200/80 pb-6">
+    <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+      Abonnement
+    </p>
+    <h2 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-[26px]">
+      Kies het plan dat bij je bedrijf past
+    </h2>
+    <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
+      Eén plek voor offertes, opvolging en professionele communicatie richting je klanten. Upgrade wanneer je meer volume of merkbouw nodig hebt.
+    </p>
+  </header>
 
   {% if billing_status_error %}
-    <div class="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      Je abonnement is niet actief. Start of upgrade een plan om offertes te verzenden.
+    <div class="mt-5 rounded-2xl border border-amber-200/90 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+      Je abonnement is niet actief. Kies een plan om offertes te kunnen versturen.
     </div>
   {% endif %}
 
   {% if portal_error_no_customer %}
-    <div class="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      Er is nog geen Stripe klant gekoppeld aan dit account.
+    <div class="mt-5 rounded-2xl border border-amber-200/90 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+      Er is nog geen Stripe-klant gekoppeld aan dit account.
     </div>
   {% endif %}
 
-  <!-- Statuskaart -->
-  <div class="rounded-[24px] border border-slate-200/70 bg-slate-50 px-5 py-4">
-    <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-      <div class="space-y-1">
-        <div class="text-xs font-medium uppercase tracking-wide text-slate-400">
-          Huidige status
+  <!-- Compacte status / trial -->
+  <section class="mt-6 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm sm:px-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div class="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-700">
+        <div class="flex items-baseline gap-2">
+          <span class="text-xs font-medium uppercase tracking-wide text-slate-400">Huidig plan</span>
+          <span class="font-semibold text-slate-900">{{ current_plan_name }}</span>
         </div>
-        <div class="text-sm text-slate-700">
-          <span class="font-semibold">Plan:</span>
-          <span class="ml-1">{{ current_plan_code }}</span>
+        <span class="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden="true"></span>
+        <div class="flex items-baseline gap-2">
+          <span class="text-xs font-medium uppercase tracking-wide text-slate-400">Status</span>
+          <span class="font-medium text-slate-800">{{ subscription_status_label }}</span>
         </div>
-        <div class="text-sm text-slate-700">
-          <span class="font-semibold">Abonnement:</span>
-          <span class="ml-1">
-            {{ subscription_status }}
-          </span>
-        </div>
-        {% if trial_days_left is not none or trial_ends_at %}
-          <div class="text-sm text-slate-700">
-            {% if trial_days_left is not none %}
-              <span class="font-semibold">Trial dagen over:</span>
-              <span class="ml-1">{{ trial_days_left }}</span>
-            {% endif %}
-            {% if trial_ends_at %}
-              <span class="ml-3 text-xs text-slate-500">
-                (tot {{ trial_ends_at }})
-              </span>
-            {% endif %}
+        {% if subscription_status == "trialing" and trial_days_left is not none %}
+          <span class="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden="true"></span>
+          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span class="text-xs font-medium uppercase tracking-wide text-slate-400">Proefperiode</span>
+            <span class="font-medium text-slate-800">
+              Nog {{ trial_days_left }} dag{% if trial_days_left != 1 %}en{% endif %}
+              {% if trial_ends_at_display %}
+                <span class="font-normal text-slate-500">· tot {{ trial_ends_at_display }}</span>
+              {% endif %}
+            </span>
           </div>
         {% endif %}
       </div>
-
-      <div class="mt-2 text-sm md:mt-0">
+      <div class="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
         {% if subscription_status == "trialing" %}
-          <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-            Trial actief
+          <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-200/80">
+            Proef
           </span>
         {% elif subscription_status == "active" %}
-          <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-            Abonnement actief
+          <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-800 ring-1 ring-inset ring-emerald-200/80">
+            Actief
           </span>
         {% else %}
-          <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-            Nog geen actief abonnement
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 ring-1 ring-inset ring-slate-200/80">
+            Geen abonnement
           </span>
         {% endif %}
+        <button
+          type="button"
+          onclick="openBillingPortal()"
+          class="text-sm font-medium text-sky-600 underline-offset-4 transition hover:text-sky-700 hover:underline"
+        >
+          Betaling beheren
+        </button>
       </div>
     </div>
-  </div>
+  </section>
 
-  <div>
-    <button
-      type="button"
-      onclick="openBillingPortal()"
-      class="inline-flex w-full items-center justify-center rounded-xl bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-    >
-      Beheer abonnement
-    </button>
-  </div>
+  <!-- Pricing cards -->
+  <section class="mt-10" aria-labelledby="pricing-heading">
+    <h3 id="pricing-heading" class="sr-only">Beschikbare plannen</h3>
+    <div class="grid gap-6 lg:grid-cols-3 lg:items-stretch lg:gap-5">
+      {% for plan in plans %}
+        {% set is_current = (plan.code == current_plan_code) %}
+        {% set is_pro = plan.is_recommended %}
 
-  <div class="grid gap-6 md:grid-cols-3">
-    {% for plan in plans %}
-      {% set is_current = (plan.code == current_plan_code) %}
-      <div class="rounded-[24px] border {{ 'border-sky-400' if is_current else 'border-slate-200/70' }} bg-white p-5 shadow-sm">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="text-sm font-semibold text-slate-900">
-              {{ plan.name }}
+        <article
+          class="relative flex flex-col rounded-2xl border bg-white transition
+            {% if is_pro %}
+              z-10 border-sky-400/90 shadow-[0_18px_50px_-12px_rgba(14,165,233,0.28)] ring-1 ring-sky-500/20 lg:-mt-1 lg:scale-[1.02]
+            {% elif is_current %}
+              border-sky-300/80 shadow-md ring-1 ring-sky-100
+            {% else %}
+              border-slate-200/80 shadow-sm hover:border-slate-300 hover:shadow-md
+            {% endif %}"
+        >
+          {% if is_pro %}
+            <div class="absolute -top-3 left-1/2 z-20 -translate-x-1/2">
+              <span class="inline-flex items-center rounded-full bg-gradient-to-r from-sky-500 to-sky-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm">
+                Meest gekozen
+              </span>
+            </div>
+          {% endif %}
+
+          <div class="flex flex-1 flex-col px-5 pb-5 pt-8 {% if is_pro %}pt-9{% endif %}">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h4 class="text-lg font-semibold text-slate-900">{{ plan.name }}</h4>
+                <p class="mt-1.5 text-sm leading-snug text-slate-600">{{ plan.tagline }}</p>
+              </div>
+              {% if is_current %}
+                <span class="shrink-0 rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700 ring-1 ring-sky-200/80">
+                  Huidig plan
+                </span>
+              {% endif %}
+            </div>
+
+            <div class="mt-6 border-t border-slate-100 pt-5">
+              <div class="flex items-end gap-1.5">
+                <span class="text-4xl font-semibold tracking-tight text-slate-900">{{ plan.price_display }}</span>
+                <span class="pb-1 text-sm font-medium text-slate-500">{{ plan.price_period }}</span>
+              </div>
+              <p class="mt-1 text-xs text-slate-500">{{ plan.quote_limit_label }}</p>
+            </div>
+
+            <div class="my-6 h-px w-full bg-slate-100" aria-hidden="true"></div>
+
+            <ul class="flex-1 space-y-2.5 text-sm text-slate-700">
+              {% for feat in plan.features %}
+                <li class="flex gap-2.5">
+                  <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                  <span class="leading-snug">{{ feat }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+
+            <div class="mt-8">
+              {% if is_current %}
+                <button
+                  type="button"
+                  disabled
+                  class="inline-flex w-full cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-400"
+                >
+                  Huidig plan
+                </button>
+              {% else %}
+                <button
+                  type="button"
+                  onclick="upgradePlan('{{ plan.code }}')"
+                  class="inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition
+                    {% if is_pro %}
+                      bg-sky-600 hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500
+                    {% else %}
+                      bg-slate-900 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400
+                    {% endif %}"
+                >
+                  {{ plan.cta_label }}
+                </button>
+              {% endif %}
             </div>
           </div>
-          {% if is_current %}
-            <span class="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-600">
-              Huidig plan
-            </span>
-          {% endif %}
-        </div>
+        </article>
+      {% endfor %}
+    </div>
 
-        <div class="mt-4">
-          <div class="text-xl font-semibold text-slate-900">
-            {{ plan.price_label }}
-          </div>
-          <div class="mt-1 text-xs text-slate-400">
-            {{ plan.quote_limit_label }}
-          </div>
-        </div>
-
-        <ul class="mt-4 space-y-2 text-sm text-slate-600">
-          {% for feat in plan.features %}
-            <li class="flex items-center gap-2">
-              <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              <span>{{ feat }}</span>
-            </li>
-          {% endfor %}
-        </ul>
-
-        <div class="mt-6">
-          {% if is_current %}
-            <button
-              class="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-400 cursor-default"
-              disabled
-            >
-              Huidig plan
-            </button>
-          {% else %}
-            <button
-              type="button"
-              onclick="upgradePlan('{{ plan.code }}')"
-              class="inline-flex w-full items-center justify-center rounded-xl bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-            >
-              Upgrade plan
-            </button>
-          {% endif %}
-        </div>
-      </div>
-    {% endfor %}
-  </div>
+    <p class="mt-6 text-center text-xs text-slate-500">
+      Prijzen zijn exclusief btw. Je kunt facturen en betaalmethoden beheren via <button type="button" onclick="openBillingPortal()" class="font-medium text-sky-600 underline-offset-2 hover:underline">betaling beheren</button>.
+    </p>
+  </section>
 </div>
 
 <script>
@@ -224,4 +252,3 @@
 </script>
 
 {% endblock %}
-

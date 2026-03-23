@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from datetime import UTC, datetime
 
 from app.models.lead import Lead
@@ -32,6 +33,7 @@ def _normalize_utc(value: datetime) -> datetime:
 def _ics_escape(value: str) -> str:
     escaped = (value or "").replace("\\", "\\\\")
     escaped = escaped.replace("\n", "\\n")
+    escaped = escaped.replace("\r", "")
     escaped = escaped.replace(",", "\\,")
     escaped = escaped.replace(";", "\\;")
     return escaped
@@ -60,6 +62,29 @@ def _build_location_from_intake(raw_intake_payload: str | None) -> str:
     return ", ".join(parts)
 
 
+def _extract_job_type(raw_intake_payload: str | None) -> str:
+    if not raw_intake_payload:
+        return ""
+    try:
+        payload = json.loads(raw_intake_payload)
+    except Exception:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    return str(payload.get("job_type") or "").strip()
+
+
+def _extract_price_display(lead: Lead) -> str:
+    value = getattr(lead, "final_price", None)
+    if value is None:
+        return ""
+    try:
+        amount = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return ""
+    return f"EUR {amount.quantize(Decimal('0.01'))}"
+
+
 def build_quote_calendar_payload(lead: Lead) -> QuoteCalendarPayload:
     status = str(getattr(lead, "status", "") or "").upper().strip()
     if status != "ACCEPTED":
@@ -79,13 +104,35 @@ def build_quote_calendar_payload(lead: Lead) -> QuoteCalendarPayload:
     tenant_id = str(getattr(lead, "tenant_id", "") or "default")
     customer_name = str(getattr(lead, "name", "") or "").strip()
     customer_email = str(getattr(lead, "email", "") or "").strip()
+    customer_phone = str(getattr(lead, "phone", "") or "").strip()
+    notes = str(getattr(lead, "notes", "") or "").strip()
+    job_type = _extract_job_type(getattr(lead, "intake_payload", None))
+    price_display = _extract_price_display(lead)
     location = str(getattr(lead, "address_line", "") or "").strip()
     if not location:
         location = _build_location_from_intake(getattr(lead, "intake_payload", None))
-    summary = f"Paintly job - {customer_name or 'Accepted quote'}"
-    description = f"Accepted Paintly quote {quote_id}"
-    if customer_email:
-        description = f"{description} for {customer_email}"
+    title_parts = ["Paintly"]
+    if job_type:
+        title_parts.append(job_type)
+    else:
+        title_parts.append("Paint job")
+    if customer_name:
+        title_parts.append(f"- {customer_name}")
+    summary = " ".join(title_parts)
+
+    description_lines = [
+        f"Quote ID: {quote_id}",
+        f"Name: {customer_name or '-'}",
+        f"Email: {customer_email or '-'}",
+        f"Phone: {customer_phone or '-'}",
+    ]
+    if price_display:
+        description_lines.append(f"Price: {price_display}")
+    if notes:
+        description_lines.append("")
+        description_lines.append("Notes:")
+        description_lines.append(notes)
+    description = "\n".join(description_lines)
     uid = f"paintly-quote-{tenant_id}-{quote_id}@paintly.local"
 
     created_at = getattr(lead, "created_at", None) or datetime.now(UTC)

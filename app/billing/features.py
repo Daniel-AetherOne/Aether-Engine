@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from datetime import datetime, timezone
 from typing import Iterable, Mapping, Protocol
 import logging
 
@@ -38,11 +39,16 @@ _ACCESSIBLE_STATUSES: frozenset[str] = frozenset({"active", "trialing"})
 _PLAN_CODE_ALIASES: Mapping[str, str] = PLAN_CODE_ALIASES
 
 
-def is_subscription_accessible(subscription_status: str | None) -> bool:
+def is_subscription_accessible(
+    subscription_status: str | None,
+    trial_ends_at: datetime | None = None,
+) -> bool:
     """
     Return whether a tenant's subscription should be treated as granting access.
 
-    Accessible statuses are: "active" and "trialing".
+    Accessible statuses are:
+    - "active" always
+    - "trialing" only when `trial_ends_at` is in the future
     Non-accessible statuses are: "inactive", "past_due", "canceled", and None.
     Unknown statuses are treated as non-accessible.
 
@@ -54,7 +60,18 @@ def is_subscription_accessible(subscription_status: str | None) -> bool:
     status = (subscription_status or "").strip().lower()
     if not status:
         return False
-    return status in _ACCESSIBLE_STATUSES
+    if status == "active":
+        return True
+    if status != "trialing":
+        return False
+    if trial_ends_at is None:
+        return False
+    trial_end_utc = (
+        trial_ends_at
+        if getattr(trial_ends_at, "tzinfo", None) is not None
+        else trial_ends_at.replace(tzinfo=timezone.utc)
+    )
+    return trial_end_utc > datetime.now(timezone.utc)
 
 
 def get_plan_features(plan_code: str | None) -> set[FeatureName]:
@@ -88,6 +105,7 @@ def plan_supports_feature(plan_code: str | None, feature: str) -> bool:
 class TenantLike(Protocol):
     plan_code: str | None
     subscription_status: str | None
+    trial_ends_at: datetime | None
 
 
 def tenant_has_feature(tenant: TenantLike, feature: str) -> bool:
@@ -97,12 +115,14 @@ def tenant_has_feature(tenant: TenantLike, feature: str) -> bool:
     Rules:
     - First require an accessible subscription status (active or trialing)
     - Then check whether the tenant plan includes the feature
+    - PDF export is not tier-gated: any accessible subscription may use it
     """
 
     subscription_status = getattr(tenant, "subscription_status", None)
+    trial_ends_at = getattr(tenant, "trial_ends_at", None)
     plan_code = getattr(tenant, "plan_code", None)
     resolved_features = sorted(get_plan_features(plan_code))
-    if not is_subscription_accessible(subscription_status):
+    if not is_subscription_accessible(subscription_status, trial_ends_at):
         if feature == Feature.PDF_EXPORT.value:
             logger.info(
                 "PDF_TENANT_HAS_FEATURE plan_code=%s subscription_status=%s feature=%s resolved_features=%s result=%s",
@@ -113,7 +133,6 @@ def tenant_has_feature(tenant: TenantLike, feature: str) -> bool:
                 False,
             )
         return False
-    result = plan_supports_feature(plan_code, feature)
     if feature == Feature.PDF_EXPORT.value:
         logger.info(
             "PDF_TENANT_HAS_FEATURE plan_code=%s subscription_status=%s feature=%s resolved_features=%s result=%s",
@@ -121,8 +140,10 @@ def tenant_has_feature(tenant: TenantLike, feature: str) -> bool:
             subscription_status,
             feature,
             resolved_features,
-            result,
+            True,
         )
+        return True
+    result = plan_supports_feature(plan_code, feature)
     return result
 
 

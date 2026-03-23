@@ -1,7 +1,8 @@
 # app/services/workflow.py
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 
 from app.models.lead import Lead
@@ -15,6 +16,16 @@ JOB_TO_LEAD = {
 
 def _utcnow():
     return datetime.now(timezone.utc)
+
+
+def _default_acceptance_schedule_window() -> tuple[datetime, datetime]:
+    tz = ZoneInfo("Europe/Amsterdam")
+    now_local = datetime.now(tz)
+    next_day = now_local.date() + timedelta(days=1)
+    start_local = datetime.combine(next_day, time(hour=9, minute=0), tzinfo=tz)
+    start_utc = start_local.astimezone(timezone.utc)
+    end_utc = start_utc + timedelta(hours=4)
+    return start_utc, end_utc
 
 
 def ensure_job_for_lead(db: Session, lead: Lead) -> Job:
@@ -72,4 +83,10 @@ def mark_lead_accepted(db: Session, lead: Lead) -> None:
     lead.status = "ACCEPTED"
     if hasattr(lead, "accepted_at") and not getattr(lead, "accepted_at", None):
         lead.accepted_at = _utcnow()
+    has_start = bool(getattr(lead, "scheduled_start", None))
+    has_end = bool(getattr(lead, "scheduled_end", None))
+    if (not has_start) and (not has_end):
+        start_utc, end_utc = _default_acceptance_schedule_window()
+        lead.scheduled_start = start_utc
+        lead.scheduled_end = end_utc
     db.add(lead)

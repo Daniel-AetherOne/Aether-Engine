@@ -5,6 +5,9 @@ import json
 import logging
 from typing import Any
 
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -17,6 +20,7 @@ from app.models.lead import Lead
 from app.models.user import User
 
 from app.verticals.paintly.router_app import (
+    build_followup_summary,
     _get_tenant_timezone,
     _utc_to_local_human,
     get_estimate_overrides,
@@ -37,6 +41,82 @@ router = APIRouter(
 def _require_tenant_match(tenant_id: str, user: User) -> None:
     if str(user.tenant_id) != tenant_id:
         raise HTTPException(status_code=404, detail="Not found")
+
+
+def _parse_next_action_at_utc(value: str) -> datetime | None:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except Exception:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _collect_followup_rows(db: Session, tenant_id: str, tz_name: str) -> list[dict[str, Any]]:
+    tz = ZoneInfo(tz_name)
+    now_utc = datetime.now(timezone.utc)
+    now_local = now_utc.astimezone(tz)
+    today_local = now_local.date()
+    one_hour_ahead_local = now_local + timedelta(hours=1)
+
+    leads = (
+        db.query(Lead)
+        .filter(Lead.tenant_id == tenant_id, Lead.estimate_overrides_json.isnot(None))
+        .all()
+    )
+
+    rows: list[dict[str, Any]] = []
+    for lead in leads:
+        overrides = get_estimate_overrides(lead)
+        next_action = str(overrides.get("next_action") or "").strip()
+        if not next_action:
+            continue
+        next_action_at_utc = _parse_next_action_at_utc(
+            str(overrides.get("next_action_at") or "")
+        )
+        if next_action_at_utc is None:
+            continue
+
+        target_local = next_action_at_utc.astimezone(tz)
+        is_overdue = next_action_at_utc < now_utc
+        is_today = target_local.date() == today_local
+        if is_overdue:
+            status_label = "Te laat"
+            bucket = 0
+        elif is_today:
+            status_label = "Vandaag"
+            bucket = 1
+        else:
+            status_label = "Komt eraan"
+            bucket = 2
+
+        today_label = "Vandaag"
+        if target_local < now_local:
+            today_label = "Te laat"
+        elif target_local <= one_hour_ahead_local:
+            today_label = "Nu"
+
+        rows.append(
+            {
+                "lead_id": str(lead.id),
+                "customer_name": (getattr(lead, "name", "") or "Onbekende klant").strip()
+                or "Onbekende klant",
+                "next_action": next_action,
+                "next_action_at_utc": next_action_at_utc,
+                "next_action_at_human": _utc_to_local_human(next_action_at_utc, tz_name),
+                "next_action_time": target_local.strftime("%H:%M"),
+                "status_label": status_label,
+                "today_status_label": today_label,
+                "bucket": bucket,
+                "href": f"/app/leads/{lead.id}",
+                "is_today": is_today,
+            }
+        )
+    return rows
 
 
 def _quote_ui_for_lead(lead: Lead) -> dict[str, Any]:
@@ -158,12 +238,9 @@ def build_quote_oob_context(
         "REJECTED",
         "ACCEPTED",
     }
-    quote_ui["can_download_pdf"] = bool(lead.estimate_html_key) and raw_status in {
-        "SENT",
-        "VIEWED",
-        "REJECTED",
-        "ACCEPTED",
-    }
+    has_html = bool((getattr(lead, "estimate_html_key", None) or "").strip())
+    has_json = bool((getattr(lead, "estimate_json", None) or "").strip())
+    quote_ui["can_download_pdf"] = has_html or has_json
     quote_ui["public_quote_url"] = public_quote_url
 
     st = raw_status
@@ -189,6 +266,7 @@ def build_quote_oob_context(
 
     overrides = get_estimate_overrides(lead)
     internal_notes = str(overrides.get("internal_notes") or "")
+    followup_summary = build_followup_summary(overrides, tz_name)
 
     return {
         "request": request,
@@ -202,6 +280,7 @@ def build_quote_oob_context(
         "lead_status_badge": lead_status_badge,
         "st": st,
         "internal_notes": internal_notes,
+        "followup_summary": followup_summary,
     }
 
 
@@ -216,7 +295,7 @@ def render_quote_oob_response(
     current_user: User,
     lead_id: str,
     *,
-    toast_title: str = "Offerte verstuurd",
+    toast_title: str = "Offerte verzonden",
     toast_message: str = "De klant ontvangt de e-mail binnenkort.",
 ) -> HTMLResponse:
     lead = (
@@ -277,6 +356,8 @@ def hx_save_internal_notes(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
     internal_notes: str = Form(""),
+    next_action: str = Form(""),
+    next_action_at: str = Form(""),
 ):
     _require_tenant_match(tenant_id, current_user)
     lead = (
@@ -289,6 +370,16 @@ def hx_save_internal_notes(
 
     overrides = get_estimate_overrides(lead)
     overrides["internal_notes"] = (internal_notes or "")[:8000]
+    overrides["next_action"] = (next_action or "").strip()[:240]
+    cleaned_next_action_at = (next_action_at or "").strip()
+    if cleaned_next_action_at:
+        try:
+            datetime.fromisoformat(cleaned_next_action_at)
+            overrides["next_action_at"] = cleaned_next_action_at
+        except Exception:
+            overrides["next_action_at"] = ""
+    else:
+        overrides["next_action_at"] = ""
     lead.estimate_overrides_json = json.dumps(overrides, ensure_ascii=False)
     db.add(lead)
     db.commit()
@@ -303,11 +394,52 @@ def hx_save_internal_notes(
             "show-toast": {
                 "level": "success",
                 "title": "Opgeslagen",
-                "message": "Interne notities bijgewerkt.",
+                "message": "Opvolging bijgewerkt.",
             }
         }
     )
     return HTMLResponse(
         content=html,
         headers={"HX-Trigger": trigger},
+    )
+
+
+@router.get("/dashboard/partials/followups", response_class=HTMLResponse)
+def hx_dashboard_followups(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    tenant_id = str(current_user.tenant_id)
+    tz_name = _get_tenant_timezone(current_user, None)
+    rows = _collect_followup_rows(db, tenant_id, tz_name)
+    rows.sort(key=lambda item: (item["bucket"], item["next_action_at_utc"]))
+    followups = rows[:5]
+    return templates.TemplateResponse(
+        "dashboard/partials/followups.html",
+        {
+            "request": request,
+            "followups": followups,
+        },
+    )
+
+
+@router.get("/tenants/{tenant_id}/dashboard/partials/today", response_class=HTMLResponse)
+def hx_dashboard_today(
+    tenant_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user_html),
+):
+    _require_tenant_match(tenant_id, current_user)
+    tz_name = _get_tenant_timezone(current_user, None)
+    rows = _collect_followup_rows(db, tenant_id, tz_name)
+    today_items = [item for item in rows if item["is_today"]]
+    today_items.sort(key=lambda item: item["next_action_at_utc"])
+    return templates.TemplateResponse(
+        "dashboard/partials/today.html",
+        {
+            "request": request,
+            "today_items": today_items[:5],
+        },
     )

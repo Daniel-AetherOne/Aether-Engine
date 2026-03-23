@@ -1,7 +1,7 @@
 {% extends "app/layout.html" %}
 {% block content %}
 
-<div class="mx-auto max-w-6xl px-4 lg:px-6 py-4 space-y-6">
+<div class="mx-auto max-w-7xl px-4 py-5 lg:px-6 lg:py-6 space-y-6">
 
   {% set sent = request.query_params.get('sent') %}
   {% set send_error = request.query_params.get('send_error') %}
@@ -16,7 +16,6 @@
   {% set country = payload.get('country') or '' %}
   {% set square_meters = payload.get('square_meters') or payload.get('sqm') or '' %}
   {% set job_type = payload.get('job_type') or '' %}
-  {% set vertical_label = lead.vertical or 'paintly' %}
   {% set st = (lead.status or '').upper() %}
   {% set status_labels = {
     'ACCEPTED': 'Geaccepteerd',
@@ -32,7 +31,7 @@
   {% if st in ['ACCEPTED','DONE','COMPLETED'] %}
     {% set lead_status_badge = 'bg-emerald-50 text-emerald-700' %}
   {% elif st in ['SENT','VIEWED'] %}
-    {% set lead_status_badge = 'bg-amber-50 text-amber-700' %}
+    {% set lead_status_badge = 'bg-indigo-50 text-indigo-700' %}
   {% elif st in ['REJECTED','DECLINED','CANCELLED'] %}
     {% set lead_status_badge = 'bg-rose-50 text-rose-700' %}
   {% else %}
@@ -47,14 +46,26 @@
   {% if country %}{% set _ = address_parts.append(country) %}{% endif %}
   {% set full_address = address_parts | join(', ') %}
 
+  {% set header_work_summary = (job_type ~ (' • ' ~ square_meters ~ ' m²' if square_meters else '')) if job_type else ((square_meters ~ ' m²') if square_meters else 'Werksamenvatting niet ingevuld') %}
+
   <!-- Header -->
-  <div class="rounded-[26px] border border-slate-200/70 bg-white px-5 py-4 shadow-sm">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Offerte</div>
-        <div class="text-xl font-semibold text-slate-900">Offerte #{{ lead.id }}</div>
-        <div class="mt-2 flex items-center gap-2">
-          <div class="text-3xl font-semibold tracking-tight text-slate-900">
+  <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+    <div class="border-b border-slate-100 bg-gradient-to-b from-slate-50/90 to-white px-5 py-5 sm:px-6">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div class="min-w-0">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Offerte</p>
+          <div class="mt-1 flex flex-wrap items-center gap-2.5">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900">#{{ lead.id }}</h1>
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ lead_status_badge }}">
+              {{ status_labels.get(st, 'Nieuw') }}
+            </span>
+          </div>
+          <div class="mt-2 text-sm text-slate-700">
+            <span class="font-medium text-slate-900">{{ lead.name or 'Onbekende klant' }}</span>
+            <span class="mx-1.5 text-slate-300">•</span>
+            <span>{{ header_work_summary }}</span>
+          </div>
+          <div class="mt-3 text-3xl font-semibold tracking-tight text-slate-900 tabular-nums sm:text-4xl">
             {% if effective_total_display %}
               {{ effective_total_display }}
             {% elif lead.final_price is not none %}
@@ -65,16 +76,12 @@
               —
             {% endif %}
           </div>
-          <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ lead_status_badge }}">
-            {{ status_labels.get(st, 'Nieuw') }}
-          </span>
         </div>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-shrink-0 flex-wrap items-center gap-2">
         {% if quote_ui and quote_ui.can_view %}
           <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
              href="/app/leads/{{ lead.id }}/estimate" target="_blank">
-            Bekijk offerte
+            Open offerte
           </a>
         {% endif %}
         {% set ent = (entitlements.export_pdf if entitlements is defined and entitlements else None) %}
@@ -82,7 +89,7 @@
           {% if ent and ent.allowed %}
             <a class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
                href="/app/leads/{{ lead.id }}/export-pdf" target="_blank">
-              Download PDF
+              PDF downloaden
             </a>
           {% else %}
             <a class="inline-flex h-9 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-400 cursor-not-allowed"
@@ -111,6 +118,7 @@
             Offerte bewerken
           </a>
         {% endif %}
+        </div>
       </div>
     </div>
   </div>
@@ -125,7 +133,7 @@
           </svg>
         </div>
         <div>
-          <div class="text-sm font-semibold text-emerald-900">Offerte verstuurd</div>
+          <div class="text-sm font-semibold text-emerald-900">Offerte verzonden</div>
           <div class="mt-0.5 text-xs text-emerald-700">De klant ontvangt de e-mail binnenkort</div>
         </div>
       </div>
@@ -180,40 +188,28 @@
           </svg>
         </div>
         <div>
-          <div class="text-sm font-semibold text-rose-900">Kon offerte niet versturen</div>
+          <div class="text-sm font-semibold text-rose-900">Kon offerte niet verzenden</div>
           <div class="mt-0.5 text-xs text-rose-700">Probeer het opnieuw</div>
         </div>
       </div>
     </div>
   {% endif %}
 
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+  <div class="grid grid-cols-1 gap-7 lg:grid-cols-12">
 
     <!-- Left column -->
-    <div class="space-y-6 lg:col-span-2">
+    <div class="space-y-6 lg:col-span-7">
 
       <!-- Lead card -->
-      <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
-        <div class="border-b border-slate-100 px-5 py-4">
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                </svg>
-              </div>
-              <div>
-                <div class="text-sm font-semibold text-slate-900">Offerte #{{ lead.id }}</div>
-                <div class="text-xs text-slate-400">Overzicht & klantgegevens</div>
-              </div>
-            </div>
-          </div>
-
+      <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+        <div class="border-b border-slate-100 px-5 py-4 sm:px-6">
+          <h2 class="text-sm font-semibold text-slate-900">Project &amp; klant</h2>
+          <p class="mt-0.5 text-xs text-slate-500">Kerncijfers en gegevens uit de aanvraag</p>
           <!-- Summary stat row -->
-          <div class="mt-4 grid gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
-              <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Totaal bedrag</div>
-              <div class="mt-1 text-sm font-semibold text-slate-900">
+          <div class="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-xl bg-slate-50/90 px-3 py-2.5">
+              <div class="text-[11px] font-medium text-slate-500">Totaal</div>
+              <div class="mt-0.5 text-base font-semibold tabular-nums text-slate-900">
                 {% if effective_total_display %}
                   {{ effective_total_display }}
                 {% elif lead.final_price is not none %}
@@ -225,85 +221,76 @@
                 {% endif %}
               </div>
             </div>
-            <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
-              <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Oppervlakte</div>
-              <div class="mt-1 text-sm font-semibold text-slate-900">
+            <div class="rounded-xl bg-slate-50/90 px-3 py-2.5">
+              <div class="text-[11px] font-medium text-slate-500">Oppervlakte</div>
+              <div class="mt-0.5 text-base font-semibold tabular-nums text-slate-900">
                 {% if square_meters %}{{ square_meters }} m²{% else %}—{% endif %}
               </div>
             </div>
-            <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
-              <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Type werkzaamheden</div>
-              <div class="mt-1 text-sm font-semibold text-slate-900">
+            <div class="rounded-xl bg-slate-50/90 px-3 py-2.5">
+              <div class="text-[11px] font-medium text-slate-500">Soort werk</div>
+              <div class="mt-0.5 text-base font-semibold text-slate-900">
                 {{ job_type or "—" }}
               </div>
             </div>
-            <div class="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
-              <div class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">Status</div>
+            <div class="rounded-xl bg-slate-50/90 px-3 py-2.5">
+              <div class="text-[11px] font-medium text-slate-500">Offerte-check</div>
               {% set q = quote_ui or {} %}
               {% set qs = q.quote_status or 'none' %}
               {% if qs == 'review' %}
-                <div class="mt-1 inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
-                  Controle nodig
+                <div class="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                  Handmatige controle
                 </div>
               {% elif qs in ['generated','sent','accepted'] %}
-                <div class="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
-                  AI gecontroleerd
+                <div class="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                  Gecontroleerd
                 </div>
               {% else %}
-                <div class="mt-1 text-sm font-semibold text-slate-900">
-                  —
-                </div>
+                <div class="mt-0.5 text-base font-semibold text-slate-400">—</div>
               {% endif %}
             </div>
           </div>
         </div>
 
-        <div class="space-y-5 p-5">
-          <div class="grid gap-5 sm:grid-cols-2">
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Klant</div>
-              <div class="mt-2 text-sm font-medium text-slate-900">{{ lead.name or "—" }}</div>
-            </div>
-
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Adres</div>
-              <div class="mt-2 text-sm text-slate-700">{{ full_address or "—" }}</div>
-            </div>
-          </div>
-
-          <div class="grid gap-5 sm:grid-cols-2">
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">E-mail</div>
-              <div class="mt-2 text-sm text-slate-700 break-all">{{ lead.email or "—" }}</div>
-            </div>
-
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Telefoon</div>
-              <div class="mt-2 text-sm text-slate-700">{{ lead.phone or "—" }}</div>
-            </div>
-          </div>
-
-          <div class="grid gap-5 sm:grid-cols-3">
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Oppervlakte</div>
-              <div class="mt-2 text-sm text-slate-700">
-                {% if square_meters %}{{ square_meters }} m²{% else %}—{% endif %}
+        <div class="space-y-6 p-5 sm:p-6">
+          <div>
+            <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Contact</h3>
+            <div class="mt-3 grid gap-4 sm:grid-cols-3">
+              <div>
+                <div class="text-xs text-slate-500">Naam</div>
+                <div class="mt-1 text-sm font-medium text-slate-900">{{ lead.name or "—" }}</div>
+              </div>
+              <div class="sm:col-span-2">
+                <div class="text-xs text-slate-500">E-mail</div>
+                <div class="mt-1 break-all text-sm font-medium text-slate-900">{{ lead.email or "—" }}</div>
+              </div>
+              <div>
+                <div class="text-xs text-slate-500">Telefoon</div>
+                <div class="mt-1 text-sm font-medium text-slate-900">{{ lead.phone or "—" }}</div>
               </div>
             </div>
+          </div>
 
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Soort werk</div>
-              <div class="mt-2 text-sm text-slate-700">{{ job_type or "—" }}</div>
-            </div>
-
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Vertical</div>
-              <div class="mt-2 text-sm text-slate-700">{{ vertical_label }}</div>
+          <div class="border-t border-slate-100 pt-6">
+            <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Locatie &amp; werk</h3>
+            <div class="mt-3 grid gap-4 sm:grid-cols-2">
+              <div class="sm:col-span-2">
+                <div class="text-xs text-slate-500">Adres</div>
+                <div class="mt-1 text-sm font-medium text-slate-900">{{ full_address or "—" }}</div>
+              </div>
+              <div>
+                <div class="text-xs text-slate-500">Oppervlakte</div>
+                <div class="mt-1 text-sm font-medium text-slate-900">{% if square_meters %}{{ square_meters }} m²{% else %}—{% endif %}</div>
+              </div>
+              <div>
+                <div class="text-xs text-slate-500">Soort werk</div>
+                <div class="mt-1 text-sm font-medium text-slate-900">{{ job_type or "—" }}</div>
+              </div>
             </div>
           </div>
 
-          <div>
-            <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Projectomschrijving</div>
+          <div class="border-t border-slate-100 pt-6">
+            <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Wat wil de klant?</h3>
             {% set raw_notes = lead.notes or "" %}
             {% set lines = raw_notes.split('\n') %}
             {% set first_line = (lines[0] if lines else '') %}
@@ -311,8 +298,8 @@
               {% set _ = lines.pop(0) %}
             {% endif %}
             {% set clean_notes = (lines|join('\n'))|trim %}
-            <div class="mt-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700 whitespace-pre-line">
-              {{ clean_notes or "Geen omschrijving opgegeven" }}
+            <div class="mt-2 text-sm leading-relaxed text-slate-800 whitespace-pre-line">
+              {{ clean_notes or "Geen toelichting bij de aanvraag." }}
             </div>
           </div>
 
@@ -505,8 +492,8 @@
       {% endif %}
     </div>
 
-    <!-- Right column -->
-    <div class="space-y-6 lg:col-span-1">
+    <!-- Right column: sales cockpit -->
+    <div class="space-y-4 lg:col-span-5">
       {% set q = quote_ui or {} %}
 
       <div id="hx-quote-poller"
@@ -516,93 +503,113 @@
            hx-trigger="load delay:1s, every 20s"
            hx-swap="none"></div>
 
-      <div id="quote-status">
-        {% include "quotes/partials/status_badge.html" %}
-      </div>
-
-      <div id="timeline-block">
-        {% include "quotes/partials/timeline_block.html" %}
-      </div>
-
-      <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-4">
-        <div class="flex items-center justify-between">
-          <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Foto’s</div>
-          <div class="text-xs text-slate-400">{{ (photo_previews|length) if photo_previews else 0 }} bestanden</div>
+      <!-- Primaire werkzone -->
+      <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+        <div class="border-b border-slate-100 bg-slate-50/70 px-5 py-4 sm:px-6">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Wat nu?</p>
+          <p class="mt-1 max-w-md text-xs leading-relaxed text-slate-600">Status en acties voor deze offerte.</p>
         </div>
-        {% if photo_previews and photo_previews|length > 0 %}
-          <div class="grid grid-cols-2 gap-3">
-            {% for p in photo_previews %}
-              <a href="{{ p.url }}" target="_blank" class="group relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                <img src="{{ p.url }}" alt="{{ p.name or 'Foto' }}" class="h-28 w-full object-cover transition duration-200 group-hover:scale-[1.02]" />
-              </a>
-            {% endfor %}
+
+        <div class="px-5 pt-5 sm:px-6">
+          <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Huidige status</h3>
+          <div id="quote-status" class="mt-2.5">
+            {% include "quotes/partials/status_badge.html" %}
           </div>
-        {% else %}
-          <div class="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">Geen foto's beschikbaar.</div>
-        {% endif %}
+        </div>
+
+        <div class="border-t border-slate-100"></div>
+
+        <div class="px-5 py-4.5 sm:px-6">
+          <h3 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Nu doen</h3>
+          <div id="quote-actions" class="mt-2.5">
+            {% include "quotes/partials/quote_actions.html" %}
+          </div>
+        </div>
+
+        <div class="border-t border-slate-100"></div>
+
+        {% include "quotes/partials/internal_notes.html" %}
       </div>
 
       {% if st == "ACCEPTED" %}
-        <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-4">
-          <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Agenda</div>
+        <div class="rounded-md border border-slate-200/60 bg-slate-50/20 px-2.5 py-2">
+          <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Agenda</div>
           {% if lead_scheduled_start_display and lead_scheduled_end_display %}
-            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-              Ingepland: <span class="font-semibold text-slate-900">{{ lead_scheduled_start_display }}</span>
-              - <span class="font-semibold text-slate-900">{{ lead_scheduled_end_display }}</span>
+            <div class="mt-2 text-xs text-slate-700">
+              <span class="font-medium text-slate-800">{{ lead_scheduled_start_display }}</span>
+              – <span class="font-medium text-slate-800">{{ lead_scheduled_end_display }}</span>
               <span class="text-slate-500">({{ tz_name }})</span>
             </div>
           {% endif %}
-          <div id="agenda-feedback"></div>
-          <div class="flex flex-wrap items-center gap-2">
+          <div id="agenda-feedback" class="mt-2"></div>
+          <div class="mt-2.5 flex flex-wrap gap-2">
             {% if google_calendar_connected %}
               <button
-                class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+                class="inline-flex h-8 items-center justify-center rounded-lg bg-sky-600 px-3 text-xs font-medium text-white transition hover:bg-sky-700"
                 hx-post="/quotes/{{ lead.id }}/calendar/google/partial"
                 hx-target="#agenda-feedback"
                 hx-swap="innerHTML"
                 type="button"
               >
-                Zet in Google Calendar
+                Naar Google Agenda
               </button>
             {% else %}
               <a
-                class="inline-flex h-9 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
+                class="inline-flex h-8 items-center justify-center rounded-lg bg-sky-600 px-3 text-xs font-medium text-white transition hover:bg-sky-700"
                 href="/integrations/google-calendar/connect"
               >
-                Koppel Google Calendar
+                Google Agenda koppelen
               </a>
             {% endif %}
             <a
-              class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+              class="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
               href="/quotes/{{ lead.id }}/calendar.ics"
             >
-              Download .ics
+              .ics downloaden
             </a>
           </div>
         </div>
       {% endif %}
 
-      <div id="quote-actions" class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-4">
-        {% include "quotes/partials/quote_actions.html" %}
-      </div>
-
-      {% include "quotes/partials/internal_notes.html" %}
-
       {% if q.can_copy_link and lead.public_token %}
-        <div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-3">
-          <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Publieke URL</div>
-          <code class="block rounded-xl bg-slate-100 px-3 py-2 text-xs font-mono text-slate-600">/e/{{ lead.public_token }}</code>
-          <button class="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                  type="button"
-                  data-copy-url="{{ request.base_url }}e/{{ lead.public_token }}"
-                  x-data="{ copied: false }"
-                  @click="window.paintlyCopy($el.dataset.copyUrl).then(() => { copied = true; setTimeout(() => copied = false, 2000) })">
-            <span x-show="!copied">Kopiëren</span>
-            <span x-show="copied" class="text-emerald-600" x-cloak>Gekopieerd</span>
-          </button>
-          <p class="text-xs text-slate-500">Deel deze link met de klant om de offerte te bekijken en accepteren.</p>
+        <div class="rounded-md border border-slate-200/60 bg-slate-50/20 px-2.5 py-2">
+          <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Link voor de klant</div>
+          <code class="mt-1.5 block truncate rounded-md border border-slate-200/80 bg-white px-2 py-1 text-[11px] font-mono text-slate-600">/e/{{ lead.public_token }}</code>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <button class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                    type="button"
+                    data-copy-url="{{ request.base_url }}e/{{ lead.public_token }}"
+                    x-data="{ copied: false }"
+                    @click="window.paintlyCopy($el.dataset.copyUrl).then(() => { copied = true; setTimeout(() => copied = false, 2000) })">
+              <span x-show="!copied">Link kopiëren</span>
+              <span x-show="copied" class="text-emerald-600" x-cloak>Gekopieerd</span>
+            </button>
+            <span class="text-[11px] text-slate-500">Deel met de klant om te bekijken of te bevestigen.</span>
+          </div>
         </div>
       {% endif %}
+
+      <div id="timeline-block">
+        {% include "quotes/partials/timeline_block.html" %}
+      </div>
+
+      <div class="rounded-md border border-dashed border-slate-200/80 bg-slate-50/10 px-2.5 py-2">
+        <div class="mb-1 flex items-center justify-between gap-2">
+          <span class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Foto’s van de klant</span>
+          <span class="text-[10px] text-slate-400">{{ (photo_previews|length) if photo_previews else 0 }}</span>
+        </div>
+        {% if photo_previews and photo_previews|length > 0 %}
+          <div class="flex flex-wrap gap-1">
+            {% for p in photo_previews %}
+              <a href="{{ p.url }}" target="_blank" class="group block h-10 w-10 shrink-0 overflow-hidden rounded-sm border border-slate-200/70 bg-white">
+                <img src="{{ p.url }}" alt="{{ p.name or 'Foto' }}" class="h-full w-full object-cover transition group-hover:opacity-90" />
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-xs text-slate-500">Geen foto’s meegestuurd.</p>
+        {% endif %}
+      </div>
 
       {% if job and job.status in ["NEW","SCHEDULED"] %}
         <div class="overflow-hidden rounded-[26px] border border-slate-200/70 bg-white shadow-sm">

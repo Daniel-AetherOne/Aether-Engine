@@ -1,6 +1,7 @@
 # app/services/tenant_onboarding.py
 import re
 import uuid
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.models.tenant import Tenant
@@ -43,6 +44,9 @@ def create_tenant_with_pricing(db: Session, payload: TenantOnboardingCreate) -> 
     base_slug = _slugify_company_name(company_name)
     unique_slug = _ensure_unique_slug(db, base_slug)
 
+    trial_start = datetime.now(timezone.utc)
+    trial_end = trial_start + timedelta(days=14)
+
     tenant = Tenant(
         id=str(uuid.uuid4()),
         name=company_name,  # tijdelijk gelijk houden aan company_name
@@ -50,8 +54,9 @@ def create_tenant_with_pricing(db: Session, payload: TenantOnboardingCreate) -> 
         email=email,
         phone=phone,
         slug=unique_slug,
-        plan_code="starter_99",
+        plan_code="pro_199",
         subscription_status="trialing",
+        trial_ends_at=trial_end,
         pricing_json={
             "walls_rate_eur_per_sqm": float(payload.walls_rate_eur_per_sqm),
         },

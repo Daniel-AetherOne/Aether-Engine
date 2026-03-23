@@ -54,29 +54,29 @@
 
   <!-- Oneflow-style offerte analytics -->
   <div class="space-y-8">
-    <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-5 lg:grid-cols-12">
       <div
         id="today-widget"
-        class="lg:col-span-2"
+        class="lg:col-span-8"
         hx-get="/app/tenants/{{ tenant_id }}/dashboard/partials/today"
         hx-trigger="load, every 30s"
         hx-swap="innerHTML"
       >
-        <div class="rounded-[26px] border border-sky-200/60 bg-gradient-to-br from-sky-50 via-white to-white p-6 shadow-[0_12px_40px_-24px_rgba(2,132,199,0.45)]">
-          <div class="text-base font-semibold text-slate-900">Vandaag</div>
-          <div class="mt-1 text-sm text-slate-500">Wat moet je doen</div>
+        <div class="rounded-[28px] border border-sky-200/60 bg-white p-7 ring-1 ring-sky-200/40 shadow-[0_10px_30px_rgba(59,130,246,0.08)]">
+          <div class="text-lg font-semibold text-slate-900">Vandaag</div>
+          <div class="mt-1 text-sm text-slate-500">Eerst doen</div>
           <div class="mt-4 text-xs text-slate-400">Laden...</div>
         </div>
       </div>
 
       <div
         id="followups-widget"
-        class="lg:col-span-1"
+        class="lg:col-span-4"
         hx-get="/app/dashboard/partials/followups"
         hx-trigger="load, every 30s"
         hx-swap="innerHTML"
       >
-        <div class="rounded-[26px] border border-slate-200/80 bg-white p-5 shadow-[0_10px_30px_-22px_rgba(15,23,42,0.35)]">
+        <div class="rounded-[24px] border border-slate-200 bg-white p-5">
           <div class="text-sm font-semibold text-slate-900">Follow-ups</div>
           <div class="mt-1 text-xs text-slate-500">Te laat, vandaag en komt eraan</div>
           <div class="mt-4 text-xs text-slate-400">Laden...</div>
@@ -85,8 +85,8 @@
     </div>
 
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+      <div class="rounded-[18px] border border-sky-100 bg-sky-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
           <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-2.5 0-4 1.1-4 2.5S9.5 13 12 13s4 1.1 4 2.5S14.5 18 12 18m0-10V6m0 12v-2" />
           </svg>
@@ -95,9 +95,9 @@
         <div id="kpi-pipeline-value" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
         <div class="mt-2 text-sm text-slate-500">Totale waarde van alle open offertes</div>
       </div>
-      <div class="rounded-[20px] border border-green-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-green-700">
-          <svg class="h-5 w-5 text-green-600 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="rounded-[18px] border border-emerald-100 bg-emerald-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+          <svg class="h-5 w-5 text-slate-400 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3 17 6-6 4 4 7-7" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 8h6v6" />
           </svg>
@@ -105,8 +105,8 @@
         </div>
         <div id="kpi-won-revenue" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
       </div>
-      <div class="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+      <div class="rounded-[18px] border border-slate-200 bg-slate-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
           <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v5h5M9 13h6M9 17h6" />
@@ -115,8 +115,8 @@
         </div>
         <div id="kpi-pending-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
       </div>
-      <div class="rounded-[20px] border border-slate-200/70 bg-white p-4 shadow-sm">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+      <div class="rounded-[18px] border border-sky-100 bg-sky-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
           <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
@@ -125,9 +125,9 @@
         </div>
         <div id="kpi-sign-rate" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
       </div>
-      <div class="rounded-[20px] border border-green-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-green-700">
-          <svg class="h-5 w-5 text-green-600 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="rounded-[18px] border border-emerald-100 bg-emerald-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+          <svg class="h-5 w-5 text-slate-400 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l2.5 1.2L17 4l1 2.3 2 1-.4 2.6L21 12l-1.4 2.1.4 2.6-2 1L17 20l-2.5-.2L12 21l-2.5-1.2L7 20l-1-2.3-2-1 .4-2.6L3 12l1.4-2.1-.4-2.6 2-1L7 4l2.5.2L12 3z" />
           </svg>
@@ -135,8 +135,8 @@
         </div>
         <div id="kpi-signed-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
       </div>
-      <div class="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+      <div class="rounded-[18px] border border-rose-100 bg-rose-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
           <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 9l-6 6m0-6 6 6" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
@@ -145,8 +145,8 @@
         </div>
         <div id="kpi-rejected-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
       </div>
-      <div class="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+      <div class="rounded-[18px] border border-rose-100 bg-rose-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
           <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 7v5l3 3" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
@@ -155,8 +155,8 @@
         </div>
         <div id="kpi-overdue-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
       </div>
-      <div class="rounded-[20px] border border-slate-200/70 bg-white p-4 shadow-sm">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+      <div class="rounded-[18px] border border-slate-200 bg-slate-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
           <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 7v5l3 3" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
@@ -165,9 +165,9 @@
         </div>
         <div id="kpi-avg-time-to-sign" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
       </div>
-      <div class="rounded-[20px] border border-orange-300 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-orange-700">
-          <svg class="h-5 w-5 text-orange-600 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="rounded-[18px] border border-amber-100 bg-amber-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+          <svg class="h-5 w-5 text-slate-400 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v5h5M9 13h6" />
           </svg>
@@ -176,15 +176,15 @@
         <div id="kpi-no-response-value" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
         <div class="mt-2 text-sm text-slate-500">Offertes waar nog geen actie op is</div>
       </div>
-      <div class="rounded-[20px] border-2 border-orange-300 bg-white p-4 shadow-sm transition hover:bg-slate-50/70">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-orange-700">
-          <svg class="h-5 w-5 text-orange-600 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="rounded-[18px] border border-amber-100 bg-amber-50/35 p-4">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+          <svg class="h-5 w-5 text-slate-400 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18A2 2 0 0 0 3.53 21h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
           </svg>
           <span>Actie nodig vandaag</span>
         </div>
-        <div id="kpi-action-needed-today" class="mt-3 text-3xl font-semibold text-orange-900">-</div>
-        <div class="mt-2 text-sm text-orange-700/80">Offertes ouder dan 3 dagen zonder reactie</div>
+        <div id="kpi-action-needed-today" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
+        <div class="mt-2 text-sm text-slate-500">Offertes ouder dan 3 dagen zonder reactie</div>
       </div>
     </div>
 
@@ -279,7 +279,7 @@
               {% if pdf and pdf.enabled %}
                 Ingeschakeld
               {% else %}
-                {{ (pdf.hint if pdf else 'Beschikbaar vanaf Pro') }}
+                {{ (pdf.hint if pdf else 'Beschikbaar vanaf Starter') }}
               {% endif %}
             </div>
             <div class="mt-3">

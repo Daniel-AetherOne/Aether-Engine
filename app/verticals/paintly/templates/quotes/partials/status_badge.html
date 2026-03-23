@@ -1,40 +1,45 @@
 {% set q = quote_ui or {} %}
 {% set qs = q.quote_status or 'none' %}
 {% set quote_labels = {
-  'none': 'Geen offerte',
-  'generated': 'AI gecontroleerd',
+  'none': 'Nog niet opgesteld',
+  'generated': 'Klaar om te verzenden',
   'review': 'Controle nodig',
-  'sent': 'Verstuurd naar klant',
+  'sent': 'Verzonden naar klant',
   'accepted': 'Geaccepteerd'
 } %}
 {% if qs == 'accepted' %}
-  {% set qbadge = 'bg-emerald-50 text-emerald-600' %}
-{% elif qs in ['review', 'sent'] %}
-  {% set qbadge = 'bg-amber-50 text-amber-600' %}
+  {% set qbadge = 'bg-emerald-50 text-emerald-700' %}
+{% elif qs == 'review' %}
+  {% set qbadge = 'bg-amber-50 text-amber-700' %}
+{% elif qs == 'sent' %}
+  {% set qbadge = 'bg-indigo-50 text-indigo-700' %}
 {% elif qs == 'generated' %}
-  {% set qbadge = 'bg-sky-50 text-sky-600' %}
+  {% set qbadge = 'bg-sky-50 text-sky-700' %}
 {% else %}
-  {% set qbadge = 'bg-slate-100 text-slate-600' %}
+  {% set qbadge = 'bg-slate-100 text-slate-700' %}
+{% endif %}
+{% set lead_badge = lead_status_badge %}
+{% if st in ['SENT', 'VIEWED'] %}
+  {% set lead_badge = 'bg-indigo-50 text-indigo-700' %}
 {% endif %}
 
-<div class="rounded-[26px] border border-slate-200/70 bg-white p-5 shadow-sm space-y-4">
-  <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Status</div>
-  <div class="flex items-center justify-between gap-2">
-    <span class="text-sm text-slate-600">Offerte status</span>
-    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ qbadge }}">
-      {{ quote_labels.get(qs, 'Geen offerte') }}
+<div class="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2.5">
+  <div class="flex flex-wrap items-center gap-2.5">
+    <span class="text-[11px] font-medium text-slate-500">Offerte</span>
+    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ qbadge }}">
+      {{ quote_labels.get(qs, 'Nog niet opgesteld') }}
     </span>
-  </div>
-  <div class="flex items-center justify-between gap-2">
-    <span class="text-sm text-slate-600">Lead status</span>
-    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ lead_status_badge }}">
+    <span class="text-slate-300">•</span>
+    <span class="text-[11px] font-medium text-slate-500">Lead</span>
+    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ lead_badge }}">
       {{ status_labels.get(st, 'Nieuw') }}
     </span>
   </div>
-  {% if sent_display %}
-    <div class="border-t border-slate-100 pt-3 text-xs text-slate-500">
-      Laatst verstuurd: <span class="font-medium text-slate-700">{{ sent_display }}</span>
-      <span class="text-slate-400">({{ tz_name }})</span>
-    </div>
-  {% endif %}
 </div>
+
+{% if sent_display %}
+  <div class="mt-2.5 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 text-xs text-slate-600">
+    <span class="text-[11px] font-medium text-slate-500">Laatst verzonden</span>
+    <span class="mt-0.5 block font-medium text-slate-800">{{ sent_display }} <span class="font-normal text-slate-500">({{ tz_name }})</span></span>
+  </div>
+{% endif %}
