@@ -675,9 +675,10 @@ def app_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user_html),
 ):
+    tenant_id = str(current_user.tenant_id)
     job_counts = dict(
         db.query(Job.status, func.count(Job.id))
-        .filter(Job.tenant_id == str(current_user.tenant_id))
+        .filter(Job.tenant_id == tenant_id)
         .group_by(Job.status)
         .all()
     )
@@ -686,7 +687,7 @@ def app_dashboard(
 
     jobs = (
         db.query(Job)
-        .filter(Job.tenant_id == str(current_user.tenant_id))
+        .filter(Job.tenant_id == tenant_id)
         .order_by(desc(getattr(Job, "updated_at", Job.id)))
         .limit(25)
         .all()
@@ -694,9 +695,9 @@ def app_dashboard(
 
     leads = (
         db.query(Lead)
-        .filter(Lead.tenant_id == str(current_user.tenant_id))
+        .filter(Lead.tenant_id == tenant_id)
         .order_by(desc(Lead.created_at))
-        .limit(25)
+        .limit(40)
         .all()
     )
 
@@ -705,6 +706,49 @@ def app_dashboard(
         {"id": l.id, "name": getattr(l, "name", ""), "status": derive_status(l)}
         for l in leads
     ]
+
+    followups = collect_dashboard_followups(
+        db,
+        tenant_id,
+        _get_tenant_timezone(current_user, None),
+        limit=12,
+    )
+
+    def _lead_status_ui(raw_status: str) -> tuple[str, str]:
+        st = (raw_status or "").upper()
+        if st == "SENT":
+            return "Verstuurd", "bg-amber-50 text-amber-700"
+        if st == "VIEWED":
+            return "Bekeken", "bg-sky-50 text-sky-700"
+        if st == "SUCCEEDED":
+            return "Klaar om te versturen", "bg-indigo-50 text-indigo-700"
+        if st == "NEEDS_REVIEW":
+            return "Review nodig", "bg-rose-50 text-rose-700"
+        if st == "RUNNING":
+            return "Wordt voorbereid", "bg-slate-100 text-slate-700"
+        if st == "NEW":
+            return "Nieuw", "bg-slate-100 text-slate-700"
+        return st.title() if st else "Nieuw", "bg-slate-100 text-slate-700"
+
+    open_statuses = {"NEW", "RUNNING", "SUCCEEDED", "SENT", "VIEWED", "NEEDS_REVIEW"}
+    open_quotes: list[dict] = []
+    for lead in leads:
+        raw_status = derive_status(lead)
+        if raw_status not in open_statuses:
+            continue
+        status_label, status_badge = _lead_status_ui(raw_status)
+        total_display = _fmt_eur(get_effective_total(lead)) or "Nog niet berekend"
+        open_quotes.append(
+            {
+                "id": lead.id,
+                "customer_name": (getattr(lead, "name", "") or "Onbekende klant").strip()
+                or "Onbekende klant",
+                "status_label": status_label,
+                "status_badge": status_badge,
+                "total_display": total_display,
+            }
+        )
+    open_quotes = open_quotes[:20]
 
     tenant = db.query(Tenant).filter(Tenant.id == str(current_user.tenant_id)).first()
     billing_usage_summary = (
@@ -763,7 +807,9 @@ def app_dashboard(
             "feature_flags": tenant_feature_flags(tenant),
             "features": tenant_feature_ui(tenant),
             "entitlements": tenant_entitlements(tenant),
-            "tenant_id": str(current_user.tenant_id),
+            "tenant_id": tenant_id,
+            "followups": followups,
+            "open_quotes": open_quotes,
         },
     )
     return templates.TemplateResponse("app/dashboard.html", context)

@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["processing"])
 
 
+def _friendly_processing_error(_: str | None = None) -> str:
+    return "Er ging iets mis bij het opstellen van je offerte. Probeer het opnieuw of ga terug."
+
+
 def _map_lead_status_for_ui(*, lead_status: str, lead_id: str) -> tuple[str, str | None, str | None]:
     """
     UI status flow:
@@ -74,7 +78,10 @@ def lead_status_json(lead_id: str, db: Session = Depends(get_db)) -> dict:
             "lead_id": str(lead.id),
             "status": "failed",
             "redirect_url": None,
-            "error": error_message or "Onbekende fout",
+            "error": None,
+            "user_message": _friendly_processing_error(error_message),
+            "can_retry": True,
+            "back_url": "/",
         }
         logger.info(
             "PROCESSING_STATUS_RESPONSE lead_id=%s status=%s redirect_url=%s route=%s",
@@ -134,7 +141,10 @@ def lead_status_json(lead_id: str, db: Session = Depends(get_db)) -> dict:
                     "lead_id": str(lead.id),
                     "status": "failed",
                     "redirect_url": None,
-                    "error": lead.error_message or "Onbekende fout",
+                    "error": None,
+                    "user_message": _friendly_processing_error(lead.error_message),
+                    "can_retry": True,
+                    "back_url": "/",
                 }
                 logger.info(
                     "PROCESSING_STATUS_RESPONSE lead_id=%s status=%s redirect_url=%s route=%s",
@@ -150,6 +160,9 @@ def lead_status_json(lead_id: str, db: Session = Depends(get_db)) -> dict:
         "status": "running",
         "redirect_url": None,
         "error": None,
+        "user_message": None,
+        "can_retry": False,
+        "back_url": "/",
     }
     logger.info(
         "PROCESSING_STATUS_RESPONSE lead_id=%s status=%s redirect_url=%s route=%s",

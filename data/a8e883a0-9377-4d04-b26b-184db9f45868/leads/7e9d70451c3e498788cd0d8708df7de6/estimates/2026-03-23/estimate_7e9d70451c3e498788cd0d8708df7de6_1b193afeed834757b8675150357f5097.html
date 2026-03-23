@@ -1,15 +1,15 @@
-{# app/verticals/paintly/templates/estimate.html #}
+
 <!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{{ copy.doc_title if copy and copy.doc_title else "Offerte schilderwerk" }}</title>
+  <title>Concept offerte – schilderwerk</title>
 
-  {% set wl = (company.whitelabel_enabled if company and company.whitelabel_enabled is defined else false) %}
-  {% if not wl %}
+  
+  
     <link rel="icon" href="https://offers.getpaintly.com/static/v1/favicon.ico">
-  {% endif %}
+  
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
@@ -115,38 +115,25 @@
 
 <body class="bg-[#eef4fb] text-slate-900 antialiased">
 
-  {# ---------- pricing flags ---------- #}
-  {% set reasons = (review_reasons if review_reasons is defined and review_reasons else (pricing.review_reasons if pricing and pricing.review_reasons else (pricing.meta.review_reasons if pricing and pricing.meta and pricing.meta.review_reasons else []))) %}
-  {% set is_provisional = ('provisional_total' in reasons) or ('missing_total' in reasons) %}
-  {% set show_prices = pricing_ready or is_provisional %}
-  {% set month_names = {
-    '01': 'januari',
-    '02': 'februari',
-    '03': 'maart',
-    '04': 'april',
-    '05': 'mei',
-    '06': 'juni',
-    '07': 'juli',
-    '08': 'augustus',
-    '09': 'september',
-    '10': 'oktober',
-    '11': 'november',
-    '12': 'december'
-  } %}
-  {% set valid_until_compact = (project.valid_until | string) if project and project.valid_until else '' %}
-  {% if valid_until_compact and (valid_until_compact | length) >= 10 %}
-    {% set _date_only = valid_until_compact[:10] %}
-    {% set _parts = _date_only.split('-') %}
-    {% if _parts | length == 3 %}
-      {% set _month = month_names.get(_parts[1], _parts[1]) %}
-      {% set valid_until_compact = (_parts[2] | int) ~ ' ' ~ _month %}
-    {% endif %}
-  {% endif %}
+  
+  
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+  
 
-  {# ---------- lead/customer helpers ---------- #}
-  {% set lead_name = (customer.name if customer and customer.name else (lead.name if lead and lead.name else '')) %}
-  {% set lead_email = (customer.email if customer and customer.email else (lead.email if lead and lead.email else '')) %}
-  {% set lead_phone = (customer.phone if customer and customer.phone else (lead.phone if lead and lead.phone else '')) %}
+  
+  
+  
+  
 
   <div class="w-full max-w-none px-8 py-5 md:py-6 pdf-root">
 
@@ -154,49 +141,34 @@
     <div class="mb-4 rounded-[28px] border border-slate-200/70 bg-white px-6 py-4 shadow-sm print-card pdf-section pdf-keep-together">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-4">
-          {% if company and company.logo_url %}
-          <div class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
-            <img src="{{ company.logo_url }}" alt="{{ company.name or 'Bedrijfslogo' }}" class="h-full w-full object-contain">
-          </div>
-          {% else %}
+          
           <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-sm">
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
             </svg>
           </div>
-          {% endif %}
+          
 
           <div>
             <div class="text-[22px] font-semibold tracking-tight text-slate-900">
-              {% if wl %}
-                {{ (company.name if company and company.name else "Schilderbedrijf") }}
-              {% else %}
+              
                 Paintly
-              {% endif %}
+              
             </div>
             <div class="mt-0.5 text-sm text-slate-500">
-              {{ company.name if company and company.name else "Schilderbedrijf" }}
+              Paintly
             </div>
             <div class="mt-1 text-sm text-slate-500">
-              {% if company.phone %}{{ company.phone }}{% endif %}
-              {% if company.phone and company.email %}<span class="mx-1 text-slate-300">•</span>{% endif %}
-              {% if company.email %}{{ company.email }}{% endif %}
+              
+              
+              
             </div>
           </div>
         </div>
 
         <div class="no-print flex items-center gap-2">
-          {% if company and company.phone %}
-            <a class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-               href="tel:{{ company.phone }}">
-              <svg class="mr-2 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-              </svg>
-              Bellen
-            </a>
-          {% endif %}
+          
         </div>
       </div>
     </div>
@@ -217,32 +189,23 @@
             <p class="mt-1.5 text-sm text-slate-500">
               Wordt nog gecontroleerd voor definitieve prijs
             </p>
-            {% if project and project.address %}
-              <div class="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>
-                {{ project.address }}
-              </div>
-            {% endif %}
+            
           </div>
 
           <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
             <span class="inline-flex items-center text-[11px] font-medium text-slate-400">
-              Ref #{{ project.estimate_id if project and project.estimate_id else project.lead_id }}
+              Ref #lead_7e9d70451c3e498788cd0d8708df7de6
             </span>
-            {% if project.date %}
+            
               <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                {{ project.date }}
+                2026-03-23
               </span>
-            {% endif %}
-            {% if project.valid_until %}
+            
+            
               <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                Geldig tot {{ valid_until_compact }}
+                Geldig tot 22 april
               </span>
-            {% endif %}
+            
           </div>
         </div>
       </div>
@@ -252,44 +215,37 @@
 
       <!-- Total preview -->
       <div class="px-6 py-6">
-        {% if show_prices %}
+        
           <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Totaalprijs</div>
           <div class="flex flex-wrap items-baseline gap-3">
             <span class="text-5xl font-semibold tracking-tight text-slate-900">
-              {{ fmt_eur(vat.total_incl_vat if vat and vat.total_incl_vat is not none else 0) }} incl. btw
+              €681,25 incl. btw
             </span>
-            {% if is_provisional %}
-              <span class="text-sm font-medium text-amber-600">ruwe schatting</span>
-            {% endif %}
+            
           </div>
 
           <div class="mt-3 max-w-md space-y-1 text-sm text-slate-600">
             <div class="flex justify-between">
               <span>Subtotaal (excl. btw)</span>
               <span class="font-medium text-slate-900">
-                {{ fmt_eur(vat.subtotal_excl_vat if vat and vat.subtotal_excl_vat is not none else 0) }}
+                €625
               </span>
             </div>
 
             <div class="flex justify-between">
-              <span>BTW ({{ ((vat.vat_rate if vat and vat.vat_rate is not none else 0) * 100) | round(0) }}%)</span>
+              <span>BTW (9.0%)</span>
               <span class="font-medium text-slate-900">
-                {{ fmt_eur(vat.vat_amount if vat and vat.vat_amount is not none else 0) }}
+                €56,25
               </span>
             </div>
 
-            {% if project.valid_until %}
+            
               <div class="pt-1">
-                Geldig tot <span class="font-medium text-slate-900">{{ valid_until_compact }}</span>
+                Geldig tot <span class="font-medium text-slate-900">22 april</span>
               </div>
-            {% endif %}
+            
           </div>
-        {% else %}
-          <div class="text-3xl font-semibold tracking-tight text-slate-400">Prijs: nader te bepalen</div>
-          <div class="mt-2 text-sm text-slate-600">
-            We finaliseren na een korte review van oppervlakken, voorbereiding en bereikbaarheid.
-          </div>
-        {% endif %}
+        
 
         <!-- Trust badges -->
         <div class="mt-5 flex flex-wrap gap-2">
@@ -350,74 +306,49 @@
               </thead>
 
               <tbody>
-                {% if pricing and pricing.line_items and (pricing.line_items | length) > 0 %}
-                  {% for item in pricing.line_items %}
-                    {% set code = (item.code if item and item.code else '') %}
-                    {% set unit = (item.unit if item and item.unit else '') %}
-                    {% set qty = (item.quantity if item and item.quantity is defined else None) %}
-                    {% set is_row_provisional = is_provisional and (code in ['provisional_estimate','provisional_minimum','provisional_total','provisional']) %}
-                    {% set is_meaningless_job_qty = (unit == 'job' and (qty == 1 or qty == 1.0 or qty == '1' or qty == '1.0')) %}
+                
+                  
+                    
+                    
+                    
+                    
+                    
 
                     <tr class="border-b border-slate-100 last:border-0 transition hover:bg-slate-50/70">
                       <td class="px-5 py-4">
-                        <div class="text-sm font-medium text-slate-900">{{ item.label }}</div>
+                        <div class="text-sm font-medium text-slate-900">Wanden schilderen</div>
 
-                        {% if item.description %}
-                          <div class="mt-1 text-xs text-slate-500">{{ item.description }}</div>
-                        {% endif %}
+                        
 
-                        {% if is_row_provisional %}
-                          <div class="mt-1 text-xs text-amber-600">
-                            Getoond ter ondersteuning van uw planning — definitieve prijs na review.
-                          </div>
-                        {% endif %}
+                        
 
-                        {% if item.assumptions and (item.assumptions.prep_level or item.assumptions.access) %}
+                        
                           <div class="mt-2 flex flex-wrap gap-2">
-                            {% if item.assumptions.prep_level %}
-                              <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">Voorbereiding: {{ item.assumptions.prep_level }}</span>
-                            {% endif %}
-                            {% if item.assumptions.access %}
-                              <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">Toegang: {{ item.assumptions.access }}</span>
-                            {% endif %}
+                            
+                              <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">Voorbereiding: light</span>
+                            
+                            
+                              <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">Toegang: low</span>
+                            
                           </div>
-                        {% endif %}
+                        
                       </td>
 
                       <td class="px-5 py-4 text-sm text-slate-600">
-                        {% if is_row_provisional or is_meaningless_job_qty %}
-                          <span class="text-slate-400">—</span>
-                        {% else %}
-                          {% set display_unit = 'm²' if item.unit == 'sqm' else item.unit %}
-                          {{ fmt_qty(item.quantity, item.unit) }} {{ display_unit }}
-                        {% endif %}
+                        
+                          
+                          25.0 m²
+                        
                       </td>
 
                       <td class="px-5 py-4 text-right">
-                        {% if show_prices and item.total %}
-                          <span class="text-sm font-semibold text-slate-900">{{ fmt_eur(item.total) }}</span>
-                        {% else %}
-                          <span class="text-sm text-slate-400">Nader te bepalen</span>
-                        {% endif %}
+                        
+                          <span class="text-sm font-semibold text-slate-900">€625</span>
+                        
                       </td>
                     </tr>
-                  {% endfor %}
-                {% else %}
-                  <tr>
-                    <td colspan="3" class="px-5 py-10 text-center">
-                      <div class="flex flex-col items-center justify-center">
-                        <div class="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                          </svg>
-                        </div>
-                        <p class="text-sm text-slate-600">Nog geen regels</p>
-                        <p class="mt-1 text-xs text-slate-500">We finaliseren het werkgebied tijdens de review</p>
-                      </div>
-                    </td>
-                  </tr>
-                {% endif %}
+                  
+                
               </tbody>
             </table>
           </div>
@@ -432,18 +363,39 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
               </div>
-              <h3 class="text-sm font-semibold text-slate-900">{{ copy.scope_label if copy and copy.scope_label else "Inbegrepen" }}</h3>
+              <h3 class="text-sm font-semibold text-slate-900">Werkzaamheden</h3>
             </div>
 
             <ul class="space-y-2 text-sm text-slate-700">
-              {% for b in scope_bullets %}
+              
                 <li class="flex items-start gap-2">
                   <svg class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                   </svg>
-                  <span>{{ b }}</span>
+                  <span>Bescherming van vloeren en omliggende oppervlakken</span>
                 </li>
-              {% endfor %}
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span>Standaard voorbereiding (licht schuren waar nodig)</span>
+                </li>
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span>Twee verflagen waar nodig</span>
+                </li>
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span>Opruimen en afvoeren van licht afval</span>
+                </li>
+              
             </ul>
 
             <p class="mt-4 text-xs text-slate-500">
@@ -458,18 +410,32 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
               </div>
-              <h3 class="text-sm font-semibold text-slate-900">{{ copy.exclusions_label if copy and copy.exclusions_label else "Niet inbegrepen" }}</h3>
+              <h3 class="text-sm font-semibold text-slate-900">Niet inbegrepen</h3>
             </div>
 
             <ul class="space-y-2 text-sm text-slate-700">
-              {% for x in exclusions %}
+              
                 <li class="flex items-start gap-2">
                   <svg class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                   </svg>
-                  <span>{{ x }}</span>
+                  <span>Groot herstelwerk aan muren of hout</span>
                 </li>
-              {% endfor %}
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  <span>Schimmelbehandeling</span>
+                </li>
+              
+                <li class="flex items-start gap-2">
+                  <svg class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  <span>Verplaatsen van zware meubels</span>
+                </li>
+              
             </ul>
 
             <div class="mt-4 border-t border-slate-100 pt-4">
@@ -505,68 +471,28 @@
             <div class="space-y-3">
               <div class="flex justify-between gap-4 text-sm">
                 <span class="text-slate-500">Naam</span>
-                <span class="text-right font-medium text-slate-900">{{ lead_name if lead_name else "—" }}</span>
+                <span class="text-right font-medium text-slate-900">Jan Mulder</span>
               </div>
               <div class="flex justify-between gap-4 text-sm">
                 <span class="text-slate-500">E-mail</span>
-                <span class="break-all text-right text-xs text-slate-900">{{ lead_email if lead_email else "—" }}</span>
+                <span class="break-all text-right text-xs text-slate-900">test@email.nl</span>
               </div>
               <div class="flex justify-between gap-4 text-sm">
                 <span class="text-slate-500">Telefoon</span>
-                <span class="text-right text-slate-900">{{ lead_phone if lead_phone else "—" }}</span>
+                <span class="text-right text-slate-900">123456789</span>
               </div>
             </div>
 
             <div class="h-px bg-slate-100"></div>
 
             <div class="space-y-3">
-              {% if project and project.address %}
-                <div class="flex justify-between gap-4 text-sm">
-                  <span class="text-slate-500">Locatie</span>
-                  <span class="text-right text-slate-900">{{ project.address }}</span>
-                </div>
-              {% endif %}
-              {% if project and project.square_meters %}
-                <div class="flex justify-between gap-4 text-sm">
-                  <span class="text-slate-500">Oppervlakte</span>
-                  <span class="text-right text-slate-900">{{ fmt_qty(project.square_meters) }} m²</span>
-                </div>
-              {% endif %}
+              
+              
             </div>
 
-            {% if decision_vars is defined and decision_vars %}
-              <div class="h-px bg-slate-100"></div>
+            
 
-              <div>
-                <div class="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Assumpties</div>
-                <div class="space-y-2 text-sm">
-                  <div class="flex justify-between gap-4">
-                    <span class="text-slate-500">Voorbereiding</span>
-                    <span class="text-right font-medium text-slate-900">{{ decision_vars.prep_level or "—" }}</span>
-                  </div>
-                  <div class="flex justify-between gap-4">
-                    <span class="text-slate-500">Complexiteit</span>
-                    <span class="text-right font-medium text-slate-900">{{ decision_vars.complexity_level or "—" }}</span>
-                  </div>
-                  <div class="flex justify-between gap-4">
-                    <span class="text-slate-500">Toegang</span>
-                    <span class="text-right font-medium text-slate-900">{{ decision_vars.access_risk or "—" }}</span>
-                  </div>
-                </div>
-
-                {% if needs_review_flag %}
-                  <p class="mt-3 text-xs text-amber-700">Deze inschatting vereist een korte review.</p>
-                {% endif %}
-              </div>
-            {% endif %}
-
-            {% if project and project.description %}
-              <div class="h-px bg-slate-100"></div>
-              <div>
-                <div class="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Omschrijving</div>
-                <p class="text-sm leading-relaxed text-slate-700">{{ project.description }}</p>
-              </div>
-            {% endif %}
+            
 
             <div class="h-px bg-slate-100"></div>
 
@@ -576,54 +502,47 @@
                 Kostenoverzicht
               </div>
 
-              {% if show_prices %}
+              
                 <div class="space-y-2">
                   <div class="flex justify-between gap-4 text-sm">
-                    <span class="text-slate-600">{{ copy.labor_label if copy and copy.labor_label else "Arbeid" }}</span>
+                    <span class="text-slate-600">Arbeid</span>
                     <span class="font-medium text-slate-900">
-                      {{ fmt_eur(pricing.subtotals.labor if pricing and pricing.subtotals and pricing.subtotals.labor is not none else pricing_labor) }}
+                      €625
                     </span>
                   </div>
 
                   <div class="flex justify-between gap-4 text-sm">
-                    <span class="text-slate-600">{{ copy.materials_label if copy and copy.labor_label else "Materialen" }}</span>
+                    <span class="text-slate-600">Materialen</span>
                     <span class="font-medium text-slate-900">
-                      {{ fmt_eur(pricing.subtotals.materials if pricing and pricing.subtotals and pricing.subtotals.materials is not none else pricing_materials) }}
+                      €0
                     </span>
                   </div>
 
                   <div class="flex justify-between gap-4 pt-2 text-sm">
                     <span class="text-slate-600">Subtotaal (excl. btw)</span>
-                    <span class="font-medium text-slate-900">{{ fmt_eur(vat.subtotal_excl_vat) }}</span>
+                    <span class="font-medium text-slate-900">€625</span>
                   </div>
 
                   <div class="flex justify-between gap-4 text-sm">
-                    <span class="text-slate-600">BTW ({{ (vat.vat_rate * 100) | round(0) }}%)</span>
-                    <span class="font-medium text-slate-900">{{ fmt_eur(vat.vat_amount) }}</span>
+                    <span class="text-slate-600">BTW (9.0%)</span>
+                    <span class="font-medium text-slate-900">€56,25</span>
                   </div>
                 </div>
 
                 <div class="mt-4 rounded-2xl bg-slate-900 px-4 py-4">
                   <div class="flex items-center justify-between gap-3">
                     <span class="text-sm font-medium text-white">Totaal (incl. btw)</span>
-                    <span class="text-2xl font-semibold text-white">{{ fmt_eur(vat.total_incl_vat) }}</span>
+                    <span class="text-2xl font-semibold text-white">€681,25</span>
                   </div>
-                  {% if is_provisional %}
-                    <p class="mt-1 text-xs text-slate-400">Indicatie — definitieve prijs na review</p>
-                  {% endif %}
+                  
                 </div>
-              {% else %}
-                <div class="rounded-2xl bg-slate-100 px-4 py-4 text-center">
-                  <p class="text-sm font-medium text-slate-600">Prijs wordt bepaald</p>
-                  <p class="mt-1 text-xs text-slate-500">Na korte review</p>
-                </div>
-              {% endif %}
+              
             </div>
 
             <div class="text-center text-xs text-slate-400">
-              {% if project and project.lead_id %}
-                <p class="mt-1">Referentie: Offerte #{{ project.lead_id }}</p>
-              {% endif %}
+              
+                <p class="mt-1">Referentie: Offerte #7e9d70451c3e498788cd0d8708df7de6</p>
+              
             </div>
           </div>
         </div>

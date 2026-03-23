@@ -1,695 +1,170 @@
 {% extends "app/layout.html" %}
 {% block content %}
-
-<div class="space-y-6">
-
-  <!-- Header -->
-  <div class="rounded-[28px] border border-slate-200/70 bg-white px-6 py-5 shadow-sm">
-    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+<div class="space-y-7">
+  <section class="rounded-[30px] border border-sky-200/70 bg-gradient-to-br from-white via-sky-50/40 to-white p-7 shadow-sm">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
       <div>
-        <div class="text-sm text-slate-400">Home</div>
-        <h1 class="mt-1 text-[28px] font-semibold tracking-tight text-slate-900">
-          Welkom terug
-        </h1>
+        <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Vandaag</h1>
+        <p class="mt-1 text-sm text-slate-600">Pak eerst deze acties op en houd je pipeline in beweging.</p>
+        <p class="mt-3 text-sm text-slate-500">
+          {{ open_quotes|length }} open offertes · {{ followups|length }} follow-ups klaar voor opvolging
+        </p>
       </div>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <button class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-600">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-        </button>
-
-        <button class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-600">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
-          </svg>
-        </button>
-
+      <div class="flex flex-wrap gap-2.5">
+        <a href="/app/leads" class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700">
+          Bekijk open offertes
+        </a>
+        <a href="/app/leads" class="inline-flex h-10 items-center justify-center rounded-xl border border-sky-200 bg-white px-4 text-sm font-semibold text-sky-700 transition hover:bg-sky-50">
+          Plan follow-up
+        </a>
+      </div>
+    </div>
+    {% if open_quotes|length == 0 %}
+      <div class="mt-5 rounded-2xl border border-dashed border-sky-200 bg-white/80 px-4 py-4 text-sm text-slate-600">
+        Nog geen open offertes, maak je eerste offerte.
         {% if tenant is defined and tenant and tenant.slug %}
-          <a
-            href="/intake/{{ tenant.slug }}"
-            class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-          >
-            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5"/>
-            </svg>
-            Nieuwe offerte
-          </a>
-        {% else %}
-          <button
-            type="button"
-            class="inline-flex h-10 items-center justify-center rounded-xl bg-slate-200 px-4 text-sm font-medium text-slate-400 cursor-not-allowed"
-            disabled
-          >
-            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5"/>
-            </svg>
-            Nieuwe offerte
-          </button>
+          <a href="/intake/{{ tenant.slug }}" class="ml-2 font-semibold text-sky-700 hover:text-sky-800">Start nieuwe offerte</a>
         {% endif %}
       </div>
+    {% endif %}
+  </section>
+
+  <section>
+    <div class="mb-3">
+      <h2 class="text-base font-semibold text-slate-900">Overzicht</h2>
     </div>
-  </div>
-
-  <!-- Oneflow-style offerte analytics -->
-  <div class="space-y-8">
-    <div class="grid grid-cols-1 gap-5 lg:grid-cols-12">
-      <div
-        id="today-widget"
-        class="lg:col-span-8"
-        hx-get="/app/tenants/{{ tenant_id }}/dashboard/partials/today"
-        hx-trigger="load, every 30s"
-        hx-swap="innerHTML"
-      >
-        <div class="rounded-[28px] border border-sky-200/60 bg-white p-7 ring-1 ring-sky-200/40 shadow-[0_10px_30px_rgba(59,130,246,0.08)]">
-          <div class="text-lg font-semibold text-slate-900">Vandaag</div>
-          <div class="mt-1 text-sm text-slate-500">Eerst doen</div>
-          <div class="mt-4 text-xs text-slate-400">Laden...</div>
-        </div>
-      </div>
-
-      <div
-        id="followups-widget"
-        class="lg:col-span-4"
-        hx-get="/app/dashboard/partials/followups"
-        hx-trigger="load, every 30s"
-        hx-swap="innerHTML"
-      >
-        <div class="rounded-[24px] border border-slate-200 bg-white p-5">
-          <div class="text-sm font-semibold text-slate-900">Follow-ups</div>
-          <div class="mt-1 text-xs text-slate-500">Te laat, vandaag en komt eraan</div>
-          <div class="mt-4 text-xs text-slate-400">Laden...</div>
-        </div>
-      </div>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Omzet deze maand</p>
+        <p id="kpi-month-revenue" class="mt-1 text-2xl font-semibold tracking-tight text-slate-900">€ 0</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Offertes verzonden</p>
+        <p class="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{{ quotes_sent_this_month }}</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Conversie %</p>
+        <p id="kpi-sign-rate" class="mt-1 text-2xl font-semibold tracking-tight text-slate-900">0%</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Open offertes</p>
+        <p id="kpi-open-offers" class="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{{ open_quotes|length }}</p>
+      </article>
     </div>
+  </section>
 
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[18px] border border-sky-100 bg-sky-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-2.5 0-4 1.1-4 2.5S9.5 13 12 13s4 1.1 4 2.5S14.5 18 12 18m0-10V6m0 12v-2" />
-          </svg>
-          <span>Openstaande offertewaarde</span>
-        </div>
-        <div id="kpi-pipeline-value" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-        <div class="mt-2 text-sm text-slate-500">Totale waarde van alle open offertes</div>
-      </div>
-      <div class="rounded-[18px] border border-emerald-100 bg-emerald-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-400 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3 17 6-6 4 4 7-7" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 8h6v6" />
-          </svg>
-          <span>Gewonnen omzet</span>
-        </div>
-        <div id="kpi-won-revenue" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-      </div>
-      <div class="rounded-[18px] border border-slate-200 bg-slate-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v5h5M9 13h6M9 17h6" />
-          </svg>
-          <span>Openstaande offertes</span>
-        </div>
-        <div id="kpi-pending-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-      </div>
-      <div class="rounded-[18px] border border-sky-100 bg-sky-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
-          </svg>
-          <span>Tekenratio</span>
-        </div>
-        <div id="kpi-sign-rate" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-      </div>
-      <div class="rounded-[18px] border border-emerald-100 bg-emerald-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-400 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l2.5 1.2L17 4l1 2.3 2 1-.4 2.6L21 12l-1.4 2.1.4 2.6-2 1L17 20l-2.5-.2L12 21l-2.5-1.2L7 20l-1-2.3-2-1 .4-2.6L3 12l1.4-2.1-.4-2.6 2-1L7 4l2.5.2L12 3z" />
-          </svg>
-          <span>Getekend</span>
-        </div>
-        <div id="kpi-signed-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-      </div>
-      <div class="rounded-[18px] border border-rose-100 bg-rose-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 9l-6 6m0-6 6 6" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
-          </svg>
-          <span>Afgewezen</span>
-        </div>
-        <div id="kpi-rejected-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-      </div>
-      <div class="rounded-[18px] border border-rose-100 bg-rose-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 7v5l3 3" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
-          </svg>
-          <span>Te laat</span>
-        </div>
-        <div id="kpi-overdue-count" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-      </div>
-      <div class="rounded-[18px] border border-slate-200 bg-slate-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-300 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 7v5l3 3" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
-          </svg>
-          <span>Gem. tijd tot tekenen</span>
-        </div>
-        <div id="kpi-avg-time-to-sign" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-      </div>
-      <div class="rounded-[18px] border border-amber-100 bg-amber-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-400 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v5h5M9 13h6" />
-          </svg>
-          <span>Offertes zonder reactie</span>
-        </div>
-        <div id="kpi-no-response-value" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-        <div class="mt-2 text-sm text-slate-500">Offertes waar nog geen actie op is</div>
-      </div>
-      <div class="rounded-[18px] border border-amber-100 bg-amber-50/35 p-4">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
-          <svg class="h-5 w-5 text-slate-400 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18A2 2 0 0 0 3.53 21h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-          </svg>
-          <span>Actie nodig vandaag</span>
-        </div>
-        <div id="kpi-action-needed-today" class="mt-3 text-3xl font-semibold text-slate-900">-</div>
-        <div class="mt-2 text-sm text-slate-500">Offertes ouder dan 3 dagen zonder reactie</div>
-      </div>
-    </div>
-
-    <div class="grid gap-6 xl:grid-cols-12">
-      <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm xl:col-span-8">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-700">Omzet per maand</h2>
-        <p class="mt-1 text-xs text-slate-400">Getekende omzet per maand</p>
-        <div id="current-month-revenue" class="mt-3 text-sm font-medium text-slate-700">€ 0 deze maand</div>
-        <div class="mt-5 h-72">
-          <canvas id="revenue-by-month-chart"></canvas>
-        </div>
-      </div>
-
-      <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm xl:col-span-4">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-700">Statusverdeling</h2>
-        <p class="mt-1 text-xs text-slate-400">Verdeling van offerte statussen</p>
-        <div class="mt-5 h-72">
-          <canvas id="status-breakdown-chart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-700">Tijd tot ondertekening</h2>
-      <p class="mt-1 text-xs text-slate-400">Aantal offertes per doorlooptijd</p>
-      <div id="time-to-sign-summary" class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-        <div id="time-to-sign-summary-primary" class="text-sm font-medium text-slate-800">Nog geen ondertekeningen</div>
-        <div id="time-to-sign-summary-secondary" class="mt-1 text-xs text-slate-500">0 offertes getekend</div>
-      </div>
-      <div id="time-to-sign-chart-wrap" class="mt-3 h-36">
-        <canvas id="time-to-sign-chart"></canvas>
-      </div>
-    </div>
-
-    <div class="rounded-[24px] border border-slate-200/70 bg-white shadow-sm">
-      <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-        <h2 class="text-base font-semibold text-slate-900">Recente offertes</h2>
+  <section class="grid gap-6 xl:grid-cols-12">
+    <article class="rounded-[24px] border border-slate-200/80 bg-white shadow-sm xl:col-span-8">
+      <div class="border-b border-slate-100 px-5 py-4">
+        <h3 class="text-lg font-semibold text-slate-900">Openstaande offertes</h3>
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-full">
           <thead>
-            <tr class="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-              <th class="px-5 py-3 text-left font-medium">Offerte</th>
-              <th class="px-5 py-3 text-left font-medium">Klant</th>
-              <th class="px-5 py-3 text-left font-medium">Status</th>
+            <tr class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-500">
+              <th class="px-5 py-3 font-medium">Klanten</th>
+              <th class="px-5 py-3 font-medium">Bedrag</th>
+              <th class="px-5 py-3 font-medium">Status</th>
+              <th class="px-5 py-3 font-medium">Actie</th>
             </tr>
           </thead>
           <tbody>
-            {% for l in leads[:8] %}
+            {% for q in open_quotes %}
               <tr class="border-b border-slate-100 last:border-0">
-                <td class="px-5 py-3 text-sm">
-                  <a href="/app/leads/{{ l.id }}" class="font-medium text-slate-800 transition hover:text-sky-600">#{{ l.id }}</a>
+                <td class="px-5 py-3 text-sm font-medium text-slate-800">{{ q.customer_name }}</td>
+                <td class="px-5 py-3 text-sm text-slate-700">{{ q.total_display }}</td>
+                <td class="px-5 py-3">
+                  <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ q.status_badge }}">{{ q.status_label }}</span>
                 </td>
-                <td class="px-5 py-3 text-sm text-slate-600">{{ l.name or "Onbekend" }}</td>
-                <td class="px-5 py-3 text-sm text-slate-500">{{ l.status or "Nieuw" }}</td>
+                <td class="px-5 py-3">
+                  <a href="/app/leads/{{ q.id }}" class="inline-flex items-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                    Open
+                  </a>
+                </td>
               </tr>
             {% else %}
               <tr>
-                <td colspan="3" class="px-5 py-8 text-center text-sm text-slate-400">Nog geen offertes</td>
+                <td colspan="4" class="px-5 py-10 text-center text-sm text-slate-500">
+                  Geen open offertes - lekker bezig.
+                  {% if tenant is defined and tenant and tenant.slug %}
+                    <a href="/intake/{{ tenant.slug }}" class="ml-2 font-semibold text-sky-700 hover:text-sky-800">Maak nieuwe offerte</a>
+                  {% endif %}
+                </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
-  </div>
+    </article>
 
-  <!-- Main grid -->
-  <div class="grid gap-6 xl:grid-cols-12">
-
-    <!-- Left column -->
-    <div class="space-y-6 xl:col-span-9">
-
-      <!-- Premium features (UI only; backend gating remains authoritative) -->
-      {% set pdf = features.get('PDF_EXPORT') if features is defined and features else None %}
-      {% set branding = features.get('BRANDING') if features is defined and features else None %}
-      {% set wl = features.get('WHITELABEL') if features is defined and features else None %}
-      <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <div class="text-[15px] font-medium text-slate-800">Premium functies</div>
-            <p class="mt-1 text-sm text-slate-400">Zie wat er beschikbaar is op je huidige plan</p>
+    <article class="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-sm xl:col-span-4">
+      <h3 class="text-lg font-semibold text-slate-900">Opvolging</h3>
+      <div class="mt-4 space-y-3">
+        {% for item in followups %}
+          <a href="{{ item.href }}" class="block rounded-xl border border-slate-200 px-3.5 py-3 transition hover:border-slate-300 hover:bg-slate-50">
+            <p class="truncate text-sm font-semibold text-slate-900">{{ item.customer_name }}</p>
+            <p class="mt-1 text-sm text-slate-700">{{ item.next_action }}</p>
+            <p class="mt-1 text-xs text-slate-500">{{ item.next_action_at_human or "Geen datum" }}</p>
+          </a>
+        {% else %}
+          <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+            Geen opvolging gepland.
+            <a href="/app/leads" class="ml-1 font-semibold text-sky-700 hover:text-sky-800">Bekijk klanten</a>
           </div>
-          <a href="/app/billing" class="text-sm font-medium text-slate-500 transition hover:text-slate-800">Upgrade</a>
-        </div>
-
-        <div class="mt-4 grid gap-3 md:grid-cols-3">
-          <!-- PDF export -->
-          <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-            <div class="text-sm font-semibold text-slate-900">PDF export</div>
-            <div class="mt-1 text-xs text-slate-500">
-              {% if pdf and pdf.enabled %}
-                Ingeschakeld
-              {% else %}
-                {{ (pdf.hint if pdf else 'Beschikbaar vanaf Starter') }}
-              {% endif %}
-            </div>
-            <div class="mt-3">
-              {% if pdf and pdf.enabled %}
-                <span class="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-50 px-3 text-xs font-medium text-emerald-700">
-                  Beschikbaar
-                </span>
-              {% else %}
-                <a href="{{ (pdf.upgrade_url if pdf else '/app/billing?upgrade=1&feature=PDF_EXPORT') }}"
-                   class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                  Upgrade om PDF export te gebruiken
-                </a>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Branding / logo -->
-          <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-            <div class="text-sm font-semibold text-slate-900">Branding / logo</div>
-            <div class="mt-1 text-xs text-slate-500">
-              {% if branding and branding.enabled %}
-                Ingeschakeld
-              {% else %}
-                {{ (branding.hint if branding else 'Beschikbaar vanaf Pro') }}
-              {% endif %}
-            </div>
-            <div class="mt-3">
-              {% if branding and branding.enabled %}
-                <span class="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-50 px-3 text-xs font-medium text-emerald-700">
-                  Beschikbaar
-                </span>
-              {% else %}
-                <a href="{{ (branding.upgrade_url if branding else '/app/billing?upgrade=1&feature=BRANDING') }}"
-                   class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                  Upgrade om branding te gebruiken
-                </a>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Whitelabel -->
-          <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-            <div class="text-sm font-semibold text-slate-900">Whitelabel</div>
-            <div class="mt-1 text-xs text-slate-500">
-              {% if wl and wl.enabled %}
-                Ingeschakeld
-              {% else %}
-                {{ (wl.hint if wl else 'Beschikbaar in Business') }}
-              {% endif %}
-            </div>
-            <div class="mt-3">
-              {% if wl and wl.enabled %}
-                <span class="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-50 px-3 text-xs font-medium text-emerald-700">
-                  Beschikbaar
-                </span>
-              {% else %}
-                <a href="{{ (wl.upgrade_url if wl else '/app/billing?upgrade=1&feature=WHITELABEL') }}"
-                   class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                  Beschikbaar in Business
-                </a>
-              {% endif %}
-            </div>
-          </div>
-        </div>
+        {% endfor %}
       </div>
 
-      <!-- Billing / usage -->
-      <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div class="space-y-1">
-            <div class="text-[15px] font-medium text-slate-800">Abonnement</div>
-            <div class="text-sm text-slate-500">
-              <span class="font-semibold text-slate-700">Plan:</span>
-              <span class="ml-1">{{ current_plan_code }}</span>
-              <span class="mx-2 text-slate-300">·</span>
-              <span class="font-semibold text-slate-700">Status:</span>
-              <span class="ml-1">{{ subscription_status }}</span>
-            </div>
-
-            {% if subscription_status == "trialing" %}
-              <div class="pt-1">
-                <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-                  Trial actief{% if trial_days_left is not none %} · {{ trial_days_left }} dagen over{% endif %}
-                </span>
-              </div>
-            {% endif %}
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <a
-              href="/app/billing"
-              class="inline-flex h-10 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-            >
-              Upgrade / beheer
-            </a>
-          </div>
+      <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+        <h4 class="text-sm font-semibold text-slate-900">Abonnement</h4>
+        <div class="mt-2 text-sm text-slate-600">
+          <span class="font-medium text-slate-700">Plan:</span> {{ current_plan_code }}
         </div>
-
-        <div class="mt-4 rounded-[18px] border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-          {% if quote_limit is none %}
-            <span class="font-semibold">Offertes gebruikt:</span>
-            <span class="ml-1">{{ quotes_sent_this_month }}</span>
-            <span class="ml-1 text-slate-400">(onbeperkt)</span>
-          {% else %}
-            <span class="font-semibold">Offertes gebruikt:</span>
-            <span class="ml-1">{{ quotes_sent_this_month }}</span>
-            <span class="mx-1 text-slate-300">/</span>
-            <span>{{ quote_limit }}</span>
-            {% if quotes_remaining is not none %}
-              <span class="ml-3 text-slate-500">Nog {{ quotes_remaining }}</span>
-            {% endif %}
+        <div class="mt-1 text-sm text-slate-600">
+          <span class="font-medium text-slate-700">Status:</span> {{ subscription_status }}
+          {% if subscription_status == "trialing" and trial_days_left is not none %}
+            · {{ trial_days_left }} dagen over
           {% endif %}
         </div>
+        <a href="/app/billing" class="mt-3 inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">
+          Beheer abonnement
+        </a>
       </div>
+    </article>
+  </section>
 
-      <!-- KPI cards -->
-      <div class="grid gap-4 md:grid-cols-2">
-        <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-          <div class="flex items-start justify-between">
-            <div>
-              <div class="text-[15px] font-medium text-slate-800">Nieuwe offertes</div>
-              <div class="mt-5 flex items-center gap-4">
-                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7.5A1.5 1.5 0 014.5 6H9l1.5 2H19.5A1.5 1.5 0 0121 9.5v8A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5v-10z"/>
-                  </svg>
-                </div>
-                <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ kpis.NEW }}</div>
-              </div>
-            </div>
-            <button class="text-slate-300 transition hover:text-slate-500">
-              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 5.5A1.5 1.5 0 1110 8.5a1.5 1.5 0 010 3zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>
-              </svg>
-            </button>
-          </div>
-          <div class="mt-4 text-sm text-slate-400">Nieuwe aanvragen vandaag</div>
-        </div>
-
-        <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-          <div class="flex items-start justify-between">
-            <div>
-              <div class="text-[15px] font-medium text-slate-800">Ingepland</div>
-              <div class="mt-5 flex items-center gap-4">
-                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-500">
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
-                  </svg>
-                </div>
-                <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ kpis.SCHEDULED }}</div>
-              </div>
-            </div>
-            <button class="text-slate-300 transition hover:text-slate-500">
-              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 5.5A1.5 1.5 0 1110 8.5a1.5 1.5 0 010 3zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>
-              </svg>
-            </button>
-          </div>
-          <div class="mt-4 text-sm text-slate-400">Klaar voor uitvoering</div>
-        </div>
-
-        <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-          <div class="flex items-start justify-between">
-            <div>
-              <div class="text-[15px] font-medium text-slate-800">In uitvoering</div>
-              <div class="mt-5 flex items-center gap-4">
-                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-500">
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                </div>
-                <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ kpis.IN_PROGRESS }}</div>
-              </div>
-            </div>
-            <button class="text-slate-300 transition hover:text-slate-500">
-              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 5.5A1.5 1.5 0 1110 8.5a1.5 1.5 0 010 3zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>
-              </svg>
-            </button>
-          </div>
-          <div class="mt-4 text-sm text-slate-400">Actieve werkzaamheden</div>
-        </div>
-
-        <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-          <div class="flex items-start justify-between">
-            <div>
-              <div class="text-[15px] font-medium text-slate-800">Afgerond</div>
-              <div class="mt-5 flex items-center gap-4">
-                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-500">
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                </div>
-                <div class="text-3xl font-semibold tracking-tight text-slate-900">{{ kpis.DONE }}</div>
-              </div>
-            </div>
-            <button class="text-slate-300 transition hover:text-slate-500">
-              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 5.5A1.5 1.5 0 1110 8.5a1.5 1.5 0 010 3zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>
-              </svg>
-            </button>
-          </div>
-          <div class="mt-4 text-sm text-slate-400">Opgeleverde projecten</div>
-        </div>
+  <section id="secondary-section" class="hidden rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-sm">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h3 class="text-base font-semibold text-slate-900">Recente activiteit</h3>
+        <p class="mt-1 text-sm text-slate-500">Omzettrend</p>
       </div>
-
-      <!-- Jobs table -->
-      <div class="rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
-        <div class="flex flex-col gap-4 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-slate-900">Recente klussen</h2>
-            <p class="mt-1 text-sm text-slate-400">Laatste activiteit in je pipeline</p>
-          </div>
-
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-            </div>
-            <input
-              placeholder="Zoeken"
-              class="h-10 w-64 rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-            />
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="min-w-full">
-            <thead>
-              <tr class="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                <th class="px-5 py-4 text-left font-medium">Klus</th>
-                <th class="px-5 py-4 text-left font-medium">Klant</th>
-                <th class="px-5 py-4 text-left font-medium">Status</th>
-                <th class="px-5 py-4 text-left font-medium">Acties</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for j in jobs %}
-                {% set st = (j.status or '').upper() %}
-                {% if st == 'DONE' %}
-                  {% set badge_color = 'bg-emerald-50 text-emerald-600' %}
-                  {% set dot_color = 'bg-emerald-400' %}
-                  {% set status_text = 'Afgerond' %}
-                {% elif st == 'IN_PROGRESS' %}
-                  {% set badge_color = 'bg-violet-50 text-violet-600' %}
-                  {% set dot_color = 'bg-violet-400' %}
-                  {% set status_text = 'Bezig' %}
-                {% elif st == 'SCHEDULED' %}
-                  {% set badge_color = 'bg-sky-50 text-sky-600' %}
-                  {% set dot_color = 'bg-sky-400' %}
-                  {% set status_text = 'Ingepland' %}
-                {% elif st == 'CANCELLED' %}
-                  {% set badge_color = 'bg-rose-50 text-rose-600' %}
-                  {% set dot_color = 'bg-rose-400' %}
-                  {% set status_text = 'Geannuleerd' %}
-                {% else %}
-                  {% set badge_color = 'bg-amber-50 text-amber-600' %}
-                  {% set dot_color = 'bg-amber-400' %}
-                  {% set status_text = 'Nieuw' %}
-                {% endif %}
-
-                <tr class="border-b border-slate-100 last:border-0 transition hover:bg-slate-50/70">
-                  <td class="px-5 py-4">
-                    <a href="/app/jobs/{{ j.id }}" class="font-medium text-slate-800 transition hover:text-sky-600">#{{ j.id }}</a>
-                  </td>
-                  <td class="px-5 py-4 text-sm text-slate-500">
-                    {% if j.customer_name %}
-                      {{ j.customer_name }}
-                    {% elif j.lead_id %}
-                      <a href="/app/leads/{{ j.lead_id }}" class="hover:text-slate-700">Offerte #{{ j.lead_id }}</a>
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-                  <td class="px-5 py-4">
-                    <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium {{ badge_color }}">
-                      <span class="h-1.5 w-1.5 rounded-full {{ dot_color }}"></span>
-                      {{ status_text }}
-                    </span>
-                  </td>
-                  <td class="px-5 py-4">
-                    <a href="/app/jobs/{{ j.id }}" class="text-sm text-slate-400 transition hover:text-slate-700">Open</a>
-                  </td>
-                </tr>
-              {% else %}
-                <tr>
-                  <td colspan="4" class="px-5 py-14 text-center text-sm text-slate-400">
-                    Nog geen klussen
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Offertes -->
-      <div class="rounded-[26px] border border-slate-200/70 bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div>
-            <h2 class="text-lg font-semibold text-slate-900">Recente offertes</h2>
-            <p class="mt-1 text-sm text-slate-400">Laatste offertes</p>
-          </div>
-          <a href="/app/leads" class="text-sm font-medium text-slate-500 transition hover:text-slate-800">Alles bekijken</a>
-        </div>
-
-        <div class="divide-y divide-slate-100">
-          {% for l in leads %}
-            {% set lst = (l.status or '').upper() %}
-            {% if lst in ['ACCEPTED','DONE','COMPLETED'] %}
-              {% set lead_badge = 'bg-emerald-50 text-emerald-600' %}
-              {% set lead_text = 'Geaccepteerd' %}
-            {% elif lst in ['SENT','VIEWED'] %}
-              {% set lead_badge = 'bg-amber-50 text-amber-600' %}
-              {% set lead_text = 'Verstuurd' if lst == 'SENT' else 'Bekeken' %}
-            {% elif lst in ['CANCELLED'] %}
-              {% set lead_badge = 'bg-rose-50 text-rose-600' %}
-              {% set lead_text = 'Geannuleerd' %}
-            {% else %}
-              {% set lead_badge = 'bg-slate-100 text-slate-600' %}
-              {% set lead_text = 'Nieuw' %}
-            {% endif %}
-
-            <div class="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <a href="/app/leads/{{ l.id }}" class="font-medium text-slate-800 transition hover:text-sky-600">Offerte #{{ l.id }}</a>
-                <div class="mt-1 text-sm text-slate-500">{{ l.name or 'Onbekende klant' }}</div>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="inline-flex rounded-full px-3 py-1 text-xs font-medium {{ lead_badge }}">
-                  {{ lead_text }}
-                </span>
-                <a href="/app/leads/{{ l.id }}" class="text-sm text-slate-400 transition hover:text-slate-700">Open</a>
-              </div>
-            </div>
-          {% else %}
-            <div class="px-5 py-12 text-center text-sm text-slate-400">
-              Nog geen offertes
-            </div>
-          {% endfor %}
-        </div>
-      </div>
-
+      <p id="current-month-revenue" class="text-sm font-semibold text-slate-700">€ 0 deze maand</p>
     </div>
-
-    <!-- Right column: billing usage -->
-    {% if billing_usage_summary %}
-      <div class="space-y-6 xl:col-span-3">
-        <div class="rounded-[24px] border border-slate-200/70 bg-white p-5 shadow-sm">
-          <div class="flex items-start justify-between">
-            <div>
-              <div class="text-[15px] font-medium text-slate-800">Gebruik deze maand</div>
-              <p class="mt-1 text-xs text-slate-400">
-                Plan:
-                <span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                  {{ billing_usage_summary.plan_label }}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          <div class="mt-5 space-y-3 text-sm text-slate-600">
-            {% if not billing_usage_summary.is_unlimited %}
-              <div class="font-medium">
-                {{ billing_usage_summary.quotes_sent }} van {{ billing_usage_summary.quote_limit }} offertes gebruikt
-              </div>
-
-              <div class="mt-1">
-                <div class="h-2 w-full rounded-full bg-slate-100">
-                  <div
-                    class="h-2 rounded-full bg-sky-500 transition-all"
-                    style="width: {{ billing_usage_summary.usage_percent }}%;"
-                  ></div>
-                </div>
-                <div class="mt-1 text-xs text-slate-400">
-                  {{ billing_usage_summary.usage_percent }}% gebruikt · Nog {{ billing_usage_summary.quotes_remaining }} offertes over
-                </div>
-
-                {% if billing_usage_summary.usage_percent >= 100 %}
-                  <div class="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
-                    Je maandlimiet is bereikt. Upgrade je plan om meer offertes te versturen.
-                  </div>
-                {% elif billing_usage_summary.usage_percent >= 80 %}
-                  <div class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    Je zit bijna aan je maandlimiet.
-                  </div>
-                {% endif %}
-              </div>
-            {% else %}
-              <div class="font-medium">
-                Onbeperkt aantal offertes
-              </div>
-            {% endif %}
-          </div>
-
-          <div class="mt-5">
-            <a
-              href="/app/billing"
-              class="inline-flex w-full items-center justify-center rounded-xl bg-sky-500 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600"
-            >
-              Upgrade plan
-            </a>
-          </div>
+    <div id="secondary-empty" class="mt-4 hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+      <p class="text-sm font-semibold text-slate-700">Nog geen data beschikbaar</p>
+      <p class="mt-1 text-sm text-slate-500">Zodra je offertes verstuurt zie je hier je resultaten</p>
+    </div>
+    <div id="secondary-charts" class="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div>
+        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Omzet over tijd</p>
+        <div id="revenue-chart-wrap" class="h-64">
+          <canvas id="revenue-by-month-chart"></canvas>
+        </div>
+        <div id="revenue-empty" class="hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+          Nog geen data beschikbaar
         </div>
       </div>
-    {% endif %}
-
-  </div>
+      <div>
+        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Statusverdeling</p>
+        <div id="status-chart-wrap" class="flex h-64 items-center justify-center">
+          <canvas id="status-breakdown-chart" class="max-h-[200px] max-w-[200px]"></canvas>
+        </div>
+        <div id="status-empty" class="hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+          Nog geen data beschikbaar
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -703,175 +178,156 @@
     if (el) el.textContent = value;
   };
 
+  let revenueChart = null;
+  let statusChart = null;
+
   function buildCharts(summary) {
     const revenue = summary.revenue_by_month || [];
     const status = summary.status_breakdown || {};
-    const buckets = summary.time_to_sign_buckets || {};
-    const bucketEntries = [
-      ["0-1 dagen", buckets["0-1_days"] || 0],
-      ["2-3 dagen", buckets["2-3_days"] || 0],
-      ["4-7 dagen", buckets["4-7_days"] || 0],
-      ["8-14 dagen", buckets["8-14_days"] || 0],
-      ["15+ dagen", buckets["15+_days"] || 0],
-    ];
-    const filteredBucketEntries = bucketEntries.filter(([, count]) => count > 0);
-    const bucketLabels = filteredBucketEntries.length
-      ? filteredBucketEntries.map(([label]) => label)
-      : ["Geen data"];
-    const bucketValues = filteredBucketEntries.length
-      ? filteredBucketEntries.map(([, count]) => count)
-      : [0];
-    const totalSignedForBuckets = bucketEntries.reduce((sum, [, count]) => sum + count, 0);
-    const topBucket = filteredBucketEntries.length
-      ? filteredBucketEntries.reduce((best, curr) => (curr[1] > best[1] ? curr : best))
-      : null;
-    const insightText = topBucket && totalSignedForBuckets > 0
-      ? `${pct.format((topBucket[1] / totalSignedForBuckets) * 100)}% binnen ${topBucket[0].replace(" dagen", "")}`
-      : "Nog geen ondertekeningen";
-    const pointsCount = filteredBucketEntries.length;
-    const timeToSignChartWrap = document.getElementById("time-to-sign-chart-wrap");
-    if (topBucket && totalSignedForBuckets > 0) {
-      setText("time-to-sign-summary-primary", insightText);
-      setText("time-to-sign-summary-secondary", `${totalSignedForBuckets} offerte${totalSignedForBuckets === 1 ? "" : "s"} getekend`);
-    } else {
-      setText("time-to-sign-summary-primary", "Nog geen ondertekeningen");
-      setText("time-to-sign-summary-secondary", "0 offertes getekend");
+    const statusAccepted = Number(status.signed || 0);
+    const statusOpen = Number(status.pending || 0);
+    const statusLost = Number(status.rejected || 0);
+    const statusTotal = statusAccepted + statusOpen + statusLost;
+
+    const secondarySection = document.getElementById("secondary-section");
+    const secondaryCharts = document.getElementById("secondary-charts");
+    const secondaryEmpty = document.getElementById("secondary-empty");
+    const revenueWrap = document.getElementById("revenue-chart-wrap");
+    const revenueEmpty = document.getElementById("revenue-empty");
+    const statusWrap = document.getElementById("status-chart-wrap");
+    const statusEmpty = document.getElementById("status-empty");
+
+    const hasRevenue = revenue.length > 0;
+    const hasStatus = statusTotal > 0;
+    const hasAnyData = hasRevenue || hasStatus;
+
+    if (!hasAnyData) {
+      if (secondarySection) secondarySection.classList.remove("hidden");
+      if (secondaryCharts) secondaryCharts.classList.add("hidden");
+      if (secondaryEmpty) secondaryEmpty.classList.remove("hidden");
+
+      if (revenueWrap) revenueWrap.classList.add("hidden");
+      if (revenueEmpty) revenueEmpty.classList.remove("hidden");
+      if (statusWrap) statusWrap.classList.add("hidden");
+      if (statusEmpty) statusEmpty.classList.remove("hidden");
+      return;
     }
-    if (timeToSignChartWrap) timeToSignChartWrap.classList.remove("hidden");
+
+    if (secondarySection) secondarySection.classList.remove("hidden");
+    if (secondaryCharts) secondaryCharts.classList.remove("hidden");
+    if (secondaryEmpty) secondaryEmpty.classList.add("hidden");
+
+    if (revenueWrap) revenueWrap.classList.toggle("hidden", !hasRevenue);
+    if (revenueEmpty) revenueEmpty.classList.toggle("hidden", hasRevenue);
+    if (statusWrap) statusWrap.classList.toggle("hidden", !hasStatus);
+    if (statusEmpty) statusEmpty.classList.toggle("hidden", hasStatus);
+
     const revenueLabels = revenue.map((x) => {
       const [y, m] = String(x.month || "").split("-");
       const dt = new Date(Number(y), Number(m) - 1, 1);
       return Number.isNaN(dt.getTime()) ? String(x.month || "") : monthFmt.format(dt);
     });
 
-    new Chart(document.getElementById("revenue-by-month-chart"), {
-      type: "bar",
-      data: {
-        labels: revenueLabels,
-        datasets: [{
-          label: "Getekende omzet per maand",
-          data: revenue.map((x) => x.value),
-          backgroundColor: "rgba(56, 189, 248, 0.75)",
-          borderColor: "rgba(56, 189, 248, 0.95)",
-          borderWidth: 1,
-          borderRadius: 6,
-          categoryPercentage: 0.52,
-          barPercentage: 0.7,
-          maxBarThickness: 28,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            title: { display: true, text: "Maand" },
-            ticks: { color: "#64748b", font: { size: 11 } },
-            grid: { display: false, drawBorder: false },
-            border: { display: false },
-          },
-          y: {
-            title: { display: true, text: "Omzet (€)" },
-            ticks: {
-              color: "#64748b",
-              font: { size: 11 },
-              callback: (value) => eur.format(value),
-            },
-            grid: { color: "rgba(148, 163, 184, 0.12)", drawBorder: false },
-            border: { display: false },
-          },
+    if (hasRevenue) {
+      if (revenueChart) {
+        revenueChart.destroy();
+      }
+      revenueChart = new Chart(document.getElementById("revenue-by-month-chart"), {
+        type: "line",
+        data: {
+          labels: revenueLabels,
+          datasets: [{
+            label: "Getekende omzet per maand",
+            data: revenue.map((x) => x.value),
+            borderColor: "rgba(14, 165, 233, 0.95)",
+            backgroundColor: "rgba(14, 165, 233, 0.14)",
+            pointRadius: 3,
+            pointHoverRadius: 4,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.25,
+          }],
         },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: "#0f172a",
-            titleColor: "#f8fafc",
-            bodyColor: "#f8fafc",
-            padding: 10,
-            cornerRadius: 8,
-            callbacks: {
-              title: (items) => (items[0] ? items[0].label : ""),
-              label: (ctx) => `Omzet: ${eur.format(ctx.parsed.y || 0)}`,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: { display: true, text: "Maand" },
+              ticks: { color: "#64748b", font: { size: 11 } },
+              grid: { display: false, drawBorder: false },
+              border: { display: false },
+            },
+            y: {
+              title: { display: true, text: "Omzet (€)" },
+              ticks: {
+                color: "#64748b",
+                font: { size: 11 },
+                callback: (value) => eur.format(value),
+              },
+              grid: { color: "rgba(148, 163, 184, 0.12)", drawBorder: false },
+              border: { display: false },
             },
           },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "#0f172a",
+              titleColor: "#f8fafc",
+              bodyColor: "#f8fafc",
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                title: (items) => (items[0] ? items[0].label : ""),
+                label: (ctx) => `Omzet: ${eur.format(ctx.parsed.y || 0)}`,
+              },
+            },
+          },
         },
-      },
-    });
+      });
+    }
 
-    new Chart(document.getElementById("status-breakdown-chart"), {
-      type: "doughnut",
-      data: {
-        labels: ["Openstaand", "Getekend", "Afgewezen", "Overig"],
-        datasets: [{
-          data: [status.pending || 0, status.signed || 0, status.rejected || 0, status.other || 0],
-          backgroundColor: ["#f59e0b", "#10b981", "#ef4444", "#94a3b8"],
-          borderColor: "#ffffff",
-          borderWidth: 2,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: "bottom",
-            labels: { boxWidth: 10, boxHeight: 10, padding: 16, color: "#64748b", font: { size: 11 } },
-          },
-          tooltip: {
-            backgroundColor: "#0f172a",
-            titleColor: "#f8fafc",
-            bodyColor: "#f8fafc",
-            padding: 10,
-            cornerRadius: 8,
+    if (hasStatus) {
+      if (statusChart) {
+        statusChart.destroy();
+      }
+      statusChart = new Chart(document.getElementById("status-breakdown-chart"), {
+        type: "doughnut",
+        data: {
+          labels: ["Geaccepteerd", "Open", "Verloren"],
+          datasets: [{
+            data: [statusAccepted, statusOpen, statusLost],
+            backgroundColor: ["#10b981", "#0ea5e9", "#f43f5e"],
+            borderColor: "#ffffff",
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "70%",
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                boxWidth: 10,
+                boxHeight: 10,
+                padding: 14,
+                color: "#64748b",
+                font: { size: 11 },
+              },
+            },
+            tooltip: {
+              backgroundColor: "#0f172a",
+              titleColor: "#f8fafc",
+              bodyColor: "#f8fafc",
+              padding: 10,
+              cornerRadius: 8,
+            },
           },
         },
-      },
-    });
-
-    new Chart(document.getElementById("time-to-sign-chart"), {
-      type: "bar",
-      data: {
-        labels: bucketLabels,
-        datasets: [{
-          label: "Aantal offertes",
-          data: bucketValues,
-          backgroundColor: "#6366f1",
-          borderRadius: 8,
-          categoryPercentage: pointsCount <= 2 ? 0.9 : 0.7,
-          barPercentage: pointsCount <= 2 ? 0.85 : 0.6,
-          maxBarThickness: pointsCount <= 2 ? 36 : 28,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: {
-          padding: { top: 10 },
-        },
-        scales: {
-          x: {
-            ticks: { color: "#64748b", font: { size: 11 } },
-            grid: { display: false, drawBorder: false },
-            border: { display: false },
-          },
-          y: {
-            ticks: { color: "#64748b", font: { size: 11 }, precision: 0 },
-            grid: { color: "#f1f5f9", drawBorder: false },
-            border: { display: false },
-          },
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: "#0f172a",
-            titleColor: "#f8fafc",
-            bodyColor: "#f8fafc",
-            padding: 10,
-            cornerRadius: 8,
-          },
-        },
-      },
-    });
+      });
+    }
   }
 
   async function loadDashboardSummary() {
@@ -882,16 +338,9 @@
     const revenue = summary.revenue_by_month || [];
     const currentMonthRevenue = revenue.length ? (revenue[revenue.length - 1].value || 0) : 0;
 
-    setText("kpi-pipeline-value", eur.format(k.pipeline_value || 0));
-    setText("kpi-won-revenue", eur.format(k.won_revenue || 0));
-    setText("kpi-pending-count", String(k.pending_count || 0));
-    setText("kpi-signed-count", String(k.signed_count || 0));
-    setText("kpi-rejected-count", String(k.rejected_count || 0));
-    setText("kpi-overdue-count", String(k.overdue_count || 0));
-    setText("kpi-no-response-value", eur.format(k.no_response_value || 0));
-    setText("kpi-action-needed-today", String(k.action_needed_today_count || 0));
+    setText("kpi-month-revenue", eur.format(currentMonthRevenue));
     setText("kpi-sign-rate", `${pct.format(k.sign_rate || 0)}%`);
-    setText("kpi-avg-time-to-sign", `${pct.format(k.avg_time_to_sign_days || 0)} dagen`);
+    setText("kpi-open-offers", String(k.pending_count || 0));
     setText("current-month-revenue", `${eur.format(currentMonthRevenue)} deze maand`);
 
     buildCharts(summary);
